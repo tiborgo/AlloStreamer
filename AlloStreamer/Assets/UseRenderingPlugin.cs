@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -32,7 +33,9 @@ public class UseRenderingPlugin : MonoBehaviour {
 	
 	[DllImport ("UnityServerPlugin")]
 	private static extern void SetTimeFromUnity (float t);
-	
+
+    [DllImport("UnityServerPlugin")]
+    private static extern void SetCubeRenderTextureFromUnity(System.IntPtr cubeTexture, out System.IntPtr pixels);
 	
 	void Awake()
 	{
@@ -55,7 +58,7 @@ public class UseRenderingPlugin : MonoBehaviour {
 		sys = GameObject.Find("System");
 		mainScript = sys.GetComponent<MainScript>();
 		
-		ServerThread server = new ServerThread();
+		/*ServerThread server = new ServerThread();
 		Thread st = new Thread(new ThreadStart(server.startServer));
 		st.Start();
 		
@@ -69,7 +72,7 @@ public class UseRenderingPlugin : MonoBehaviour {
 		
 		OSCThread oscClient = new OSCThread();
 		Thread osct = new Thread(new ThreadStart(oscClient.startServer));
-		osct.Start();
+		osct.Start();*/
 		
 	}
 	
@@ -88,7 +91,7 @@ public class UseRenderingPlugin : MonoBehaviour {
 	
 	void OnApplicationQuit(){
 		PlayerPrefs.Save ();
-		endServer ();
+		//endServer ();
 		
 	}
 	
@@ -125,8 +128,80 @@ public class UseRenderingPlugin : MonoBehaviour {
 
 	}
 	int num=0;
-	
-	
+
+    private Camera cam;
+	private RenderTexture rtexLeft;
+    private RenderTexture rtexRight;
+    private const int cubemapSize = 128 * 4;
+
+    private Texture2D dst;
+
+    void Update()
+    {
+        if (!cam) {
+            //var go = new GameObject("MonoCamera");
+			//go.hideFlags = HideFlags.HideAndDontSave;
+			//go.transform.position = transform.position;
+			//go.transform.rotation = Quaternion.identity;
+			//cam = go.GetComponent<Camera>();;
+			//cam.farClipPlane = 2000; // don't render very far into cubemap
+			//cam.enabled = false;
+            var go = GameObject.Find("Cam1");
+            var test = go.GetComponents<Camera>();
+            cam = go.GetComponent<Camera>();
+		}
+
+        if (!rtexLeft) {
+            rtexLeft = new RenderTexture(cubemapSize, cubemapSize, 16/*, RenderTextureFormat.ARGBInt*/);
+            rtexLeft.isCubemap = true;
+            rtexLeft.hideFlags = HideFlags.HideAndDontSave;
+            rtexLeft.wrapMode = TextureWrapMode.Repeat;
+            //GetComponent<Renderer>().sharedMaterial.SetTexture ("_Cube", rtexLeft);
+		}
+
+        if (!rtexRight)
+        {
+            rtexRight = new RenderTexture(cubemapSize, cubemapSize, 16);
+            rtexRight.isCubemap = true;
+            rtexRight.hideFlags = HideFlags.HideAndDontSave;
+        }
+
+        if (!dst) {
+            dst = new Texture2D(cubemapSize, cubemapSize, TextureFormat.ARGB32, false);
+        }
+
+        cam.RenderToCubemap(rtexLeft);
+        //cam.RenderToCubemap(rtexRight);
+        /*RenderTexture x = new RenderTexture(cubemapSize, cubemapSize, 16);
+        cam.targetTexture = x;
+        cam.Render();*/
+
+        /*RenderTexture x = rtexLeft;
+
+        var tex = new Texture2D(cubemapSize, cubemapSize, TextureFormat.RGB24, false);
+        RenderTexture.active = x;
+        Texture2D virtualPhoto = new Texture2D(cubemapSize, cubemapSize, TextureFormat.RGB24, false);
+        virtualPhoto.ReadPixels(new Rect(0, 0, cubemapSize, cubemapSize), 0, 0); // you get the center section
+        virtualPhoto.Apply();
+        */
+        
+        //RenderBuffer b = rtexLeft.colorBuffer;
+        // Read screen contents into the texture        
+        //tex.SetPixels(rtexLeft.GetPixels(CubemapFace.PositiveX));
+
+        
+
+        System.IntPtr unmanagedPixels = System.IntPtr.Zero;
+        SetCubeRenderTextureFromUnity(rtexLeft.GetNativeTexturePtr(), out unmanagedPixels);
+        byte[] managedPixels = new byte[cubemapSize * cubemapSize * 4];
+        Marshal.Copy(unmanagedPixels, managedPixels, 0, cubemapSize * cubemapSize * 4);
+
+        dst.LoadRawTextureData(managedPixels);
+        dst.Apply();
+
+        RawImage testRenderImage = GameObject.Find("TestRenderImage").GetComponent<RawImage>();
+        testRenderImage.texture = dst;
+    }
 	
 	private IEnumerator CallPluginAtEndOfFrames ()
 	{
