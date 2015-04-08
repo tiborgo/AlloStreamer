@@ -76,6 +76,7 @@
      <Compile Include="Assets\CreateRenderTexture.cs" />
      <Compile Include="Assets\CubeCamParams.cs" />
      <Compile Include="Assets\DrawGUIToRT.cs" />
+     <Compile Include="Assets\ExtractCubemap.cs" />
      <Compile Include="Assets\HUDFPS.cs" />
      <Compile Include="Assets\MainScript.cs" />
      <Compile Include="Assets\MeshParameters.cs" />

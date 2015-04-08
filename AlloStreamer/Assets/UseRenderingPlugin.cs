@@ -79,12 +79,65 @@ public class UseRenderingPlugin : MonoBehaviour {
 	public float posX = 512f; //Position the DrawTexture command while testing.
 	public float posY = 512f; 
 	Texture2D ARSelectionTexture;
+
+    private Camera cam;
+    private RenderTexture rtexLeft;
+    private RenderTexture rtexRight;
+    private const int cubemapSize = 512;
+    private Texture2D dst;
+    private System.IntPtr rtexLeftNativePtr;
 	
 	//void Start(){
 		//Debug.Log ("Started.");
 	IEnumerator Start () {
 		ARSelectionTexture = Resources.Load("GUISelectionBox") as Texture2D;
 		CreateTextureAndPassToPlugin();
+
+        //if (!cam)
+        //{
+            //var go = new GameObject("MonoCamera");
+            //go.hideFlags = HideFlags.HideAndDontSave;
+            //go.transform.position = transform.position;
+            //go.transform.rotation = Quaternion.identity;
+            //cam = go.GetComponent<Camera>();;
+            //cam.farClipPlane = 2000; // don't render very far into cubemap
+            //cam.enabled = false;
+            var go = GameObject.Find("Cam1");
+            var test = go.GetComponents<Camera>();
+            cam = go.GetComponent<Camera>();
+        //}
+
+        //if (!rtexLeft)
+        //{
+            rtexLeft = new RenderTexture(cubemapSize, cubemapSize, 16/*, RenderTextureFormat.ARGBInt*/);
+            rtexLeft.isCubemap = true;
+            rtexLeft.hideFlags = HideFlags.HideAndDontSave;
+            rtexLeft.wrapMode = TextureWrapMode.Repeat;
+            
+            //GetComponent<Renderer>().sharedMaterial.SetTexture ("_Cube", rtexLeft);
+        //}
+
+        //if (!rtexRight)
+        //{
+            rtexRight = new RenderTexture(cubemapSize, cubemapSize, 16);
+            rtexRight.isCubemap = true;
+            rtexRight.hideFlags = HideFlags.HideAndDontSave;
+        //}
+
+        //if (!dst)
+        //{
+            dst = new Texture2D(cubemapSize, cubemapSize, TextureFormat.ARGB32, false);
+        //}
+
+
+            var cube = GameObject.Find("CubeMapTestCube");
+            Renderer renderer = cube.GetComponent<Renderer>();
+            Material material = renderer.sharedMaterial;
+            //material.mainTexture = rtexLeft;
+            material.SetTexture("_Cube", rtexLeft);
+
+            GameObject.Find("CubeMapTestCube2").GetComponent<Renderer>().sharedMaterial.SetTexture("_Cube", rtexRight);
+            
 
 		yield return StartCoroutine("CallPluginAtEndOfFrames");
 	}
@@ -129,48 +182,15 @@ public class UseRenderingPlugin : MonoBehaviour {
 	}
 	int num=0;
 
-    private Camera cam;
-	private RenderTexture rtexLeft;
-    private RenderTexture rtexRight;
-    private const int cubemapSize = 128 * 4;
 
-    private Texture2D dst;
+    byte[] managedPixels = new byte[cubemapSize * cubemapSize * 4];
 
     void Update()
     {
-        if (!cam) {
-            //var go = new GameObject("MonoCamera");
-			//go.hideFlags = HideFlags.HideAndDontSave;
-			//go.transform.position = transform.position;
-			//go.transform.rotation = Quaternion.identity;
-			//cam = go.GetComponent<Camera>();;
-			//cam.farClipPlane = 2000; // don't render very far into cubemap
-			//cam.enabled = false;
-            var go = GameObject.Find("Cam1");
-            var test = go.GetComponents<Camera>();
-            cam = go.GetComponent<Camera>();
-		}
-
-        if (!rtexLeft) {
-            rtexLeft = new RenderTexture(cubemapSize, cubemapSize, 16/*, RenderTextureFormat.ARGBInt*/);
-            rtexLeft.isCubemap = true;
-            rtexLeft.hideFlags = HideFlags.HideAndDontSave;
-            rtexLeft.wrapMode = TextureWrapMode.Repeat;
-            //GetComponent<Renderer>().sharedMaterial.SetTexture ("_Cube", rtexLeft);
-		}
-
-        if (!rtexRight)
-        {
-            rtexRight = new RenderTexture(cubemapSize, cubemapSize, 16);
-            rtexRight.isCubemap = true;
-            rtexRight.hideFlags = HideFlags.HideAndDontSave;
-        }
-
-        if (!dst) {
-            dst = new Texture2D(cubemapSize, cubemapSize, TextureFormat.ARGB32, false);
-        }
+        
 
         cam.RenderToCubemap(rtexLeft);
+        cam.RenderToCubemap(rtexRight);
         //cam.RenderToCubemap(rtexRight);
         /*RenderTexture x = new RenderTexture(cubemapSize, cubemapSize, 16);
         cam.targetTexture = x;
@@ -182,25 +202,31 @@ public class UseRenderingPlugin : MonoBehaviour {
         RenderTexture.active = x;
         Texture2D virtualPhoto = new Texture2D(cubemapSize, cubemapSize, TextureFormat.RGB24, false);
         virtualPhoto.ReadPixels(new Rect(0, 0, cubemapSize, cubemapSize), 0, 0); // you get the center section
-        virtualPhoto.Apply();
-        */
+        virtualPhoto.Apply();*/
+        
         
         //RenderBuffer b = rtexLeft.colorBuffer;
         // Read screen contents into the texture        
         //tex.SetPixels(rtexLeft.GetPixels(CubemapFace.PositiveX));
 
+        /*if (rtexLeftNativePtr == System.IntPtr.Zero)
+        {
+            rtexLeftNativePtr = rtexLeft.GetNativeTexturePtr();
+        }*/
         
 
-        System.IntPtr unmanagedPixels = System.IntPtr.Zero;
-        SetCubeRenderTextureFromUnity(rtexLeft.GetNativeTexturePtr(), out unmanagedPixels);
-        byte[] managedPixels = new byte[cubemapSize * cubemapSize * 4];
-        Marshal.Copy(unmanagedPixels, managedPixels, 0, cubemapSize * cubemapSize * 4);
+        //System.IntPtr unmanagedPixels = System.IntPtr.Zero;
+        //SetCubeRenderTextureFromUnity(rtexLeftNativePtr, out unmanagedPixels);
+        
+        //Marshal.Copy(unmanagedPixels, managedPixels, 0, cubemapSize * cubemapSize * 4);
 
-        dst.LoadRawTextureData(managedPixels);
-        dst.Apply();
+        //dst.LoadRawTextureData(managedPixels);
+        //dst.Apply();
 
-        RawImage testRenderImage = GameObject.Find("TestRenderImage").GetComponent<RawImage>();
-        testRenderImage.texture = dst;
+        //RawImage testRenderImage = GameObject.Find("TestRenderImage").GetComponent<RawImage>();
+        //testRenderImage.texture = virtualPhoto;// dst;
+
+        
     }
 	
 	private IEnumerator CallPluginAtEndOfFrames ()
