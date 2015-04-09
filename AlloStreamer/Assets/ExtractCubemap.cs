@@ -54,6 +54,7 @@ public class ExtractCubemap : MonoBehaviour {
         texNegativeZ.Create();
 
         camPositiveX.targetTexture = texPositiveX;
+        camPositiveX.aspect = 1f;
         camNegativeX.targetTexture = texNegativeX;
         camPositiveY.targetTexture = texPositiveY;
         camNegativeY.targetTexture = texNegativeY;
