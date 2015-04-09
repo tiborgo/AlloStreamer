@@ -5,6 +5,9 @@ using System.Runtime.InteropServices;
 public class ExtractCubemap : MonoBehaviour {
 
     [DllImport("CubemapRenderingPlugin")]
+    private static extern void SetCubemapFaceCountFromUnity(int face);
+
+    [DllImport("CubemapRenderingPlugin")]
     private static extern void SetCubemapFaceTextureFromUnity(System.IntPtr texture, int face);
 
     private static System.String[] cameraNames = {
@@ -22,10 +25,12 @@ public class ExtractCubemap : MonoBehaviour {
         "RightEye/NegativeZ"
     };
 
-    private const int cubemapSize = 1280;
+    private const int cubemapSize = 2048; // 1280;
 
 	// Use this for initialization
     IEnumerator Start() {
+
+        SetCubemapFaceCountFromUnity(cameraNames.Length);
 
         for (int i = 0; i < cameraNames.Length; i++) {
 
