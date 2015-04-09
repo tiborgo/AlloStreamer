@@ -7,73 +7,36 @@ public class ExtractCubemap : MonoBehaviour {
     [DllImport("CubemapRenderingPlugin")]
     private static extern void SetCubemapFaceTextureFromUnity(System.IntPtr texture, int face);
 
-    private Camera camPositiveX;
-    private Camera camNegativeX;
-    private Camera camPositiveY;
-    private Camera camNegativeY;
-    private Camera camPositiveZ;
-    private Camera camNegativeZ;
+    private static System.String[] cameraNames = {
+        "LeftEye/PositiveX",
+        "LeftEye/NegativeX",
+        "LeftEye/PositiveY",
+        "LeftEye/NegativeY",
+        "LeftEye/PositiveZ",
+        "LeftEye/NegativeZ",
+        "RightEye/PositiveX",
+        "RightEye/NegativeX",
+        "RightEye/PositiveY",
+        "RightEye/NegativeY",
+        "RightEye/PositiveZ",
+        "RightEye/NegativeZ"
+    };
 
-    private RenderTexture texPositiveX;
-    private RenderTexture texNegativeX;
-    private RenderTexture texPositiveY;
-    private RenderTexture texNegativeY;
-    private RenderTexture texPositiveZ;
-    private RenderTexture texNegativeZ;
-
-    private System.IntPtr texPtrPositiveX;
-    private System.IntPtr texPtrNegativeX;
-    private System.IntPtr texPtrPositiveY;
-    private System.IntPtr texPtrNegativeY;
-    private System.IntPtr texPtrPositiveZ;
-    private System.IntPtr texPtrNegativeZ;
-
-    private const int cubemapSize = 2048;
+    private const int cubemapSize = 1280;
 
 	// Use this for initialization
     IEnumerator Start() {
 
-        camPositiveX = GameObject.Find("PositiveX").GetComponent<Camera>();
-        camNegativeX = GameObject.Find("NegativeX").GetComponent<Camera>();
-        camPositiveY = GameObject.Find("PositiveY").GetComponent<Camera>();
-        camNegativeY = GameObject.Find("NegativeY").GetComponent<Camera>();
-        camPositiveZ = GameObject.Find("PositiveZ").GetComponent<Camera>();
-        camNegativeZ = GameObject.Find("NegativeZ").GetComponent<Camera>();
+        for (int i = 0; i < cameraNames.Length; i++) {
 
-        texPositiveX = new RenderTexture(cubemapSize, cubemapSize, 1, RenderTextureFormat.ARGB32);
-        texNegativeX = new RenderTexture(cubemapSize, cubemapSize, 1, RenderTextureFormat.ARGB32);
-        texPositiveY = new RenderTexture(cubemapSize, cubemapSize, 1, RenderTextureFormat.ARGB32);
-        texNegativeY = new RenderTexture(cubemapSize, cubemapSize, 1, RenderTextureFormat.ARGB32);
-        texPositiveZ = new RenderTexture(cubemapSize, cubemapSize, 1, RenderTextureFormat.ARGB32);
-        texNegativeZ = new RenderTexture(cubemapSize, cubemapSize, 1, RenderTextureFormat.ARGB32);
-        texPositiveX.Create();
-        texNegativeX.Create();
-        texPositiveY.Create();
-        texNegativeY.Create();
-        texPositiveZ.Create();
-        texNegativeZ.Create();
+            GameObject go = GameObject.Find(cameraNames[i]);
+            Camera cam = go.GetComponent<Camera>();
+            RenderTexture tex = new RenderTexture(cubemapSize, cubemapSize, 1, RenderTextureFormat.ARGB32);
+            tex.Create();
+            cam.targetTexture = tex;
 
-        camPositiveX.targetTexture = texPositiveX;
-        camPositiveX.aspect = 1f;
-        camNegativeX.targetTexture = texNegativeX;
-        camPositiveY.targetTexture = texPositiveY;
-        camNegativeY.targetTexture = texNegativeY;
-        camPositiveZ.targetTexture = texPositiveZ;
-        camNegativeZ.targetTexture = texNegativeZ;
-
-        texPtrPositiveX = texPositiveX.GetNativeTexturePtr();
-        texPtrNegativeX = texNegativeX.GetNativeTexturePtr();
-        texPtrPositiveY = texPositiveY.GetNativeTexturePtr();
-        texPtrNegativeY = texNegativeY.GetNativeTexturePtr();
-        texPtrPositiveZ = texPositiveZ.GetNativeTexturePtr();
-        texPtrNegativeZ = texNegativeZ.GetNativeTexturePtr();
-
-        SetCubemapFaceTextureFromUnity(texPtrPositiveX, 0);
-        SetCubemapFaceTextureFromUnity(texPtrNegativeX, 1);
-        SetCubemapFaceTextureFromUnity(texPtrPositiveY, 2);
-        SetCubemapFaceTextureFromUnity(texPtrNegativeY, 3);
-        SetCubemapFaceTextureFromUnity(texPtrPositiveZ, 4);
-        SetCubemapFaceTextureFromUnity(texPtrNegativeZ, 5);
+            SetCubemapFaceTextureFromUnity(tex.GetNativeTexturePtr(), i);
+        }
 
         yield return StartCoroutine("CallPluginAtEndOfFrames");
 	}
