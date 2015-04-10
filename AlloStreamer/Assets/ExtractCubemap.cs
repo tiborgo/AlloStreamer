@@ -16,13 +16,13 @@ public class ExtractCubemap : MonoBehaviour {
         "LeftEye/PositiveY",
         "LeftEye/NegativeY",
         "LeftEye/PositiveZ",
-        "LeftEye/NegativeZ"/*,
+        "LeftEye/NegativeZ",
         "RightEye/PositiveX",
         "RightEye/NegativeX",
         "RightEye/PositiveY",
         "RightEye/NegativeY",
         "RightEye/PositiveZ",
-        "RightEye/NegativeZ"*/
+        "RightEye/NegativeZ"
     };
 
     private const int cubemapSize = 2048; // 1280;
