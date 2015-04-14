@@ -76,7 +76,6 @@
      <Compile Include="Assets\CreateRenderTexture.cs" />
      <Compile Include="Assets\CubeCamParams.cs" />
      <Compile Include="Assets\DrawGUIToRT.cs" />
-     <Compile Include="Assets\ExtractCubemap.cs" />
      <Compile Include="Assets\HUDFPS.cs" />
      <Compile Include="Assets\MainScript.cs" />
      <Compile Include="Assets\MeshParameters.cs" />
@@ -90,6 +89,7 @@
      <Compile Include="Assets\Quantum Theory\UCP\Scripts\QT_SkyBox.cs" />
      <Compile Include="Assets\Quantum Theory\UCP\Scripts\QT_TrafficLight.cs" />
      <Compile Include="Assets\Quantum Theory\UCP\Scripts\QT_TrafficLightController.cs" />
+     <Compile Include="Assets\RenderAndExtractCubemap.cs" />
      <Compile Include="Assets\Scripts\MxrLeepHmd.cs" />
      <Compile Include="Assets\Scripts\MxrPredistortionMesh.cs" />
      <Compile Include="Assets\Scripts\Popup.cs" />
