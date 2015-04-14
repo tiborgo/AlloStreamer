@@ -4,7 +4,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../../CMakeModul
 project(CubemapExtractionPlugin)
 
 # Use unicode in project
-add_definitions(-DUNICODE)
+add_definitions(-DUNICODE -D_UNICODE)
 
 
 set(SOUCRES
@@ -33,9 +33,11 @@ include_directories(${Boost_INCLUDE_DIRS})
 add_library(CubemapExtractionPlugin SHARED ${SOUCRES} ${HEADERS})
 target_link_libraries(CubemapExtractionPlugin ${Boost_LIBRARIES} d3d9.lib)
 
+set(UNITY_PROJECT_PLUGIN_DIR "../AlloStreamer/Assets/Plugins")
+
 set_target_properties(CubemapExtractionPlugin
     PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Lib"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Lib"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Lib"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${UNITY_PROJECT_PLUGIN_DIR}"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${UNITY_PROJECT_PLUGIN_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${UNITY_PROJECT_PLUGIN_DIR}"
 )

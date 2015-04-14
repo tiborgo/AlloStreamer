@@ -4,10 +4,10 @@ using System.Runtime.InteropServices;
 
 public class ExtractCubemap : MonoBehaviour {
 
-    [DllImport("CubemapRenderingPlugin")]
+    [DllImport("CubemapExtractionPlugin")]
     private static extern void SetCubemapFaceCountFromUnity(int face);
 
-    [DllImport("CubemapRenderingPlugin")]
+    [DllImport("CubemapExtractionPlugin")]
     private static extern void SetCubemapFaceTextureFromUnity(System.IntPtr texture, int face);
 
     private static System.String[] cameraNames = {

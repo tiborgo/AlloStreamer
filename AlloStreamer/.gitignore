@@ -1,0 +1,4 @@
+Library/
+Assets/Plugins/Debug/CubemapExtractionPlugin.*
+Assets/Plugins/Release/CubemapExtractionPlugin.*
+UnityVS.AlloStreamer.v12.suo
