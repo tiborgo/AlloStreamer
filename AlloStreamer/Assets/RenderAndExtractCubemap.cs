@@ -10,9 +10,12 @@ public class RenderAndExtractCubemap : MonoBehaviour {
 
     [DllImport("CubemapExtractionPlugin")]
     private static extern void SetCubemapFaceCountFromUnity(int face);
-
     [DllImport("CubemapExtractionPlugin")]
     private static extern void SetCubemapFaceTextureFromUnity(System.IntPtr texture, int face);
+    [DllImport("CubemapExtractionPlugin")]
+    private static extern void StartFromUnity();
+    [DllImport("CubemapExtractionPlugin")]
+    private static extern void StopFromUnity();
 
     private static System.String[] cubemapFaceNames = {
         "LeftEye/PositiveX",
@@ -80,10 +83,17 @@ public class RenderAndExtractCubemap : MonoBehaviour {
             SetCubemapFaceTextureFromUnity(tex.GetNativeTexturePtr(), i);
         }
 
+        // Tell native plugin that rendering has started
+        StartFromUnity();
+
         yield return StartCoroutine("CallPluginAtEndOfFrames");
 	}
 
-    
+    void OnDestroy()
+    {
+        StopFromUnity();
+    }
+
 
     private IEnumerator CallPluginAtEndOfFrames()
     {

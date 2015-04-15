@@ -25,11 +25,20 @@ static void DebugLog (const char* str)
 	#endif
 }
 
-// COM-like Release macro
-#ifndef SAFE_RELEASE
-#define SAFE_RELEASE(a) if (a) { a->Release(); a = NULL; }
-#endif
+// --------------------------------------------------------------------------
+// Start stop management
 
+extern "C" void EXPORT_API StartFromUnity()
+{
+	// Open window for previewing cubemap
+	CreatePreviewWindow();
+}
+
+extern "C" void EXPORT_API StopFromUnity()
+{
+	// Close preview window
+	DestroyPreviewWindow();
+}
 
 // --------------------------------------------------------------------------
 // UnitySetGraphicsDevice
@@ -83,9 +92,6 @@ extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType,
 		g_DeviceType = deviceType;
 	}
 	#endif
-
-	// Open window for previewing cubemap
-	boost::thread previewWindowThread(&_WinMain);
 }
 
 
@@ -303,6 +309,6 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 		}
 	}
 
-	repaint();
+	RepaintPreviewWindow();
 #endif
 }

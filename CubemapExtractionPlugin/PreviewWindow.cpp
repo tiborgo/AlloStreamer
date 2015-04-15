@@ -28,10 +28,6 @@ static CubeMapFacePosition cubeMapFacePositions[6] {
 
 static HWND hWnd;
 
-void repaint() {
-	InvalidateRect(hWnd, NULL, TRUE);
-}
-
 void StretchBltThreadRun(HDC hMemDC, HDC hDC, RECT clientRect, LONG wWidth, LONG wHeight, int i) {
 
 	HDC hFaceMemDC = CreateCompatibleDC(hDC);
@@ -73,6 +69,10 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
 	{
+	case WM_CLOSE:
+		DestroyWindow(hWnd);
+		return 0;
+
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;
@@ -158,14 +158,7 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-
-
-
-//-----------------------------------------------------------------------------
-// Name: wWinMain()
-// Desc: The application's entry point
-//-----------------------------------------------------------------------------
-INT WINAPI _WinMain(/*HINSTANCE hInst, HINSTANCE, LPWSTR, INT*/)
+void MainLoop()
 {
 	//UNREFERENCED_PARAMETER(hInst);
 
@@ -197,8 +190,18 @@ INT WINAPI _WinMain(/*HINSTANCE hInst, HINSTANCE, LPWSTR, INT*/)
 	}
 
 	UnregisterClass(L"CubemapExtractionPlugin", wc.hInstance);
-	return 0;
 }
 
+void CreatePreviewWindow()
+{
+	boost::thread previewWindowThread(&MainLoop);
+}
 
+void RepaintPreviewWindow() {
+	InvalidateRect(hWnd, NULL, TRUE);
+}
 
+void DestroyPreviewWindow()
+{
+	SendMessage(hWnd, WM_CLOSE, 0, 0);
+}
