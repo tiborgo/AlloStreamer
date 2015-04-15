@@ -31,20 +31,6 @@ static void DebugLog (const char* str)
 #endif
 
 
-
-// --------------------------------------------------------------------------
-// SetTimeFromUnity, an example function we export which is called by one of the scripts.
-
-static float g_Time;
-
-extern "C" void EXPORT_API SetTimeFromUnity (float t) { g_Time = t; }
-
-
-
-
-
-
-
 // --------------------------------------------------------------------------
 // UnitySetGraphicsDevice
 
@@ -111,32 +97,12 @@ extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType,
 
 static IDirect3DDevice9* g_D3D9Device;
 
-// A dynamic vertex buffer just to demonstrate how to handle D3D9 device resets.
-static IDirect3DVertexBuffer9* g_D3D9DynamicVB;
-
 static void SetGraphicsDeviceD3D9 (IDirect3DDevice9* device, GfxDeviceEventType eventType)
 {
 	g_D3D9Device = device;
-
-	// Create or release a small dynamic vertex buffer depending on the event type.
-	switch (eventType) {
-	case kGfxDeviceEventInitialize:
-	case kGfxDeviceEventAfterReset:
-		// After device is initialized or was just reset, create the VB.
-		if (!g_D3D9DynamicVB)
-			g_D3D9Device->CreateVertexBuffer (1024, D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC, 0, D3DPOOL_DEFAULT, &g_D3D9DynamicVB, NULL);
-		break;
-	case kGfxDeviceEventBeforeReset:
-	case kGfxDeviceEventShutdown:
-		// Before device is reset or being shut down, release the VB.
-		SAFE_RELEASE(g_D3D9DynamicVB);
-		break;
-	}
 }
 
 #endif // #if SUPPORT_D3D9
-
-
 
 // -------------------------------------------------------------------
 //  Direct3D 11 setup/teardown code
@@ -145,217 +111,15 @@ static void SetGraphicsDeviceD3D9 (IDirect3DDevice9* device, GfxDeviceEventType 
 #if SUPPORT_D3D11
 
 static ID3D11Device* g_D3D11Device;
-static ID3D11Buffer* g_D3D11VB; // vertex buffer
-static ID3D11Buffer* g_D3D11CB; // constant buffer
-static ID3D11VertexShader* g_D3D11VertexShader;
-static ID3D11PixelShader* g_D3D11PixelShader;
-static ID3D11InputLayout* g_D3D11InputLayout;
-static ID3D11RasterizerState* g_D3D11RasterState;
-static ID3D11BlendState* g_D3D11BlendState;
-static ID3D11DepthStencilState* g_D3D11DepthState;
-
-typedef HRESULT (WINAPI *D3DCompileFunc)(
-	const void* pSrcData,
-	unsigned long SrcDataSize,
-	const char* pFileName,
-	const D3D10_SHADER_MACRO* pDefines,
-	ID3D10Include* pInclude,
-	const char* pEntrypoint,
-	const char* pTarget,
-	unsigned int Flags1,
-	unsigned int Flags2,
-	ID3D10Blob** ppCode,
-	ID3D10Blob** ppErrorMsgs);
-
-static const char* kD3D11ShaderText =
-"cbuffer MyCB : register(b0) {\n"
-"	float4x4 worldMatrix;\n"
-"}\n"
-"void VS (float3 pos : POSITION, float4 color : COLOR, out float4 ocolor : COLOR, out float4 opos : SV_Position) {\n"
-"	opos = mul (worldMatrix, float4(pos,1));\n"
-"	ocolor = color;\n"
-"}\n"
-"float4 PS (float4 color : COLOR) : SV_TARGET {\n"
-"	return color;\n"
-"}\n";
-
-
-static void CreateD3D11Resources()
-{
-	D3D11_BUFFER_DESC desc;
-	memset (&desc, 0, sizeof(desc));
-
-	// vertex buffer
-	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.ByteWidth = 1024;
-	desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	g_D3D11Device->CreateBuffer (&desc, NULL, &g_D3D11VB);
-
-	// constant buffer
-	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.ByteWidth = 64; // hold 1 matrix
-	desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	desc.CPUAccessFlags = 0;
-	g_D3D11Device->CreateBuffer (&desc, NULL, &g_D3D11CB);
-
-	// shaders
-	HMODULE compiler = LoadLibraryA("D3DCompiler_43.dll");
-
-	if (compiler == NULL)
-	{
-		// Try compiler from Windows 8 SDK
-		compiler = LoadLibraryA("D3DCompiler_46.dll");
-	}
-	if (compiler)
-	{
-		ID3D10Blob* vsBlob = NULL;
-		ID3D10Blob* psBlob = NULL;
-
-		D3DCompileFunc compileFunc = (D3DCompileFunc)GetProcAddress (compiler, "D3DCompile");
-		if (compileFunc)
-		{
-			HRESULT hr;
-			hr = compileFunc(kD3D11ShaderText, strlen(kD3D11ShaderText), NULL, NULL, NULL, "VS", "vs_4_0", 0, 0, &vsBlob, NULL);
-			if (SUCCEEDED(hr))
-			{
-				g_D3D11Device->CreateVertexShader (vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), NULL, &g_D3D11VertexShader);
-			}
-
-			hr = compileFunc(kD3D11ShaderText, strlen(kD3D11ShaderText), NULL, NULL, NULL, "PS", "ps_4_0", 0, 0, &psBlob, NULL);
-			if (SUCCEEDED(hr))
-			{
-				g_D3D11Device->CreatePixelShader (psBlob->GetBufferPointer(), psBlob->GetBufferSize(), NULL, &g_D3D11PixelShader);
-			}
-		}
-
-		// input layout
-		if (g_D3D11VertexShader && vsBlob)
-		{
-			D3D11_INPUT_ELEMENT_DESC layout[] = {
-				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-				{ "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			};
-
-			g_D3D11Device->CreateInputLayout (layout, 2, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &g_D3D11InputLayout);
-		}
-
-		SAFE_RELEASE(vsBlob);
-		SAFE_RELEASE(psBlob);
-
-		FreeLibrary (compiler);
-	}
-	else
-	{
-		DebugLog ("D3D11: HLSL shader compiler not found, will not render anything\n");
-	}
-
-	// render states
-	D3D11_RASTERIZER_DESC rsdesc;
-	memset (&rsdesc, 0, sizeof(rsdesc));
-	rsdesc.FillMode = D3D11_FILL_SOLID;
-	rsdesc.CullMode = D3D11_CULL_NONE;
-	rsdesc.DepthClipEnable = TRUE;
-	g_D3D11Device->CreateRasterizerState (&rsdesc, &g_D3D11RasterState);
-
-	D3D11_DEPTH_STENCIL_DESC dsdesc;
-	memset (&dsdesc, 0, sizeof(dsdesc));
-	dsdesc.DepthEnable = TRUE;
-	dsdesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	dsdesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-	g_D3D11Device->CreateDepthStencilState (&dsdesc, &g_D3D11DepthState);
-
-	D3D11_BLEND_DESC bdesc;
-	memset (&bdesc, 0, sizeof(bdesc));
-	bdesc.RenderTarget[0].BlendEnable = FALSE;
-	bdesc.RenderTarget[0].RenderTargetWriteMask = 0xF;
-	g_D3D11Device->CreateBlendState (&bdesc, &g_D3D11BlendState);
-}
-
-static void ReleaseD3D11Resources()
-{
-	SAFE_RELEASE(g_D3D11VB);
-	SAFE_RELEASE(g_D3D11CB);
-	SAFE_RELEASE(g_D3D11VertexShader);
-	SAFE_RELEASE(g_D3D11PixelShader);
-	SAFE_RELEASE(g_D3D11InputLayout);
-	SAFE_RELEASE(g_D3D11RasterState);
-	SAFE_RELEASE(g_D3D11BlendState);
-	SAFE_RELEASE(g_D3D11DepthState);
-}
 
 static void SetGraphicsDeviceD3D11 (ID3D11Device* device, GfxDeviceEventType eventType)
 {
 	g_D3D11Device = device;
-
-	if (eventType == kGfxDeviceEventInitialize)
-		CreateD3D11Resources();
-	if (eventType == kGfxDeviceEventShutdown)
-		ReleaseD3D11Resources();
 }
 
 #endif // #if SUPPORT_D3D11
 
-
-
 // --------------------------------------------------------------------------
-// SetDefaultGraphicsState
-//
-// Helper function to setup some "sane" graphics state. Rendering state
-// upon call into our plugin can be almost completely arbitrary depending
-// on what was rendered in Unity before.
-// Before calling into the plugin, Unity will set shaders to null,
-// and will unbind most of "current" objects (e.g. VBOs in OpenGL case).
-//
-// Here, we set culling off, lighting off, alpha blend & test off, Z
-// comparison to less equal, and Z writes off.
-
-static void SetDefaultGraphicsState ()
-{
-	#if SUPPORT_D3D9
-	// D3D9 case
-	if (g_DeviceType == kGfxRendererD3D9)
-	{
-		g_D3D9Device->SetRenderState (D3DRS_CULLMODE, D3DCULL_NONE);
-		g_D3D9Device->SetRenderState (D3DRS_LIGHTING, FALSE);
-		g_D3D9Device->SetRenderState (D3DRS_ALPHABLENDENABLE, FALSE);
-		g_D3D9Device->SetRenderState (D3DRS_ALPHATESTENABLE, FALSE);
-		g_D3D9Device->SetRenderState (D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
-		g_D3D9Device->SetRenderState (D3DRS_ZWRITEENABLE, FALSE);
-	}
-	#endif
-
-
-	#if SUPPORT_D3D11
-	// D3D11 case
-	if (g_DeviceType == kGfxRendererD3D11)
-	{
-		ID3D11DeviceContext* ctx = NULL;
-		g_D3D11Device->GetImmediateContext (&ctx);
-		ctx->OMSetDepthStencilState (g_D3D11DepthState, 0);
-		ctx->RSSetState (g_D3D11RasterState);
-		ctx->OMSetBlendState (g_D3D11BlendState, NULL, 0xFFFFFFFF);
-		ctx->Release();
-	}
-	#endif
-
-
-	#if SUPPORT_OPENGL
-	// OpenGL case
-	if (g_DeviceType == kGfxRendererOpenGL)
-	{
-		glDisable (GL_CULL_FACE);
-		glDisable (GL_LIGHTING);
-		glDisable (GL_BLEND);
-		glDisable (GL_ALPHA_TEST);
-		glDepthFunc (GL_LEQUAL);
-		glEnable (GL_DEPTH_TEST);
-		glDepthMask (GL_FALSE);
-	}
-	#endif
-}
-
-// --------------------------------------------------------------------------
-// SetTextureFromUnity, an example function we export which is called by one of the scripts.
 
 extern "C" void EXPORT_API SetCubemapFaceCountFromUnity(int count)
 {
@@ -460,14 +224,6 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 // be the integer passed to IssuePluginEvent. In this example, we just ignore
 // that value.
 
-
-struct MyVertex {
-	float x, y, z;
-	unsigned int color;
-};
-static void SetDefaultGraphicsState ();
-static void DoRendering (const float* worldMatrix, const float* identityMatrix, float* projectionMatrix, const MyVertex* verts);
-
 void CopyFromGPUToCPU(CubemapFace* cubemapFace) {
 	
 #if SUPPORT_D3D9
@@ -549,20 +305,4 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 
 	repaint();
 #endif
-			//memcpy(out + (desc.Width * desc.Height * 4 * j), buffer, desc.Width * desc.Height * 4);
-
-		
-
-			/*for (int i = 0; i < desc.Width * desc.Height * 4; i++) {
-				int index = (desc.Width * 4 * j) + ((desc.Width * 6 * 4) * (i / (desc.Width * 4))) + (i % (desc.Width * 4));
-				out[index] = buffer[i];
-			}*/
-
-	
-
-		/*for (int i = 0; i < desc.Width * desc.Height * 6; i++) {
-			out[i*4] = 255;
-		}*/
-
-		//*pixels = out;
 }
