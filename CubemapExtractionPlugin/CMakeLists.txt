@@ -1,13 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../../CMakeModules/")
-
-project(CubemapExtractionPlugin)
-
-# Use unicode in project
-add_definitions(-DUNICODE -D_UNICODE)
-
-
-set(SOUCRES
+set(SOURCES
 	CubemapExtractionPlugin.cpp
 	PreviewWindow.cpp)
 	
@@ -17,27 +8,22 @@ set(HEADERS
 	UnityPluginInterface.h)
 
 # include boost
-set(Boost_USE_STATIC_RUNTIME OFF)
-set(Boost_USE_STATIC_LIBS OFF)
-add_definitions(-DBOOST_ALL_DYN_LINK)
 find_package(Boost
   1.57                  # Minimum version
   REQUIRED              # Fail with error if Boost is not found
   COMPONENTS thread date_time system chrono   # Boost libraries by their canonical name
-  )                     # e.g. "date_time" for "libboost_date_time"
-
-# include DirectX
-# find_package(DirectX REQUIRED)
+)                     # e.g. "date_time" for "libboost_date_time"
   
 include_directories(${Boost_INCLUDE_DIRS})
-add_library(CubemapExtractionPlugin SHARED ${SOUCRES} ${HEADERS})
-target_link_libraries(CubemapExtractionPlugin ${Boost_LIBRARIES} d3d9.lib)
-
-set(UNITY_PROJECT_PLUGIN_DIR "../AlloStreamer/Assets/Plugins")
+add_library(CubemapExtractionPlugin SHARED ${SOURCES} ${HEADERS})
+target_link_libraries(CubemapExtractionPlugin
+	${Boost_LIBRARIES}
+	d3d9.lib # DirectX support
+)
 
 set_target_properties(CubemapExtractionPlugin
     PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${UNITY_PROJECT_PLUGIN_DIR}"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${UNITY_PROJECT_PLUGIN_DIR}"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${UNITY_PROJECT_PLUGIN_DIR}"
+    ARCHIVE_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}"
+    LIBRARY_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}"
 )
