@@ -19,6 +19,7 @@ add_library(CubemapExtractionPlugin SHARED ${SOURCES} ${HEADERS})
 target_link_libraries(CubemapExtractionPlugin
 	${Boost_LIBRARIES}
 	d3d9.lib # DirectX support
+	#AlloShared
 )
 
 set_target_properties(CubemapExtractionPlugin

@@ -2,6 +2,7 @@
 
 #include <boost/cstdint.hpp>
 #include "UnityPluginInterface.h"
+#include "AlloShared/CubemapFace.h"
 
 #define MULTITHREADED
 
@@ -12,11 +13,7 @@ const bool multithreaded = true;
 const bool multithreaded = false;
 #endif
 
-struct CubemapFace {
-	boost::uint32_t width;
-	boost::uint32_t height;
-	void* pixels;
-};
+
 
 // --------------------------------------------------------------------------
 // Include headers for the graphics APIs we support
