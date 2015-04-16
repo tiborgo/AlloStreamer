@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.0)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules/")
 
@@ -15,6 +15,7 @@ add_definitions(-DUNICODE -D_UNICODE)
 # In case the libraries have to be connected to Unity
 set(UNITY_PROJECT_PLUGIN_DIR "${CMAKE_SOURCE_DIR}/AlloStreamer/Assets/Plugins")
 
+# so that each project can include the other project's headers
 include_directories(${CMAKE_SOURCE_DIR})
 
 add_subdirectory(AlloShared)

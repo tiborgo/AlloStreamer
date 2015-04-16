@@ -14,8 +14,14 @@ find_package(Boost
   COMPONENTS thread date_time system chrono   # Boost libraries by their canonical name
 )                     # e.g. "date_time" for "libboost_date_time"
   
-include_directories(${Boost_INCLUDE_DIRS})
-add_library(CubemapExtractionPlugin SHARED ${SOURCES} ${HEADERS})
+add_library(CubemapExtractionPlugin
+	SHARED
+	${SOURCES}
+	${HEADERS})
+target_include_directories(CubemapExtractionPlugin
+	PRIVATE
+	${Boost_INCLUDE_DIRS}
+)
 target_link_libraries(CubemapExtractionPlugin
 	${Boost_LIBRARIES}
 	d3d9.lib # DirectX support

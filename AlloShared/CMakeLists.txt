@@ -10,5 +10,11 @@ find_package(Boost
   1.57                  # Minimum version
 )
 
-include_directories(${Boost_INCLUDE_DIRS})
-add_library(AlloShared SHARED ${SOURCES} ${HEADERS})
+add_library(AlloShared
+	SHARED
+	${SOURCES} ${HEADERS}
+)
+target_include_directories(AlloShared
+	PRIVATE
+	${Boost_INCLUDE_DIRS}
+)
