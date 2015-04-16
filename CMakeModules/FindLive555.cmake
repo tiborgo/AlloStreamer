@@ -15,7 +15,7 @@ if (NOT Live555_FOUND)
 
 		find_path(Live555_${library}_INCLUDE_DIR
 			NAMES ${library}.hh
-			PATHS ${Live555_ROOT}/${library}/include
+			PATHS ${Live555_ROOT}/live/${library}/include
 		)
 		
 		if (Live555_${library}_INCLUDE_DIR)
@@ -24,15 +24,24 @@ if (NOT Live555_FOUND)
 			set(_Live555_FOUND OFF)
 		endif ()
 
-		find_library(Live555_${library}_LIBRARY
-			NAMES lib${library}
-			PATHS ${Live555_ROOT}/${library}
-		)
-		if (Live555_${library}_LIBRARY)
-			list(APPEND _Live555_LIBRARIES ${Live555_${library}_LIBRARY})
-		else()
-			set(_Live555_FOUND OFF)
-		endif ()
+		foreach (mode DEBUG RELEASE)
+			find_library(Live555_${library}_LIBRARY_${mode}
+				NAMES ${library}
+				PATHS ${Live555_ROOT}/lib/${mode}
+			)
+			if (Live555_${library}_LIBRARY_${mode})
+				if (${mode} STREQUAL RELEASE) 
+					list(APPEND _Live555_LIBRARIES optimized ${Live555_${library}_LIBRARY_${mode}})
+				elseif (${mode} STREQUAL DEBUG) 
+					list(APPEND _Live555_LIBRARIES debug ${Live555_${library}_LIBRARY_${mode}})
+				else ()
+					MESSAGE(STATUS no)
+					list(APPEND _Live555_LIBRARIES ${Live555_${library}_LIBRARY_${mode}})
+				endif()
+			else()
+				set(_Live555_FOUND OFF)
+			endif ()
+		endforeach ()
 
 	endforeach ()
 
