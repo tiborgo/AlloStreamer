@@ -171,6 +171,55 @@ CubemapFaceD3D9* CubemapFaceD3D9::create(IDirect3DTexture9* texturePtr) {
 
 #endif
 
+#if SUPPORT_D3D11
+
+CubemapFaceD3D11::CubemapFaceD3D11(
+	boost::uint32_t width,
+	boost::uint32_t height,
+	ID3D11Texture2D* gpuTexturePtr,
+	ID3D11Texture2D* cpuTexturePtr,
+	D3D11_MAPPED_SUBRESOURCE resource
+	) :
+	CubemapFace(width, height),
+	gpuTexturePtr(gpuTexturePtr),
+	cpuTexturePtr(cpuTexturePtr),
+	resource(resource) {
+
+
+}
+
+CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr) {
+
+	ID3D11Texture2D* gpuTexturePtr = (ID3D11Texture2D*)texturePtr;
+
+	D3D11_TEXTURE2D_DESC textureDescription;
+	gpuTexturePtr->GetDesc(&textureDescription);
+
+	UINT width = textureDescription.Width;
+	UINT height = textureDescription.Height;
+
+	textureDescription.BindFlags = 0;
+	textureDescription.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	textureDescription.Usage = D3D11_USAGE_STAGING;
+
+	ID3D11Texture2D* cpuTexturePtr;
+	HRESULT hr = g_D3D11Device->CreateTexture2D(&textureDescription, NULL, &cpuTexturePtr);
+
+	ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
+	g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
+	//HRESULT hr2 = g_D3D11Device->CreateDeferredContext(0, &g_D3D11DeviceContext);
+
+	D3D11_MAPPED_SUBRESOURCE resource;
+	ZeroMemory(&resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
+	unsigned int subresource = D3D11CalcSubresource(0, 0, 0);
+	hr = g_D3D11DeviceContext->Map(cpuTexturePtr, subresource, D3D11_MAP_READ, 0, &resource);
+	g_D3D11DeviceContext->Unmap(cpuTexturePtr, subresource);
+
+	return new CubemapFaceD3D11(width, height, gpuTexturePtr, cpuTexturePtr, resource);
+}
+
+#endif
+
 extern "C" void EXPORT_API SetCubemapFaceCountFromUnity(int count)
 {
 	//cubemapFaceCount = count;
@@ -197,35 +246,7 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 	// D3D11 case
 	if (g_DeviceType == kGfxRendererD3D11)
 	{
-		/*CubemapFaceD3D11* cubemapFaceD3D11 = new CubemapFaceD3D11();
-
-		cubemapFaceD3D11->gpuTexturePtr = (ID3D11Texture2D*)texturePtr;
-
-		D3D11_TEXTURE2D_DESC textureDescription;
-		cubemapFaceD3D11->gpuTexturePtr->GetDesc(&textureDescription);
-
-		cubemapFaceD3D11->width = textureDescription.Width;
-		cubemapFaceD3D11->height = textureDescription.Height;
-
-		textureDescription.BindFlags = 0;
-		textureDescription.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-		textureDescription.Usage = D3D11_USAGE_STAGING;
-
-		HRESULT hr = g_D3D11Device->CreateTexture2D(&textureDescription, NULL, &cubemapFaceD3D11->cpuTexturePtr);
-
-		ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
-		g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
-		//HRESULT hr2 = g_D3D11Device->CreateDeferredContext(0, &g_D3D11DeviceContext);
-
-		ZeroMemory(&cubemapFaceD3D11->resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
-		unsigned int subresource = D3D11CalcSubresource(0, 0, 0);
-		hr = g_D3D11DeviceContext->Map(cubemapFaceD3D11->cpuTexturePtr, subresource, D3D11_MAP_READ, 0, &cubemapFaceD3D11->resource);
-		g_D3D11DeviceContext->Unmap(cubemapFaceD3D11->cpuTexturePtr, subresource);
-
-		// Assuming format D3DFMT_A8R8G8B8 (4 byte per pixel)
-		cubemapFaceD3D11->pixels = new char[cubemapFaceD3D11->width * cubemapFaceD3D11->height * 4];
-
-		cubemapFaces[face] = cubemapFaceD3D11;*/
+		cubemap.setFace(face, CubemapFaceD3D11::create((ID3D11Texture2D*)texturePtr));
 	}
 #endif
 
