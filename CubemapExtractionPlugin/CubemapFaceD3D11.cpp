@@ -58,7 +58,12 @@ void CubemapFaceD3D11::copyFromGPUToCPU() {
 	//unsigned int subresource = D3D11CalcSubresource(0, 0, 0);
 	//HRESULT hr = g_D3D11DeviceContext->Map(cubemapFaceD3D11->cpuTexturePtr, subresource, D3D11_MAP_READ, 0, &cubemapFaceD3D11->resource);
 		
-	memcpy(this->pixels, this->resource.pData, this->width * this->height * 4);
+	// DirectX 11 is using wrong order of colors in a pixel -> correcting it
+	for (unsigned int i = 0; i < this->width * this->height * 4; i += 4) {
+		for (int j = 0; j < 3; j++) {
+			((char*)this->pixels)[i + j] = ((char*)this->resource.pData)[i + 2 - j];
+		}
+	}
 		
 	//g_D3D11DeviceContext->Unmap(cubemapFaceD3D11->cpuTexturePtr, subresource);
 }
