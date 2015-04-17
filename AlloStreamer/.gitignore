@@ -23,3 +23,5 @@ sysinfo.txt
 # Generated plugins
 Assets/Plugins/Debug/CubemapExtractionPlugin.*
 Assets/Plugins/Release/CubemapExtractionPlugin.*
+Assets/Plugins/Debug/AlloShared.*
+Assets/Plugins/Release/AlloShared.*

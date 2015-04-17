@@ -4,6 +4,7 @@
 
 #include "PreviewWindow.h"
 #include "CubemapExtractionPlugin.h"
+#include "AlloShared/CubemapFace.h"
 
 //-----------------------------------------------------------------------------
 // Global variables
@@ -48,7 +49,7 @@ void StretchBltThreadRun(HDC hMemDC, HDC hDC, RECT clientRect, LONG wWidth, LONG
 		&dwBytes, NULL, 0);
 
 	SelectObject(hFaceMemDC, hFaceMemBitmap);
-	memcpy(dwBytes, cubemapFaces[i]->pixels, wWidth * wHeight * 4);
+	memcpy(dwBytes, cubemap.faces[i]->pixels, wWidth * wHeight * 4);
 
 	StretchBlt(hMemDC,
 		clientRect.right * cubeMapFacePositions[i].horizontal,
@@ -79,10 +80,10 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	case WM_PAINT:
 
-		if (cubemapFaceCount >= 6) {
+		if (cubemap.faces.size() >= 6) {
 
-			int wWidth = cubemapFaces[0]->width;
-			int wHeight = cubemapFaces[0]->height;
+			int wWidth = cubemap.faces[0]->width;
+			int wHeight = cubemap.faces[0]->height;
 
 			PAINTSTRUCT ps = { 0 };
 

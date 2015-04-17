@@ -7,10 +7,6 @@
 #include "CubemapExtractionPlugin.h"
 #include "PreviewWindow.h"
 
-int cubemapFaceCount;
-CubemapFace** cubemapFaces;
-
-
 // --------------------------------------------------------------------------
 // Helper utilities
 
@@ -127,11 +123,59 @@ static void SetGraphicsDeviceD3D11 (ID3D11Device* device, GfxDeviceEventType eve
 
 // --------------------------------------------------------------------------
 
+#if SUPPORT_D3D9
+
+CubemapFaceD3D9::CubemapFaceD3D9(
+	boost::uint32_t width,
+	boost::uint32_t height,
+	IDirect3DTexture9* texturePtr,
+	IDirect3DSurface9* gpuSurfacePtr,
+	IDirect3DSurface9* cpuSurfacePtr,
+	D3DFORMAT format,
+	D3DLOCKED_RECT lockedRect
+	) :
+	CubemapFace(width, height),
+	texturePtr(texturePtr),
+	gpuSurfacePtr(gpuSurfacePtr),
+	cpuSurfacePtr(cpuSurfacePtr),
+	format(format),
+	lockedRect(lockedRect) {
+
+}
+
+CubemapFaceD3D9* CubemapFaceD3D9::create(IDirect3DTexture9* texturePtr) {
+
+	D3DSURFACE_DESC textureDescription;
+	HRESULT hr = texturePtr->GetLevelDesc(0, &textureDescription);
+
+	UINT width = textureDescription.Width;
+	UINT height = textureDescription.Height;
+	D3DFORMAT format = textureDescription.Format;
+
+	IDirect3DSurface9* gpuSurfacePtr;
+	IDirect3DSurface9* cpuSurfacePtr;
+
+	hr = texturePtr->GetSurfaceLevel(0, &gpuSurfacePtr);
+
+	hr = g_D3D9Device->CreateOffscreenPlainSurface(width, height, format,
+		D3DPOOL_SYSTEMMEM, &cpuSurfacePtr, NULL);
+
+	D3DLOCKED_RECT lockedRect;
+	ZeroMemory(&lockedRect, sizeof(D3DLOCKED_RECT));
+	hr = cpuSurfacePtr->LockRect(&lockedRect, 0, D3DLOCK_READONLY);
+	hr = cpuSurfacePtr->UnlockRect();
+
+	return new CubemapFaceD3D9(width, height, texturePtr,
+		gpuSurfacePtr, cpuSurfacePtr, textureDescription.Format, lockedRect);
+}
+
+#endif
+
 extern "C" void EXPORT_API SetCubemapFaceCountFromUnity(int count)
 {
-	cubemapFaceCount = count;
-	cubemapFaces = new CubemapFace*[count];
-	ZeroMemory(cubemapFaces, sizeof(CubemapFace*) * count);
+	//cubemapFaceCount = count;
+	//cubemapFaces = new CubemapFace*[count];
+	//ZeroMemory(cubemapFaces, sizeof(CubemapFace*) * count);
 }
 
 extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int face)
@@ -144,33 +188,7 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 	// D3D9 case
 	if (g_DeviceType == kGfxRendererD3D9)
 	{
-		CubemapFaceD3D9* cubemapFaceD3D9 = new CubemapFaceD3D9();
-
-		cubemapFaceD3D9->texturePtr = (IDirect3DTexture9*)texturePtr;
-
-		D3DSURFACE_DESC textureDescription;
-		HRESULT hr = cubemapFaceD3D9->texturePtr->GetLevelDesc(0, &textureDescription);
-		cubemapFaceD3D9->width = textureDescription.Width;
-		cubemapFaceD3D9->height = textureDescription.Height;
-		cubemapFaceD3D9->format = textureDescription.Format;
-
-		hr = cubemapFaceD3D9->texturePtr->GetSurfaceLevel(0, &cubemapFaceD3D9->gpuSurfacePtr);
-
-		hr = g_D3D9Device->CreateOffscreenPlainSurface(cubemapFaceD3D9->width,
-			cubemapFaceD3D9->height,
-			cubemapFaceD3D9->format,
-			D3DPOOL_SYSTEMMEM,
-			&cubemapFaceD3D9->cpuSurfacePtr,
-			NULL);
-
-		ZeroMemory(&cubemapFaceD3D9->lockedRect, sizeof(D3DLOCKED_RECT));
-		hr = cubemapFaceD3D9->cpuSurfacePtr->LockRect(&cubemapFaceD3D9->lockedRect, 0, D3DLOCK_READONLY);
-		hr = cubemapFaceD3D9->cpuSurfacePtr->UnlockRect();
-
-		// Assuming format D3DFMT_A8R8G8B8 (4 byte per pixel)
-		cubemapFaceD3D9->pixels = new char[cubemapFaceD3D9->width * cubemapFaceD3D9->height * 4];
-
-		cubemapFaces[face] = cubemapFaceD3D9;
+		cubemap.setFace(face, CubemapFaceD3D9::create((IDirect3DTexture9*)texturePtr));
 	}
 #endif
 
@@ -179,7 +197,7 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 	// D3D11 case
 	if (g_DeviceType == kGfxRendererD3D11)
 	{
-		CubemapFaceD3D11* cubemapFaceD3D11 = new CubemapFaceD3D11();
+		/*CubemapFaceD3D11* cubemapFaceD3D11 = new CubemapFaceD3D11();
 
 		cubemapFaceD3D11->gpuTexturePtr = (ID3D11Texture2D*)texturePtr;
 
@@ -207,7 +225,7 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 		// Assuming format D3DFMT_A8R8G8B8 (4 byte per pixel)
 		cubemapFaceD3D11->pixels = new char[cubemapFaceD3D11->width * cubemapFaceD3D11->height * 4];
 
-		cubemapFaces[face] = cubemapFaceD3D11;
+		cubemapFaces[face] = cubemapFaceD3D11;*/
 	}
 #endif
 
@@ -292,20 +310,20 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 	// D3D9 case
 	if (g_DeviceType == kGfxRendererD3D9 && multithreaded)
 	{
-		boost::thread* threads = new boost::thread[cubemapFaceCount];
+		boost::thread* threads = new boost::thread[cubemap.faces.size()];
 
-		for (int i = 0; i < cubemapFaceCount; i++) {
-			threads[i] = boost::thread(boost::bind(&CopyFromGPUToCPU, cubemapFaces[i]));
+		for (int i = 0; i < cubemap.faces.size(); i++) {
+			threads[i] = boost::thread(boost::bind(&CopyFromGPUToCPU, cubemap.faces[i]));
 		}
 
-		for (int i = 0; i < cubemapFaceCount; i++) {
+		for (int i = 0; i < cubemap.faces.size(); i++) {
 			threads[i].join();
 		}
 
 	}
 	else if (g_DeviceType == kGfxRendererD3D11 || !multithreaded) {
-		for (int i = 0; i < cubemapFaceCount; i++) {
-			CopyFromGPUToCPU(cubemapFaces[i]);
+		for (int i = 0; i < cubemap.faces.size(); i++) {
+			CopyFromGPUToCPU(cubemap.faces[i]);
 		}
 	}
 
