@@ -9,8 +9,6 @@ using System.Reflection;
 public class RenderAndExtractCubemap : MonoBehaviour {
 
     [DllImport("CubemapExtractionPlugin")]
-    private static extern void SetCubemapFaceCountFromUnity(int face);
-    [DllImport("CubemapExtractionPlugin")]
     private static extern void SetCubemapFaceTextureFromUnity(System.IntPtr texture, int face);
     [DllImport("CubemapExtractionPlugin")]
     private static extern void StartFromUnity();
@@ -58,8 +56,6 @@ public class RenderAndExtractCubemap : MonoBehaviour {
         //cubemap.transform.localEulerAngles = new Vector3(0, 0, 0);
         //cubemap.transform.localPosition = Vector3.zero;
         //cubemap.transform.Translate(new Vector3(50, 50, 50));
-
-        SetCubemapFaceCountFromUnity(cubemapFaceNames.Length);
 
         for (int i = 0; i < cubemapFaceNames.Length; i++)
         {

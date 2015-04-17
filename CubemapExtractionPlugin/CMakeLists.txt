@@ -1,11 +1,17 @@
 set(SOURCES
 	CubemapExtractionPlugin.cpp
-	PreviewWindow.cpp)
+	PreviewWindow.cpp
+	CubemapFaceD3D9.cpp
+	CubemapFaceD3D11.cpp
+)
 	
 set(HEADERS
 	CubemapExtractionPlugin.h
 	PreviewWindow.h
-	UnityPluginInterface.h)
+	UnityPluginInterface.h
+	CubemapFaceD3D9.h
+	CubemapFaceD3D11.h
+)
 
 # include boost
 find_package(Boost

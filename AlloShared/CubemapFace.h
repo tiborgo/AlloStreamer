@@ -20,6 +20,8 @@ public:
 	const boost::uint32_t height;
 	void* const pixels;
 
+	virtual void copyFromGPUToCPU() = 0;
+
 protected:
 	CubemapFace(boost::uint32_t width, boost::uint32_t height);
 };
