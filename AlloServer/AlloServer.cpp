@@ -119,8 +119,8 @@ static void initEncoder()
     /* put sample parameters */
     contexts[i]->bit_rate = bit_rate;
     /* resolution must be a multiple of two */
-    contexts[i]->width = image_width;
-    contexts[i]->height = image_height;
+    //contexts[i]->width = image_width;
+    //contexts[i]->height = image_height;
     /* frames per second */
     contexts[i]->time_base= {1,FPS};
     contexts[i]->gop_size = 20; /* emit one intra frame every ten frames */
@@ -150,13 +150,13 @@ static void initEncoder()
     exit(1);
   }
     frame->format = AV_PIX_FMT_YUV420P;//c->pix_fmt;
-    frame->width  = image_width;//c->width;
-    frame->height = image_height;//c->height;
+    //frame->width  = image_width;//c->width;
+    //frame->height = image_height;//c->height;
 //  frame->time_base= (AVRational){1,10};
 
     iframe->format = AV_PIX_FMT_RGB24;
-    iframe->width  = image_width;//c->width;
-    iframe->height = image_height;//c->height;
+    //iframe->width  = image_width;//c->width;
+    //iframe->height = image_height;//c->height;
   /* the image can be allocated by any means and av_image_alloc() is
    * just the most convenient way if av_malloc() is to be used */
   ret = av_image_alloc(frame->data, frame->linesize, frame->width, frame->height,
@@ -168,7 +168,7 @@ static void initEncoder()
     exit(1);
   }
 
-  convertCtx = sws_getContext(image_width, image_height, PIX_FMT_RGB24, image_width, image_height, PIX_FMT_YUV420P, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+  //convertCtx = sws_getContext(image_width, image_height, PIX_FMT_RGB24, image_width, image_height, PIX_FMT_YUV420P, SWS_FAST_BILINEAR, NULL, NULL, NULL);
   
 }
 
@@ -190,7 +190,7 @@ count++;
 
 //avpicture_fill((AVPicture *) frame1, /*randomPixels*/sharedData->pixels, AV_PIX_FMT_RGB24,image_width,image_height);
 //	count++;
-  avpicture_fill((AVPicture *) iframe, sharedData->pixels/*randomPixels*/, AV_PIX_FMT_RGB24,image_width,image_height);
+  //avpicture_fill((AVPicture *) iframe, sharedData->pixels/*randomPixels*/, AV_PIX_FMT_RGB24,image_width,image_height);
 
 	//avpicture_fill((AVPicture *) iframe, randomPixels, AV_PIX_FMT_RGB24,image_width,image_height);
 
@@ -203,14 +203,14 @@ count++;
 
     if(iframe->linesize[0] > 0)
     {
-    	iframe->data[0] += iframe->linesize[0]*(image_height -1);
+    	//iframe->data[0] += iframe->linesize[0]*(image_height -1);
     	iframe->linesize[0] = -iframe->linesize[0];
     }
 
 /*    sws_scale(convertCtx, frame1->data, frame1->linesize,0, image_height, (u_int8_t *const *)pic_in.img.plane, (const int*)pic_in.img.i_stride);*/
 
 
-    sws_scale(convertCtx, iframe->data, iframe->linesize,0, image_height, frame->data, frame->linesize);
+    //sws_scale(convertCtx, iframe->data, iframe->linesize,0, image_height, frame->data, frame->linesize);
     
 
 /*    x264_nal_t* nals = NULL;*/
@@ -289,8 +289,8 @@ main(int argc, char *argv[])
   fprintf(logz, "Uploading frames to libav... \n");
   fflush(logz);
 
- for(int i=0; i<image_width*image_height*3; i++)
-{
+ //for(int i=0; i<image_width*image_height*3; i++)
+//{
     //randomPixels[i] = rand() % 255;
 
 /*	fprintf(logz, "%i, ", sharedData->pixels[i]);*/
@@ -300,7 +300,7 @@ main(int argc, char *argv[])
 /*		fprintf(logz,"\n");*/
 /*		fflush(logz);*/
 /*	}*/
-} 
+//} 
 
 
 
@@ -315,10 +315,13 @@ main(int argc, char *argv[])
 
   uploadFrames();//Does not return
   
-  unsigned int winWidth = image_width, winHeight = image_height;
+  //unsigned int winWidth = image_width, winHeight = image_height;
   int x = 0, y = 0;
 
 
   return 0;
 }
 
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
+	startRTSP();
+}

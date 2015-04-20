@@ -13,7 +13,7 @@ public:
 	ID3D11Texture2D* const cpuTexturePtr;
 	D3D11_MAPPED_SUBRESOURCE resource;
 
-	static CubemapFaceD3D11* create(ID3D11Texture2D* texturePtr);
+	static CubemapFaceD3D11* create(ID3D11Texture2D* texturePtr, int face);
 
 	void copyFromGPUToCPU();
 
@@ -22,6 +22,7 @@ protected:
 	CubemapFaceD3D11(
 		boost::uint32_t width,
 		boost::uint32_t height,
+		int face,
 		ID3D11Texture2D* gpuTexturePtr,
 		ID3D11Texture2D* cpuTexturePtr,
 		D3D11_MAPPED_SUBRESOURCE resource

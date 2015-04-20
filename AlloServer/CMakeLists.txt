@@ -1,19 +1,22 @@
 set(SOURCES
 	config.cpp
 	serverUni.cpp
-	RandomFramedSource.cpp
-	#MyDeviceSource.cpp
+	#RandomFramedSource.cpp
 	H264VideoOnDemandServerMediaSubsession.cpp
-	AlloServer.cpp)
+	AlloServer.cpp
+	CubemapFaceSource.cpp
+)
 	
 set(HEADERS
 	shared.h
 	config.h
-	#MyDeviceSource.h
-	RandomFramedSource.h
+	#RandomFramedSource.h
 	FrameData.h
 	H264VideoOnDemandServerMediaSubsession.h
-	ConcurrentQueue.h)
+	concurrent_queue.h
+	CubemapFaceSource.h
+	AlloServer.h
+)
 
 # include Boost, FFMpeg, live555, x264
 find_package(Boost
@@ -43,11 +46,12 @@ target_link_libraries(AlloServer
 	${Live555_LIBRARIES}
 	${X264_LIBRARIES}
 	Ws2_32.lib # for live555 sockets
+	AlloShared
 )
 
-#set_target_properties(CubemapExtractionPlugin
-#    PROPERTIES
-#    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${UNITY_PROJECT_PLUGIN_DIR}"
-#    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${UNITY_PROJECT_PLUGIN_DIR}"
-#    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${UNITY_PROJECT_PLUGIN_DIR}"
-#)
+set_target_properties(AlloServer
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}"
+    LIBRARY_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}"
+)

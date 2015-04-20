@@ -6,17 +6,18 @@
 CubemapFaceD3D11::CubemapFaceD3D11(
 	boost::uint32_t width,
 	boost::uint32_t height,
+	int index,
 	ID3D11Texture2D* gpuTexturePtr,
 	ID3D11Texture2D* cpuTexturePtr,
 	D3D11_MAPPED_SUBRESOURCE resource
 	) :
-	CubemapFace(width, height),
+	CubemapFace(width, height, index),
 	gpuTexturePtr(gpuTexturePtr),
 	cpuTexturePtr(cpuTexturePtr),
 	resource(resource) {
 }
 
-CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr) {
+CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr, int face) {
 
 	ID3D11Texture2D* gpuTexturePtr = (ID3D11Texture2D*)texturePtr;
 
@@ -43,7 +44,7 @@ CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr) {
 	hr = g_D3D11DeviceContext->Map(cpuTexturePtr, subresource, D3D11_MAP_READ, 0, &resource);
 	g_D3D11DeviceContext->Unmap(cpuTexturePtr, subresource);
 
-	return new CubemapFaceD3D11(width, height, gpuTexturePtr, cpuTexturePtr, resource);
+	return new CubemapFaceD3D11(width, height, face, gpuTexturePtr, cpuTexturePtr, resource);
 }
 
 void CubemapFaceD3D11::copyFromGPUToCPU() {

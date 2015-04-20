@@ -3,11 +3,14 @@
 #include <math.h>
 #include <stdio.h>
 #include <boost/thread.hpp>
+#include <boost/interprocess/shared_memory_object.hpp>
 
 #include "CubemapExtractionPlugin.h"
 #include "PreviewWindow.h"
 #include "CubemapFaceD3D9.h"
 #include "CubemapFaceD3D11.h"
+#include "AlloShared/Signals.h"
+#include "AlloServer/AlloServer.h"
 
 // --------------------------------------------------------------------------
 // Helper utilities
@@ -30,6 +33,27 @@ extern "C" void EXPORT_API StartFromUnity()
 {
 	// Open window for previewing cubemap
 	CreatePreviewWindow();
+	startRTSP();
+
+	// Create and/or open shared memory
+	boost::interprocess::shared_memory_object shm =
+		boost::interprocess::shared_memory_object(boost::interprocess::open_or_create, "MySharedMemory", write);
+
+	//Set size
+	shm.truncate(sizeof(FrameData));
+
+	//Map the whole shared memory in this process
+	region = mapped_region(shm, read_write);
+
+
+	//Write all the memory to 1
+	//std::memset(region.get_address(), 2, region.get_size());
+
+	//Get the address of the mapped region
+	void * addr = region.get_address();
+
+	//Construct the shared structure in memory
+	data = new (addr)FrameData;
 }
 
 extern "C" void EXPORT_API StopFromUnity()
@@ -102,7 +126,7 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 	// D3D9 case
 	if (g_DeviceType == kGfxRendererD3D9)
 	{
-		cubemap.setFace(face, CubemapFaceD3D9::create((IDirect3DTexture9*)texturePtr));
+		cubemap.setFace(CubemapFaceD3D9::create((IDirect3DTexture9*)texturePtr, face));
 	}
 #endif
 
@@ -111,7 +135,7 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 	// D3D11 case
 	if (g_DeviceType == kGfxRendererD3D11)
 	{
-		cubemap.setFace(face, CubemapFaceD3D11::create((ID3D11Texture2D*)texturePtr));
+		cubemap.setFace(CubemapFaceD3D11::create((ID3D11Texture2D*)texturePtr, face));
 	}
 #endif
 
@@ -124,6 +148,7 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 	}
 #endif
 
+	addedCubemapFace(face);
 }
 
 // --------------------------------------------------------------------------
@@ -139,20 +164,22 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 	// D3D9 case
 	if (g_DeviceType == kGfxRendererD3D9 && multithreaded)
 	{
-		boost::thread* threads = new boost::thread[cubemap.faces.size()];
+		boost::thread* threads = new boost::thread[cubemap.count()];
 
-		for (int i = 0; i < cubemap.faces.size(); i++) {
-			threads[i] = boost::thread(boost::bind(&CubemapFace::copyFromGPUToCPU, cubemap.faces[i]));
+		for (int i = 0; i < cubemap.count(); i++) {
+			threads[i] = boost::thread(boost::bind(&CubemapFace::copyFromGPUToCPU, cubemap.getFace(i)));
 		}
 
-		for (int i = 0; i < cubemap.faces.size(); i++) {
+		for (int i = 0; i < cubemap.count(); i++) {
 			threads[i].join();
+			extractedCubemapFace(i);
 		}
 
 	}
 	else if (g_DeviceType == kGfxRendererD3D11 || !multithreaded) {
-		for (int i = 0; i < cubemap.faces.size(); i++) {
-			cubemap.faces[i]->copyFromGPUToCPU();
+		for (int i = 0; i < cubemap.count(); i++) {
+			cubemap.getFace(i)->copyFromGPUToCPU();
+			extractedCubemapFace(i);
 		}
 	}
 

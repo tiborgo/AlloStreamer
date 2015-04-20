@@ -22,6 +22,8 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 #ifndef _H264_ON_DEMAND_SERVER_MEDIA_SUBSESSION_HH
 #define _H264_ON_DEMAND_SERVER_MEDIA_SUBSESSION_HH
 
+#include "AlloShared/CubemapFace.h"
+
 #ifndef _ON_DEMAND_SERVER_MEDIA_SUBSESSION_HH
 #include "OnDemandServerMediaSubsession.hh"
 #endif
@@ -29,8 +31,9 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 class H264VideoOnDemandServerMediaSubsession : public OnDemandServerMediaSubsession {
 public:
     static H264VideoOnDemandServerMediaSubsession*
-    createNew(UsageEnvironment& env, Boolean reuseFirstSource,
-            char* name);
+    createNew(UsageEnvironment& env,
+		Boolean reuseFirstSource,
+		CubemapFace* face);
 
     // Used to implement "getAuxSDPLine()":
     //void checkForAuxSDPLine1();
@@ -39,7 +42,7 @@ public:
 protected:
     H264VideoOnDemandServerMediaSubsession(UsageEnvironment& env,
             Boolean reuseFirstSource,
-            char* name);
+            CubemapFace* face);
     // called only by createNew();
     virtual ~H264VideoOnDemandServerMediaSubsession();
 
@@ -59,7 +62,7 @@ private:
     char* fAuxSDPLine;
     char fDoneFlag; // used when setting up "fAuxSDPLine"
     RTPSink* fDummyRTPSink; // ditto
-    char* name;
+	CubemapFace* face;
 
 };
 

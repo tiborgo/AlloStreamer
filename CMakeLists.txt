@@ -19,5 +19,5 @@ set(UNITY_PROJECT_PLUGIN_DIR "${CMAKE_SOURCE_DIR}/AlloStreamer/Assets/Plugins")
 include_directories(${CMAKE_SOURCE_DIR})
 
 add_subdirectory(AlloShared)
-add_subdirectory(CubemapExtractionPlugin)
 add_subdirectory(AlloServer)
+add_subdirectory(CubemapExtractionPlugin)

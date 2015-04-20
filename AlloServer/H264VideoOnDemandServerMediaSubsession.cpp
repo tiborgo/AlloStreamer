@@ -27,19 +27,22 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 #include "H264VideoOnDemandServerMediaSubsession.h"
 #include "H264VideoRTPSink.hh"
 #include "RandomFramedSource.h"
+#include "CubemapFaceSource.h"
 #include "H264VideoStreamFramer.hh"
 UsageEnvironment* envi;
 
 H264VideoOnDemandServerMediaSubsession*
 H264VideoOnDemandServerMediaSubsession::createNew(UsageEnvironment& env,
         Boolean reuseFirstSource,
-        char* name) {
-  return new H264VideoOnDemandServerMediaSubsession(env, reuseFirstSource, name);
+		CubemapFace* face) {
+	return new H264VideoOnDemandServerMediaSubsession(env, reuseFirstSource, face);
 }
 
-H264VideoOnDemandServerMediaSubsession::H264VideoOnDemandServerMediaSubsession(UsageEnvironment& env, Boolean reuseFirstSource, char* name)
+H264VideoOnDemandServerMediaSubsession::H264VideoOnDemandServerMediaSubsession(UsageEnvironment& env,
+	Boolean reuseFirstSource,
+	CubemapFace* face)
 : OnDemandServerMediaSubsession(env, reuseFirstSource),
-fAuxSDPLine(NULL), fDoneFlag(0), fDummyRTPSink(NULL), name(name) {
+fAuxSDPLine(NULL), fDoneFlag(0), fDummyRTPSink(NULL), face(face) {
   envi = &env;
 }
 
@@ -50,7 +53,9 @@ H264VideoOnDemandServerMediaSubsession::~H264VideoOnDemandServerMediaSubsession(
 FramedSource* H264VideoOnDemandServerMediaSubsession::createNewStreamSource(unsigned /*clientSessionId*/, unsigned& estBitrate) {
   estBitrate = 4000; // kbps, estimate
 
-  RandomFramedSource* source = RandomFramedSource::createNew(*envi, name);
+  //RandomFramedSource* source = RandomFramedSource::createNew(*envi, name);
+
+  CubemapFaceSource* source = CubemapFaceSource::createNew(*envi, face);
 
   if (source == NULL) return NULL;
 

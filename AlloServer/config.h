@@ -8,8 +8,8 @@
 #ifndef CONFIG_H
 #define	CONFIG_H
 
-extern const int image_width;
-extern const int image_height;
+//extern const int image_width;
+//extern const int image_height;
 extern const int bit_rate;
 extern const char* preset_val;
 extern const char* tune_val;

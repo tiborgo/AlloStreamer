@@ -6,13 +6,14 @@
 CubemapFaceD3D9::CubemapFaceD3D9(
 	boost::uint32_t width,
 	boost::uint32_t height,
+	int index,
 	IDirect3DTexture9* texturePtr,
 	IDirect3DSurface9* gpuSurfacePtr,
 	IDirect3DSurface9* cpuSurfacePtr,
 	D3DFORMAT format,
 	D3DLOCKED_RECT lockedRect
 	) :
-	CubemapFace(width, height),
+	CubemapFace(width, height, index),
 	texturePtr(texturePtr),
 	gpuSurfacePtr(gpuSurfacePtr),
 	cpuSurfacePtr(cpuSurfacePtr),
@@ -21,7 +22,7 @@ CubemapFaceD3D9::CubemapFaceD3D9(
 
 }
 
-CubemapFaceD3D9* CubemapFaceD3D9::create(IDirect3DTexture9* texturePtr) {
+CubemapFaceD3D9* CubemapFaceD3D9::create(IDirect3DTexture9* texturePtr, int index) {
 
 	D3DSURFACE_DESC textureDescription;
 	HRESULT hr = texturePtr->GetLevelDesc(0, &textureDescription);
@@ -43,7 +44,7 @@ CubemapFaceD3D9* CubemapFaceD3D9::create(IDirect3DTexture9* texturePtr) {
 	hr = cpuSurfacePtr->LockRect(&lockedRect, 0, D3DLOCK_READONLY);
 	hr = cpuSurfacePtr->UnlockRect();
 
-	return new CubemapFaceD3D9(width, height, texturePtr,
+	return new CubemapFaceD3D9(width, height, index, texturePtr,
 		gpuSurfacePtr, cpuSurfacePtr, textureDescription.Format, lockedRect);
 }
 

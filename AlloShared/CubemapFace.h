@@ -19,18 +19,23 @@ public:
 	const boost::uint32_t width;
 	const boost::uint32_t height;
 	void* const pixels;
+	const int index;
 
 	virtual void copyFromGPUToCPU() = 0;
 
 protected:
-	CubemapFace(boost::uint32_t width, boost::uint32_t height);
+	CubemapFace(boost::uint32_t width, boost::uint32_t height, int index);
 };
 
 class AlloShared_API Cubemap {
-public:
+
+private:
 	std::vector<CubemapFace*> faces;
 
-	void setFace(int faceIndex, CubemapFace* face);
+public:
+	void setFace(CubemapFace* face);
+	CubemapFace* getFace(int index);
+	int count();
 };
 
 extern AlloShared_API Cubemap cubemap;

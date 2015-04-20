@@ -16,7 +16,7 @@ public:
 	const D3DFORMAT format;
 	const D3DLOCKED_RECT lockedRect;
 
-	static CubemapFaceD3D9* create(IDirect3DTexture9* texturePtr);
+	static CubemapFaceD3D9* create(IDirect3DTexture9* texturePtr, int index);
 
 	void copyFromGPUToCPU();
 
@@ -24,6 +24,7 @@ protected:
 	CubemapFaceD3D9(
 		boost::uint32_t width,
 		boost::uint32_t height,
+		int index,
 		IDirect3DTexture9* texturePtr,
 		IDirect3DSurface9* gpuSurfacePtr,
 		IDirect3DSurface9* cpuSurfacePtr,

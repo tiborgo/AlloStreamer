@@ -1,18 +1,25 @@
 set(SOURCES
 	CubemapFace.cpp
+	Signals.cpp
 )
 	
 set(HEADERS
 	CubemapFace.h
+	Signals.h
 )
 
 find_package(Boost
   1.57                  # Minimum version
+  REQUIRED
+  signals
 )
 
 add_library(AlloShared
 	SHARED
 	${SOURCES} ${HEADERS}
+)
+target_link_libraries(AlloShared
+	${Boost_LIBRARIES}
 )
 target_include_directories(AlloShared
 	PRIVATE

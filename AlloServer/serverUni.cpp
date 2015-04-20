@@ -33,6 +33,9 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 #include "shared.h"
 #include "config.h"
 #include "RandomFramedSource.h"
+#include "AlloShared/CubemapFace.h"
+#include "AlloShared/Signals.h"
+#include "AlloServer.h"
 //RTPSink* videoSink;
 UsageEnvironment* env;
 
@@ -58,10 +61,29 @@ static void onMatroskaDemuxCreation(MatroskaFileServerDemux* newDemux, void* /*c
 }
 void eventLoop();
 
-void startRTSP(){
+void AlloServer_API startRTSP(){
 //    pthread_t thread;
 //    return pthread_create(&thread,NULL,eventLoop, NULL);
     boost::thread thread1(eventLoop);
+}
+
+ServerMediaSession* sms;
+
+EventTriggerId addFaceSubstreamTriggerId;
+
+void addFaceSubstream0(void* face) {
+
+	//for (int i = 0; i < cubemap.faces.size(); i++) {
+
+		H264VideoOnDemandServerMediaSubsession *subsession = H264VideoOnDemandServerMediaSubsession::createNew(*env, reuseFirstSource, (CubemapFace*)face);
+		sms->addSubsession(subsession);
+	//}
+
+}
+
+void addFaceSubstream(int index) {
+	CubemapFace* face = cubemap.getFace(index);
+	env->taskScheduler().triggerEvent(addFaceSubstreamTriggerId, face);
 }
 
 void eventLoop() {
@@ -77,6 +99,8 @@ void eventLoop() {
   // Repeat the above with each <username>, <password> that you wish to allow
   // access to the server.
 #endif
+
+  addedCubemapFace.connect(&addFaceSubstream);
 
   // Create the RTSP server:
   RTSPServer* rtspServer = RTSPServer::createNew(*env, 8554, authDB);
@@ -101,17 +125,10 @@ void eventLoop() {
   {
     char const* streamName = "h264ESVideoTest";
     
-    ServerMediaSession* sms
-      = ServerMediaSession::createNew(*env, streamName, streamName,
+    sms = ServerMediaSession::createNew(*env, streamName, streamName,
 				      descriptionString);
     
-    for (int i = 0; i < randomStreamsCount; i++) {
-      
-      char* name = new char[56];
-      sprintf(name, "%d", i);
-      H264VideoOnDemandServerMediaSubsession *subsession = H264VideoOnDemandServerMediaSubsession::createNew(*env, reuseFirstSource, name);
-      sms->addSubsession(subsession);
-    }
+    
       
     
     //H264VideoOnDemandServerMediaSubsession *subsession2 = H264VideoOnDemandServerMediaSubsession::createNew(*env, reuseFirstSource, "two");
@@ -146,6 +163,8 @@ void eventLoop() {
     usleep(5000000);
     printf("done play\n");
     */
+  addFaceSubstreamTriggerId = env->taskScheduler().createEventTrigger(&addFaceSubstream0);
+
   env->taskScheduler().doEventLoop(); // does not return
 
  // return 0; // only to prevent compiler warning
