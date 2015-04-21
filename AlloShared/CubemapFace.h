@@ -5,6 +5,8 @@
 #include <boost/interprocess/containers/vector.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/interprocess/sync/interprocess_mutex.hpp>
+#include <boost/interprocess/sync/interprocess_condition.hpp>
 
 #ifdef _WIN32
 	#ifdef AlloShared_EXPORTS
@@ -49,6 +51,9 @@ public:
 	void setFace(CubemapFace::Ptr& face);
 	CubemapFace::Ptr getFace(int index);
 	int count();
+
+	boost::interprocess::interprocess_mutex mutex;
+	boost::interprocess::interprocess_condition newFaceCondition;
 
 private:
 	boost::interprocess::vector<CubemapFace::Ptr, FacePtrAllocator> faces;

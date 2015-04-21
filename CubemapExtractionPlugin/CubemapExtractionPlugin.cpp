@@ -195,8 +195,6 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 		// to be implemented
 	}
 #endif
-
-	addedCubemapFace(index);
 }
 
 // --------------------------------------------------------------------------

@@ -36,6 +36,7 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 #include "AlloShared/CubemapFace.h"
 #include "AlloShared/Signals.h"
 #include "AlloServer.h"
+
 //RTPSink* videoSink;
 UsageEnvironment* env;
 
@@ -60,6 +61,7 @@ static void onMatroskaDemuxCreation(MatroskaFileServerDemux* newDemux, void* /*c
   newMatroskaDemuxWatchVariable = 1;
 }
 void eventLoop();
+void addFaceSubstream();
 
 void startRTSP(){
 //    pthread_t thread;
@@ -81,9 +83,24 @@ void addFaceSubstream0(void* face) {
 
 }
 
-void addFaceSubstream(int index) {
-	CubemapFace* face = cubemap->getFace(index).get();
-	env->taskScheduler().triggerEvent(addFaceSubstreamTriggerId, face);
+std::vector<H264VideoOnDemandServerMediaSubsession*> faceSubstreams;
+
+void addFaceSubstream()
+{
+	while (true)
+	{
+		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(cubemap->mutex);
+		std::vector<CubemapFace*> facesToAdd;
+		for (int i = faceSubstreams.size(); i < cubemap->count(); i++)
+		{
+			facesToAdd.push_back(cubemap->getFace(i).get());
+		}
+		for (int i = 0; i < facesToAdd.size(); i++)
+		{
+			env->taskScheduler().triggerEvent(addFaceSubstreamTriggerId, facesToAdd[i]);
+		}
+		cubemap->newFaceCondition.wait(lock);
+	}
 }
 
 void eventLoop() {
@@ -99,8 +116,6 @@ void eventLoop() {
   // Repeat the above with each <username>, <password> that you wish to allow
   // access to the server.
 #endif
-
-  addedCubemapFace.connect(&addFaceSubstream);
 
   // Create the RTSP server:
   RTSPServer* rtspServer = RTSPServer::createNew(*env, 8554, authDB);
@@ -164,6 +179,8 @@ void eventLoop() {
     printf("done play\n");
     */
   addFaceSubstreamTriggerId = env->taskScheduler().createEventTrigger(&addFaceSubstream0);
+
+  boost::thread thread2(&addFaceSubstream);
 
   env->taskScheduler().doEventLoop(); // does not return
 

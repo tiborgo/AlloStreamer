@@ -285,8 +285,10 @@ main(int argc, char *argv[])
   
   //sharedData = static_cast<FrameData*>(addr);
 
+  // Must have read and write access since we are using mutexes
+  // and locking a mutex is a write operation
   boost::interprocess::managed_shared_memory shm =
-	  boost::interprocess::managed_shared_memory(boost::interprocess::open_read_only,
+	  boost::interprocess::managed_shared_memory(boost::interprocess::open_only,
 	  "MySharedMemory");
 
   cubemap = shm.find<Cubemap>("Cubemap").first;
@@ -323,12 +325,8 @@ main(int argc, char *argv[])
   uploadFrames();//Does not return
   
   //unsigned int winWidth = image_width, winHeight = image_height;
-  int x = 0, y = 0;
+  //int x = 0, y = 0;
 
 
   return 0;
-}
-
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
-	startRTSP();
 }

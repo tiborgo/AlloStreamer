@@ -16,4 +16,3 @@
 
 
 extern AlloShared_API boost::signal<void(int)> extractedCubemapFace;
-extern AlloShared_API boost::signal<void(int)> addedCubemapFace;

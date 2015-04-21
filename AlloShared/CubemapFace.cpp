@@ -18,10 +18,12 @@ Cubemap::Cubemap(FacePtrAllocator& allocator)
 }
 
 void Cubemap::setFace(CubemapFace::Ptr& face) {
+	boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(mutex);
 	if (faces.size() <= face->index) {
 		faces.resize(face->index + 1);
 	}
 	faces[face->index] = face;
+	newFaceCondition.notify_all();
 }
 
 CubemapFace::Ptr Cubemap::getFace(int index) {
