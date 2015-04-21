@@ -91,11 +91,18 @@ CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapFace* face)
 	  framePool->push(frame);
   }
 
+  // Initialize codec and encoder
   
-
-  
-
-  // Initialize codec
+  int ret;
+  //uint8_t endcode[] = { 0, 0, 1, 0xb7 };
+  //printf("Encode video file %s\n", filename);
+  /* find the mpeg1 video encoder */
+  AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+  if (!codec) {
+	  fprintf(stderr, "Codec not found\n");
+	  exit(1);
+  }
+ 
   codecContext = avcodec_alloc_context3(codec);
 
   if (!codecContext) {

@@ -20,7 +20,7 @@ extern x264_picture_t pic_in, pic_out;
 //extern unsigned char image[1280*720*3];
 //extern unsigned char* image;
 //extern pthread_mutex_t mutex;
-extern AVCodec *codec;
+//extern AVCodec *codec;
 extern AVCodecContext** contexts;
 const int contexts_count = 1;
 extern AVFrame *frame;

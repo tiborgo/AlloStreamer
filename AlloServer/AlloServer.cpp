@@ -120,8 +120,8 @@ static void initEncoder()
     /* put sample parameters */
     contexts[i]->bit_rate = bit_rate;
     /* resolution must be a multiple of two */
-    //contexts[i]->width = image_width;
-    //contexts[i]->height = image_height;
+	contexts[i]->width = 2048;//image_width;
+	contexts[i]->height = 2048;// image_height;
     /* frames per second */
     contexts[i]->time_base= {1,FPS};
     contexts[i]->gop_size = 20; /* emit one intra frame every ten frames */
@@ -144,30 +144,30 @@ static void initEncoder()
     }
   }
  
-  frame = avcodec_alloc_frame();
+  /*frame = avcodec_alloc_frame();
   iframe = avcodec_alloc_frame();
   if (!frame|| !iframe) {
     fprintf(stderr, "Could not allocate video frame\n");
     exit(1);
-  }
-    frame->format = AV_PIX_FMT_YUV420P;//c->pix_fmt;
+  }*/
+    //frame->format = AV_PIX_FMT_YUV420P;//c->pix_fmt;
     //frame->width  = image_width;//c->width;
     //frame->height = image_height;//c->height;
 //  frame->time_base= (AVRational){1,10};
 
-    iframe->format = AV_PIX_FMT_RGB24;
+    //iframe->format = AV_PIX_FMT_RGB24;
     //iframe->width  = image_width;//c->width;
     //iframe->height = image_height;//c->height;
   /* the image can be allocated by any means and av_image_alloc() is
    * just the most convenient way if av_malloc() is to be used */
-  ret = av_image_alloc(frame->data, frame->linesize, frame->width, frame->height,
+  /*ret = av_image_alloc(frame->data, frame->linesize, frame->width, frame->height,
     AV_PIX_FMT_YUV420P, 32);
   ret = av_image_alloc(iframe->data, iframe->linesize, iframe->width, iframe->height, AV_PIX_FMT_RGB24, 32);
     
   if (ret < 0) {
     fprintf(stderr, "Could not allocate raw picture buffer\n");
     exit(1);
-  }
+  }*/
 
   //convertCtx = sws_getContext(image_width, image_height, PIX_FMT_RGB24, image_width, image_height, PIX_FMT_YUV420P, SWS_FAST_BILINEAR, NULL, NULL, NULL);
   
@@ -179,7 +179,7 @@ void *addr;
 void uploadFrames()
 {
   
-  while(sharedData->shutdownServer==false/* true*/)
+  while(true)
   {
 count++;
 /*if(count%100==0){*/
@@ -202,11 +202,11 @@ count++;
 /*    }*/
 
 
-    if(iframe->linesize[0] > 0)
-    {
+    //if(iframe->linesize[0] > 0)
+    //{
     	//iframe->data[0] += iframe->linesize[0]*(image_height -1);
-    	iframe->linesize[0] = -iframe->linesize[0];
-    }
+    	//iframe->linesize[0] = -iframe->linesize[0];
+    //}
 
 /*    sws_scale(convertCtx, frame1->data, frame1->linesize,0, image_height, (u_int8_t *const *)pic_in.img.plane, (const int*)pic_in.img.i_stride);*/
 
@@ -261,7 +261,7 @@ count++;
 int
 main(int argc, char *argv[])
 {
-    logz = fopen("/home/tibor/Desktop/Logs/AlloServer.log", "w");
+	logz = fopen("C:/Users/Tibor/Desktop/Logs/AlloServer.log", "w");
 
 
   avcodec_register_all();
@@ -289,7 +289,7 @@ main(int argc, char *argv[])
 	  boost::interprocess::managed_shared_memory(boost::interprocess::open_read_only,
 	  "MySharedMemory");
 
-  cubemap = shm.construct<Cubemap>("Cubemap")(Cubemap::FacePtrAllocator(shm.get_segment_manager()));
+  cubemap = shm.find<Cubemap>("Cubemap").first;
   
   startRTSP();
 
