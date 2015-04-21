@@ -11,7 +11,6 @@
 #include "CubemapFaceD3D9.h"
 #include "CubemapFaceD3D11.h"
 #include "AlloShared/Signals.h"
-#include "AlloServer/AlloServer.h"
 
 // --------------------------------------------------------------------------
 // Helper utilities
@@ -27,27 +26,38 @@ static void DebugLog (const char* str)
 	#endif
 }
 
+boost::interprocess::managed_shared_memory shm;
+
+void allocateCubemap()
+{
+	if (!cubemap)
+	{
+		boost::interprocess::shared_memory_object::remove("MySharedMemory");
+
+		shm =
+			boost::interprocess::managed_shared_memory(boost::interprocess::open_or_create,
+			"MySharedMemory",
+			2048 * 2048 * 4 * 12 + sizeof(Cubemap)+12 * sizeof(CubemapFace)+65536);
+
+		//Cubemap::Allocator allocator(shm.get_segment_manager());
+		shm.destroy<Cubemap>("Cubemap");
+		cubemap = shm.construct<Cubemap>("Cubemap")(Cubemap::FacePtrAllocator(shm.get_segment_manager()));
+	}
+}
+
 // --------------------------------------------------------------------------
 // Start stop management
 
-boost::interprocess::managed_shared_memory shm;
-
 extern "C" void EXPORT_API StartFromUnity()
 {
+	// Create and/or open shared memory
+	allocateCubemap();
+
 	// Open window for previewing cubemap
 	CreatePreviewWindow();
-	startRTSP();
 
-	// Create and/or open shared memory
-	shm =
-		boost::interprocess::managed_shared_memory(boost::interprocess::open_or_create,
-		"MySharedMemory",
-		65536);
-
-	//Cubemap::Allocator allocator(shm.get_segment_manager());
-
-	boost::interprocess::offset_ptr<Cubemap> cubemap = shm.construct<Cubemap>("Cubemap")(Cubemap::FacePtrAllocator(shm.get_segment_manager()));
-
+	
+	
 
 	//Set size
 	//shm.truncate(sizeof(FrameData));
@@ -128,6 +138,8 @@ extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType,
 
 extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int index)
 {
+	allocateCubemap();
+
 	// A script calls this at initialization time; just remember the texture pointer here.
 	// Will update texture pixels each frame from the plugin rendering event (texture update
 	// needs to happen on the rendering thread).
@@ -138,6 +150,12 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 	// D3D9 case
 	if (g_DeviceType == kGfxRendererD3D9)
 	{
+		size_t requiredMemorySize = 2048 * 2048 * 4 + sizeof(CubemapFaceD3D9)+sizeof(CubemapFace::Ptr) * (cubemap->count() + 1);
+		if (shm.get_free_memory() < requiredMemorySize)
+		{
+			boost::interprocess::managed_shared_memory::grow("MySharedMemory", requiredMemorySize);
+		}
+
 		static CubemapFaceD3D9::FaceAllocator faceAllocator(shm.get_segment_manager());
 
 		CubemapFaceD3D9::Ptr face = CubemapFaceD3D9::create((IDirect3DTexture9*)texturePtr,
@@ -153,6 +171,12 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 	// D3D11 case
 	if (g_DeviceType == kGfxRendererD3D11)
 	{
+		/*size_t requiredMemorySize = 2048 * 2048 * 4 + sizeof(CubemapFaceD3D11)+sizeof(CubemapFace::Ptr) * (cubemap->count() + 1);
+		if (shm.get_free_memory() < requiredMemorySize)
+		{
+			boost::interprocess::managed_shared_memory::grow("MySharedMemory", requiredMemorySize);
+		}*/
+
 		static CubemapFaceD3D11::FaceAllocator faceAllocator(shm.get_segment_manager());
 
 		CubemapFaceD3D11::Ptr face = CubemapFaceD3D11::create((ID3D11Texture2D*)texturePtr,

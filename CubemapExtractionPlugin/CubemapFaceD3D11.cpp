@@ -61,18 +61,20 @@ void CubemapFaceD3D11::copyFromGPUToCPU() {
 	// copy data from GPU to CPU
 	g_D3D11DeviceContext->CopyResource(this->cpuTexturePtr, this->gpuTexturePtr);
 		
-	//ZeroMemory(&cubemapFaceD3D11->resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
-	//unsigned int subresource = D3D11CalcSubresource(0, 0, 0);
-	//HRESULT hr = g_D3D11DeviceContext->Map(cubemapFaceD3D11->cpuTexturePtr, subresource, D3D11_MAP_READ, 0, &cubemapFaceD3D11->resource);
+	/*ZeroMemory(&this->resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
+	unsigned int subresource = D3D11CalcSubresource(0, 0, 0);
+	HRESULT hr = g_D3D11DeviceContext->Map(this->cpuTexturePtr, subresource, D3D11_MAP_READ, 0, &this->resource);*/
 		
 	// DirectX 11 is using wrong order of colors in a pixel -> correcting it
+	/*char* pixels = (char*)this->pixels.get();
 	for (unsigned int i = 0; i < this->width * this->height * 4; i += 4) {
 		for (int j = 0; j < 3; j++) {
-			((char*)this->pixels.get())[i + j] = ((char*)this->resource.pData)[i + 2 - j];
+			pixels[i + j] = ((char*)this->resource.pData)[i + 2 - j];
 		}
-	}
+	}*/
+	memcpy(this->pixels.get(), this->resource.pData, this->width * this->height * 4);
 		
-	//g_D3D11DeviceContext->Unmap(cubemapFaceD3D11->cpuTexturePtr, subresource);
+	//g_D3D11DeviceContext->Unmap(this->cpuTexturePtr, subresource);
 }
 
 #endif

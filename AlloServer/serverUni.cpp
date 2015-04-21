@@ -61,7 +61,7 @@ static void onMatroskaDemuxCreation(MatroskaFileServerDemux* newDemux, void* /*c
 }
 void eventLoop();
 
-void AlloServer_API startRTSP(){
+void startRTSP(){
 //    pthread_t thread;
 //    return pthread_create(&thread,NULL,eventLoop, NULL);
     boost::thread thread1(eventLoop);

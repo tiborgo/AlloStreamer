@@ -32,7 +32,6 @@ target_link_libraries(CubemapExtractionPlugin
 	${Boost_LIBRARIES}
 	d3d9.lib # DirectX support
 	AlloShared
-	AlloServer
 )
 
 set_target_properties(CubemapExtractionPlugin

@@ -35,8 +35,7 @@
 void startRTSP();
 void signalNewFrameData();
 #include "FrameData.h"
-#include <boost/interprocess/shared_memory_object.hpp>
-#include <boost/interprocess/mapped_region.hpp>
+#include <boost/interprocess/managed_shared_memory.hpp>
 #include <cstring>
 #include <cstdlib>
 #include <stdio.h>
@@ -57,6 +56,8 @@ extern "C" {
 #include <libavutil/time.h>
 #include <libswscale/swscale.h>
 }
+
+#include "AlloShared/CubemapFace.h"
 
 /* disable printf */
 //#define printf(...)
@@ -269,20 +270,26 @@ main(int argc, char *argv[])
   
 
   //Open already created shared memory object.
-  shared_memory_object shm (open_only, "MySharedMemory", read_write);
+  //shared_memory_object shm (open_only, "MySharedMemory", read_write);
   
-  fprintf(logz,"mapping region... \n");
-  fflush(logz);
+  //fprintf(logz,"mapping region... \n");
+  //fflush(logz);
   
   //Map the whole shared memory in this process
-  region = mapped_region(shm, read_write);
+  //region = mapped_region(shm, read_write);
   
   //Check that memory was initialized to 1
-  addr = region.get_address();
-  fprintf(logz,"constructing object in memory \n");
-  fflush(logz);
+  //addr = region.get_address();
+  //fprintf(logz,"constructing object in memory \n");
+  //fflush(logz);
   
-  sharedData = static_cast<FrameData*>(addr);
+  //sharedData = static_cast<FrameData*>(addr);
+
+  boost::interprocess::managed_shared_memory shm =
+	  boost::interprocess::managed_shared_memory(boost::interprocess::open_read_only,
+	  "MySharedMemory");
+
+  cubemap = shm.construct<Cubemap>("Cubemap")(Cubemap::FacePtrAllocator(shm.get_segment_manager()));
   
   startRTSP();
 

@@ -28,8 +28,7 @@ find_package(FFmpeg REQUIRED)
 find_package(Live555 REQUIRED)
 find_package(X264 REQUIRED)
 
-add_library(AlloServer
-	SHARED
+add_executable(AlloServer
 	${SOURCES}
 	${HEADERS}
 )
