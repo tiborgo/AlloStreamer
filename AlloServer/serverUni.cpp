@@ -82,7 +82,7 @@ void addFaceSubstream0(void* face) {
 }
 
 void addFaceSubstream(int index) {
-	CubemapFace* face = cubemap.getFace(index);
+	CubemapFace* face = cubemap->getFace(index).get();
 	env->taskScheduler().triggerEvent(addFaceSubstreamTriggerId, face);
 }
 

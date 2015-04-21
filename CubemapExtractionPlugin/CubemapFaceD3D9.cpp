@@ -7,13 +7,14 @@ CubemapFaceD3D9::CubemapFaceD3D9(
 	boost::uint32_t width,
 	boost::uint32_t height,
 	int index,
+	PixelAllocator& allocator,
 	IDirect3DTexture9* texturePtr,
 	IDirect3DSurface9* gpuSurfacePtr,
 	IDirect3DSurface9* cpuSurfacePtr,
 	D3DFORMAT format,
 	D3DLOCKED_RECT lockedRect
 	) :
-	CubemapFace(width, height, index),
+	CubemapFace(width, height, index, allocator),
 	texturePtr(texturePtr),
 	gpuSurfacePtr(gpuSurfacePtr),
 	cpuSurfacePtr(cpuSurfacePtr),
@@ -22,7 +23,10 @@ CubemapFaceD3D9::CubemapFaceD3D9(
 
 }
 
-CubemapFaceD3D9* CubemapFaceD3D9::create(IDirect3DTexture9* texturePtr, int index) {
+CubemapFaceD3D9::Ptr CubemapFaceD3D9::create(IDirect3DTexture9* texturePtr,
+	int index,
+	FaceAllocator& faceAllocator,
+	PixelAllocator& pixelAllocator) {
 
 	D3DSURFACE_DESC textureDescription;
 	HRESULT hr = texturePtr->GetLevelDesc(0, &textureDescription);
@@ -44,7 +48,9 @@ CubemapFaceD3D9* CubemapFaceD3D9::create(IDirect3DTexture9* texturePtr, int inde
 	hr = cpuSurfacePtr->LockRect(&lockedRect, 0, D3DLOCK_READONLY);
 	hr = cpuSurfacePtr->UnlockRect();
 
-	return new CubemapFaceD3D9(width, height, index, texturePtr,
+	CubemapFaceD3D9* addr = faceAllocator.allocate_one().get();
+	
+	return new (addr) CubemapFaceD3D9(width, height, index, pixelAllocator, texturePtr,
 		gpuSurfacePtr, cpuSurfacePtr, textureDescription.Format, lockedRect);
 }
 
@@ -56,7 +62,7 @@ void CubemapFaceD3D9::copyFromGPUToCPU() {
 	//ZeroMemory(&cubemapFaceD3D9->lockedRect, sizeof(D3DLOCKED_RECT));
 	//hr = cubemapFaceD3D9->cpuSurfacePtr->LockRect(&cubemapFaceD3D9->lockedRect, 0, D3DLOCK_READONLY);
 
-	memcpy(this->pixels, this->lockedRect.pBits, this->width * this->height * 4);
+	memcpy(this->pixels.get(), this->lockedRect.pBits, this->width * this->height * 4);
 
 	//hr = cubemapFaceD3D9->cpuSurfacePtr->UnlockRect();
 

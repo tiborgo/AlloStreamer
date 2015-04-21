@@ -1,7 +1,10 @@
 #pragma once
 
 #include <boost/cstdint.hpp>
-#include <vector>
+#include <boost/interprocess/offset_ptr.hpp>
+#include <boost/interprocess/containers/vector.hpp>
+#include <boost/interprocess/allocators/allocator.hpp>
+#include <boost/interprocess/managed_shared_memory.hpp>
 
 #ifdef _WIN32
 	#ifdef AlloShared_EXPORTS
@@ -15,27 +18,40 @@
 
 // uses 4 byte per pixel
 class AlloShared_API CubemapFace {
+
 public:
+	typedef boost::interprocess::managed_shared_memory::segment_manager SegmentManager;
+	typedef boost::interprocess::allocator<char, SegmentManager> PixelAllocator;
+	typedef boost::interprocess::offset_ptr<CubemapFace> Ptr;
+
 	const boost::uint32_t width;
 	const boost::uint32_t height;
-	void* const pixels;
+	boost::interprocess::offset_ptr<void> pixels;
 	const int index;
 
-	virtual void copyFromGPUToCPU() = 0;
+	CubemapFace(boost::uint32_t width,
+		boost::uint32_t height,
+		int index,
+		PixelAllocator& allocator);
 
-protected:
-	CubemapFace(boost::uint32_t width, boost::uint32_t height, int index);
+	virtual void copyFromGPUToCPU() = 0;
 };
 
 class AlloShared_API Cubemap {
 
-private:
-	std::vector<CubemapFace*> faces;
-
 public:
-	void setFace(CubemapFace* face);
-	CubemapFace* getFace(int index);
+	typedef boost::interprocess::allocator<CubemapFace::Ptr, CubemapFace::SegmentManager> FacePtrAllocator;
+	typedef boost::interprocess::allocator<CubemapFace, CubemapFace::SegmentManager> FaceAllocator;
+	typedef boost::interprocess::offset_ptr<Cubemap> Ptr;
+
+	Cubemap(FacePtrAllocator& allocator);
+
+	void setFace(CubemapFace::Ptr& face);
+	CubemapFace::Ptr getFace(int index);
 	int count();
+
+private:
+	boost::interprocess::vector<CubemapFace::Ptr, FacePtrAllocator> faces;
 };
 
-extern AlloShared_API Cubemap cubemap;
+extern AlloShared_API boost::interprocess::offset_ptr<Cubemap> cubemap;

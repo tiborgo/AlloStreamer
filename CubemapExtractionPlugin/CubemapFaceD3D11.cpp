@@ -7,17 +7,21 @@ CubemapFaceD3D11::CubemapFaceD3D11(
 	boost::uint32_t width,
 	boost::uint32_t height,
 	int index,
+	PixelAllocator allocator,
 	ID3D11Texture2D* gpuTexturePtr,
 	ID3D11Texture2D* cpuTexturePtr,
 	D3D11_MAPPED_SUBRESOURCE resource
 	) :
-	CubemapFace(width, height, index),
+	CubemapFace(width, height, index, allocator),
 	gpuTexturePtr(gpuTexturePtr),
 	cpuTexturePtr(cpuTexturePtr),
 	resource(resource) {
 }
 
-CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr, int face) {
+CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr,
+	int index,
+	FaceAllocator& faceAllocator,
+	PixelAllocator& pixelAllocator) {
 
 	ID3D11Texture2D* gpuTexturePtr = (ID3D11Texture2D*)texturePtr;
 
@@ -44,7 +48,9 @@ CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr, int face
 	hr = g_D3D11DeviceContext->Map(cpuTexturePtr, subresource, D3D11_MAP_READ, 0, &resource);
 	g_D3D11DeviceContext->Unmap(cpuTexturePtr, subresource);
 
-	return new CubemapFaceD3D11(width, height, face, gpuTexturePtr, cpuTexturePtr, resource);
+	CubemapFaceD3D11* addr = faceAllocator.allocate_one().get();
+
+	return new (addr) CubemapFaceD3D11(width, height, index, pixelAllocator, gpuTexturePtr, cpuTexturePtr, resource);
 }
 
 void CubemapFaceD3D11::copyFromGPUToCPU() {
@@ -62,7 +68,7 @@ void CubemapFaceD3D11::copyFromGPUToCPU() {
 	// DirectX 11 is using wrong order of colors in a pixel -> correcting it
 	for (unsigned int i = 0; i < this->width * this->height * 4; i += 4) {
 		for (int j = 0; j < 3; j++) {
-			((char*)this->pixels)[i + j] = ((char*)this->resource.pData)[i + 2 - j];
+			((char*)this->pixels.get())[i + j] = ((char*)this->resource.pData)[i + 2 - j];
 		}
 	}
 		

@@ -1,20 +1,30 @@
 #include "CubemapFace.h"
 
-AlloShared_API Cubemap cubemap;
+AlloShared_API boost::interprocess::offset_ptr<Cubemap> cubemap;
 
-CubemapFace::CubemapFace(boost::uint32_t width, boost::uint32_t height, int index)
-: width(width), height(height), pixels(new char[width * height * 4]), index(index) {
+CubemapFace::CubemapFace(boost::uint32_t width,
+	boost::uint32_t height,
+	int index,
+	PixelAllocator& allocator)
+	: width(width), height(height), pixels(allocator.allocate(width * height * 4)), index(index)
+{
 
 }
 
-void Cubemap::setFace(CubemapFace* face) {
+Cubemap::Cubemap(FacePtrAllocator& allocator)
+: faces(allocator)
+{
+
+}
+
+void Cubemap::setFace(CubemapFace::Ptr& face) {
 	if (faces.size() <= face->index) {
 		faces.resize(face->index + 1);
 	}
 	faces[face->index] = face;
 }
 
-CubemapFace* Cubemap::getFace(int index) {
+CubemapFace::Ptr Cubemap::getFace(int index) {
 	return faces[index];
 }
 

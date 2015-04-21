@@ -10,13 +10,19 @@
 
 class CubemapFaceD3D9 : public CubemapFace {
 public:
+	typedef boost::interprocess::allocator<CubemapFaceD3D9, CubemapFace::SegmentManager> FaceAllocator;
+	typedef boost::interprocess::offset_ptr<CubemapFaceD3D9> Ptr;
+
 	IDirect3DTexture9* const texturePtr;
 	IDirect3DSurface9* const gpuSurfacePtr;
 	IDirect3DSurface9* const cpuSurfacePtr;
 	const D3DFORMAT format;
 	const D3DLOCKED_RECT lockedRect;
 
-	static CubemapFaceD3D9* create(IDirect3DTexture9* texturePtr, int index);
+	static Ptr create(IDirect3DTexture9* texturePtr,
+		int index,
+		FaceAllocator& faceAllocator,
+		PixelAllocator& pixelAllocator);
 
 	void copyFromGPUToCPU();
 
@@ -25,6 +31,7 @@ protected:
 		boost::uint32_t width,
 		boost::uint32_t height,
 		int index,
+		PixelAllocator& allocator,
 		IDirect3DTexture9* texturePtr,
 		IDirect3DSurface9* gpuSurfacePtr,
 		IDirect3DSurface9* cpuSurfacePtr,

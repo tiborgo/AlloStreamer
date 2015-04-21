@@ -49,7 +49,7 @@ void StretchBltThreadRun(HDC hMemDC, HDC hDC, RECT clientRect, LONG wWidth, LONG
 		&dwBytes, NULL, 0);
 
 	SelectObject(hFaceMemDC, hFaceMemBitmap);
-	memcpy(dwBytes, cubemap.getFace(i)->pixels, wWidth * wHeight * 4);
+	memcpy(dwBytes, cubemap->getFace(i)->pixels.get(), wWidth * wHeight * 4);
 
 	StretchBlt(hMemDC,
 		clientRect.right * cubeMapFacePositions[i].horizontal,
@@ -80,10 +80,10 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	case WM_PAINT:
 
-		if (cubemap.count() >= 6) {
+		if (cubemap->count() >= 6) {
 
-			int wWidth = cubemap.getFace(0)->width;
-			int wHeight = cubemap.getFace(0)->height;
+			int wWidth = cubemap->getFace(0)->width;
+			int wHeight = cubemap->getFace(0)->height;
 
 			PAINTSTRUCT ps = { 0 };
 

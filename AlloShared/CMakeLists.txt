@@ -12,6 +12,7 @@ find_package(Boost
   1.57                  # Minimum version
   REQUIRED
   signals
+  date_time
 )
 
 add_library(AlloShared

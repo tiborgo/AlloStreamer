@@ -191,7 +191,7 @@ void CubemapFaceSource::frameCubemapFace(int index) {
 
 		// Fill frame
 		avpicture_fill((AVPicture*)frame,
-			(uint8_t*)this->face->pixels,
+			(uint8_t*)this->face->pixels.get(),
 			AV_PIX_FMT_YUV420P,
 			this->face->width,
 			this->face->height);
