@@ -218,14 +218,12 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 
 		for (int i = 0; i < cubemap->count(); i++) {
 			threads[i].join();
-			extractedCubemapFace(i);
 		}
 
 	}
 	else if (g_DeviceType == kGfxRendererD3D11 || !multithreaded) {
 		for (int i = 0; i < cubemap->count(); i++) {
 			cubemap->getFace(i)->copyFromGPUToCPU();
-			extractedCubemapFace(i);
 		}
 	}
 

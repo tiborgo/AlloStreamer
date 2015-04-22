@@ -53,7 +53,9 @@ CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr,
 	return new (addr) CubemapFaceD3D11(width, height, index, pixelAllocator, gpuTexturePtr, cpuTexturePtr, resource);
 }
 
-void CubemapFaceD3D11::copyFromGPUToCPU() {
+void CubemapFaceD3D11::copyFromGPUToCPU()
+{
+	boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(mutex);
 
 	ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
 	g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
@@ -75,6 +77,8 @@ void CubemapFaceD3D11::copyFromGPUToCPU() {
 	memcpy(this->pixels.get(), this->resource.pData, this->width * this->height * 4);
 		
 	//g_D3D11DeviceContext->Unmap(this->cpuTexturePtr, subresource);
+
+	newPixelsCondition.notify_all();
 }
 
 #endif

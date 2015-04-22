@@ -6,6 +6,10 @@
 //#include "stdafx.h"
 #include <stdint.h>
 #include <time.h>
+#include <boost/thread.hpp>
+#include <boost/interprocess/containers/deque.hpp>
+
+EventTriggerId CubemapFaceSource::eventTriggerId;
 
 //const float RandomFramedSource::encodeReportsPS = 0.5f;
 
@@ -56,7 +60,7 @@ unsigned CubemapFaceSource::referenceCount = 0;
 struct timeval prevtime;
 
 CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapFace* face)
-: FramedSource(env), face(face), /*encodeBarrier(2),*/ shutDownEncode(false) {
+: FramedSource(env), face(face), /*encodeBarrier(2),*/ destructing(false) {
 
   gettimeofday(&prevtime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
   if (referenceCount == 0) {
@@ -64,7 +68,7 @@ CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapFace* face)
     //%%% TO BE WRITTEN %%%
   }
   ++referenceCount;
-  myfile = fopen("/home/tibor/Desktop/Logs/deviceglxgears.log", "w");
+  myfile = fopen("C:/Users/Tibor/Desktop/Logs/deviceglxgears.log", "w");
   counter = 0;
   networkStartSum = 0;
   networkStopSum = 0;
@@ -88,7 +92,7 @@ CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapFace* face)
 		  exit(1);
 	  }
 	  
-	  framePool->push(frame);
+	  framePool.push(frame);
   }
 
   // Initialize codec and encoder
@@ -150,22 +154,29 @@ CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapFace* face)
   //
   // If, however, the device *cannot* be accessed as a readable socket, then instead we can implement it using 'event triggers':
   // Create an 'event trigger' for this device (if it hasn't already been done):
-  //if (eventTriggerId == 0) {
-    eventTriggerId = envir().taskScheduler().createEventTrigger(deliverFrame0);
-  //}
+  if (eventTriggerId == 0) {
+    eventTriggerId = envir().taskScheduler().createEventTrigger(&deliverFrame0);
+  }
 
-  extractedCubemapFace.connect(boost::bind(&CubemapFaceSource::frameCubemapFace, this, _1));
+	frameThread = boost::thread(boost::bind(&CubemapFaceSource::frameCubemapFace, this));
 
-  boost::thread encodeThread(boost::bind(&CubemapFaceSource::encodeLoop, this));
+	encodeThread = boost::thread(boost::bind(&CubemapFaceSource::encodeLoop, this));
 }
 
 CubemapFaceSource::~CubemapFaceSource() {
   // Any instance-specific 'destruction' (i.e., resetting) of the device would be done here:
   //%%% TO BE WRITTEN %%%
   //encodeBarrier.wait();
-  this->shutDownEncode = true;
+	std::cout << this << ": deconstructing..." << std::endl;
+
+  this->destructing = true;
+  frameBuffer.close();
+  pktBuffer.close();
   //encodeBarrier.wait();
   
+  encodeThread.join();
+  frameThread.join();
+
   counter++;
 
   --referenceCount;
@@ -173,40 +184,62 @@ CubemapFaceSource::~CubemapFaceSource() {
     // Any global 'destruction' (i.e., resetting) of the device would be done here:
     //%%% TO BE WRITTEN %%%
 
-    
+	  // Reclaim our 'event trigger'
+	  envir().taskScheduler().deleteEventTrigger(eventTriggerId);
+	  eventTriggerId = 0;
   }
 
-  // Reclaim our 'event trigger'
-  envir().taskScheduler().deleteEventTrigger(eventTriggerId);
-  eventTriggerId = 0;
+  
 
   fclose(myfile);
+
+  std::cout << this << ": deconstructed" << std::endl;
 }
 
-void CubemapFaceSource::frameCubemapFace(int index) {
+void CubemapFaceSource::frameCubemapFace()
+{
 
-	if (face->index == index) {
+	while (!destructing)
+	{
+		//bool x = face->mutex.try_lock();
+		//face->mutex.unlock();
+		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->mutex);
 
 		// Synchronize the buffers since we are multithreading
-		boost::strict_lock_ptr<concurrent_queue<AVFrame*>> frameBufferPtr = frameBuffer.synchronize();
-		boost::strict_lock_ptr<concurrent_queue<AVFrame*>> framePoolPtr = framePool.synchronize();
+		//boost::strict_lock_ptr<concurrent_queue<AVFrame*>> frameBufferPtr = frameBuffer.synchronize();
+		//boost::strict_lock_ptr<concurrent_queue<AVFrame*>> framePoolPtr = framePool.synchronize();
 
-		// Add frame ptr to buffer
 		AVFrame* frame;
-		framePoolPtr->wait_and_pop(frame);
-		frameBufferPtr->push(frame);
+		
+		// Only frame face if spare faces are available
+		// Otherwise skip this frame
+		if (framePool.try_pop(frame))
+		{	
+			// Fill frame
+			avpicture_fill((AVPicture*)frame,
+				(uint8_t*)this->face->pixels.get(),
+				AV_PIX_FMT_YUV420P,
+				this->face->width,
+				this->face->height);
 
-		// Fill frame
-		avpicture_fill((AVPicture*)frame,
-			(uint8_t*)this->face->pixels.get(),
-			AV_PIX_FMT_YUV420P,
-			this->face->width,
-			this->face->height);
+			// Make frame available to the encoder
+			frameBuffer.push(frame);
+
+			std::cout << this << ": framed face" << std::endl;
+		}
+
+		// Wait for new frame
+		face->newPixelsCondition.wait(lock);
 	}
 }
 
 void CubemapFaceSource::doGetNextFrame() {
-  //fMaxSize = 200000;
+	//fMaxSize = 315734;
+	//fMaxSize = 500000;
+	//fMaxSize = 200000;
+
+	std::cout << this << ": get next frame" << std::endl;
+
   // This function is called (by our 'downstream' object) when it asks for new data.
 
   // Note: If, for some reason, the source device stops being readable (e.g., it gets closed), then you do the following:
@@ -217,7 +250,7 @@ void CubemapFaceSource::doGetNextFrame() {
 
   // If a new frame of data is immediately available to be delivered, then do this now:
   if (1 /* a new frame of data is immediately available to be delivered*/ /*%%% TO BE WRITTEN %%%*/) {
-    deliverFrame();
+    //deliverFrame();
   }
 
   // No new data is immediately available to be delivered.  We don't do anything more here.
@@ -231,7 +264,7 @@ void CubemapFaceSource::deliverFrame0(void* clientData) {
 
 void CubemapFaceSource::encodeLoop() {
 
-  while (!this->shutDownEncode) {
+  while (!this->destructing) {
 
     /*if (counter % 15 == 0) {
     for (int i = 0; i < (image_width * image_height * 3) - sizeof(int); i += 10) {
@@ -259,14 +292,18 @@ void CubemapFaceSource::encodeLoop() {
     //encodeStartSumEncode += av_gettime();
 
 	  // Synchronize the buffers since we are multithreading
-	  boost::strict_lock_ptr<concurrent_queue<AVFrame*>> frameBufferPtr = frameBuffer.synchronize();
-	  boost::strict_lock_ptr<concurrent_queue<AVFrame*>> framePoolPtr = framePool.synchronize();
-	  boost::strict_lock_ptr<concurrent_queue<AVPacket>> pktBufferPtr = pktBuffer.synchronize();
+	  //boost::strict_lock_ptr<concurrent_queue<AVFrame*>> frameBufferPtr = frameBuffer.synchronize();
+	  //boost::strict_lock_ptr<concurrent_queue<AVFrame*>> framePoolPtr = framePool.synchronize();
+	  //boost::strict_lock_ptr<concurrent_queue<AVPacket>> pktBufferPtr = pktBuffer.synchronize();
 
 	  // Pop frame ptr from buffer
 	  AVFrame* frame;
-	  frameBufferPtr->wait_and_pop(frame);
-	  framePoolPtr->push(frame);
+	  if (!frameBuffer.wait_and_pop(frame))
+	  {
+		  // queue did close
+		  return;
+	  }
+	  
 
 	  AVPacket pkt;
 
@@ -284,8 +321,15 @@ void CubemapFaceSource::encodeLoop() {
       exit(1);
     }
 
-	pktBufferPtr->push(pkt);
-	envir().taskScheduler().triggerEvent(eventTriggerId, this);
+	framePool.push(frame);
+	pktBuffer.push(pkt);
+
+	std::cout << this << ": encoded frame" << std::endl;
+
+	if (!this->destructing)
+	{
+		envir().taskScheduler().triggerEvent(eventTriggerId, this);
+	}
     //encodeStopSumEncode += av_gettime();
     
     //encodeStartSumSync += av_gettime();
@@ -331,81 +375,96 @@ void CubemapFaceSource::deliverFrame() {
   //         to set this variable, because - in this case - data will never arrive 'early'.
   // Note the code below.
 
-  if (!isCurrentlyAwaitingData()) return; // we're not ready for the data yet
-
-
-  int64_t start = av_gettime();
-
-  //encodeBarrier.wait();
-
-  fprintf(myfile, "fMaxSize at beginning of function: %i \n", fMaxSize);
-  fflush(myfile);
-
-  // Has no effect. FPS encoded in H.264 codec
-  this->fDurationInMicroseconds = 1000000 / 30; // 30 fps
-
-
-
-  counter++;
-  int ret;
-  
-  boost::strict_lock_ptr<concurrent_queue<AVPacket>> pktBufferPtr = pktBuffer.synchronize();
-
-  gettimeofday(&fPresentationTime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
-  //int64_t start = fPresentationTime.tv_sec *1000000 +fPresentationTime.tv_usec;
-
-
-  AVPacket pkt;
-  pktBufferPtr->wait_and_pop(pkt);
-
-  //  if(got_output) printf("got output%d\n",this->pkt.size);
-  u_int8_t* newFrameDataStart = (u_int8_t*)pkt.data; //%%% TO BE WRITTEN %%%
-  unsigned newFrameSize = pkt.size; //%%% TO BE WRITTEN %%%
-
-  // Deliver the data here:
-  if (newFrameSize > fMaxSize) {
-    fFrameSize = fMaxSize;
-    /*rest =*/ fNumTruncatedBytes = newFrameSize - fMaxSize;
-    //printf("truncated\n");
-
-    fprintf(myfile, "frameSize %i larger than maxSize %i\n", pkt.size, fMaxSize);
-    fflush(myfile);
-  } else {
-    fFrameSize = newFrameSize;
-    /*rest =*/ fNumTruncatedBytes = 0;
-
-  }
-
-
-  // If the device is *not* a 'live source' (e.g., it comes instead from a file or buffer), then set "fDurationInMicroseconds" here.
-  memmove(fTo, newFrameDataStart, fFrameSize);
-  //if (fNumTruncatedBytes == 0)
-  av_free_packet(&pkt);
-  // printf("got output%d %d\n",got_output,pkt.data);
-  // After delivering the data, inform the reader that it is now available:
-  FramedSource::afterGetting(this);
-
-  int64_t stop = av_gettime(); //fPresentationTime.tv_sec *1000000 +fPresentationTime.tv_usec;
-  networkStartSum += start;
-  networkStopSum += stop;
-  //  
-  
-//  int frequency = FPS/encodeReportsPS;
-  
-  /*if (counter % frequency == 0) {
-    networkTotalStop = stop;
-    
-    float availableTime = (float)frequency / FPS;
-    
-    printf("network %.3f (theoretical max FPS: %.3f) \n", (networkStopSum-networkStartSum) * 0.001f / frequency,
-            FPS * availableTime / ((networkTotalStop - networkTotalStart) * 0.000001));
-    //printf("time for %d frames: %.3f secs, %.3f\n", frequency, (networkTotalStop - networkTotalStart) * 0.000001, availableTime);
-    //logTimes(start_sum, stop_sum);
-    networkStopSum = networkStartSum = networkTotalStop = 0;
-    networkTotalStart = stop;
-  }*/
-
-  //encodeBarrier.wait();
+	if (!isCurrentlyAwaitingData()) return; // we're not ready for the data yet
+//
+//
+	int64_t start = av_gettime();
+//
+//  //encodeBarrier.wait();
+//
+	fprintf(myfile, "fMaxSize at beginning of function: %i \n", fMaxSize);
+	fflush(myfile);
+//
+//  // Has no effect. FPS encoded in H.264 codec
+	this->fDurationInMicroseconds = 1000000 / 30; // 30 fps
+//
+//
+//
+	counter++;
+	int ret;
+//  
+//  //boost::strict_lock_ptr<concurrent_queue<AVPacket>> pktBufferPtr = pktBuffer.synchronize();
+//
+	gettimeofday(&fPresentationTime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
+//  //int64_t start = fPresentationTime.tv_sec *1000000 +fPresentationTime.tv_usec;
+//
+//
+	AVPacket pkt;
+	if (!pktBuffer.wait_and_pop(pkt))
+	{
+//	  // queue did close
+		return;
+	}
+//
+//  //  if(got_output) printf("got output%d\n",this->pkt.size);
+	u_int8_t* newFrameDataStart = (u_int8_t*)pkt.data; //%%% TO BE WRITTEN %%%
+	unsigned newFrameSize = pkt.size; //%%% TO BE WRITTEN %%%
+//
+//  // Deliver the data here:
+	if (newFrameSize > fMaxSize)
+	{
+		fFrameSize = fMaxSize;
+		/*rest =*/ fNumTruncatedBytes = newFrameSize - fMaxSize;
+		//printf("truncated\n");
+//
+		fprintf(myfile, "frameSize %i larger than maxSize %i\n", pkt.size, fMaxSize);
+		fflush(myfile);
+	}
+	else
+	{
+		fFrameSize = newFrameSize;
+		/*rest =*/ fNumTruncatedBytes = 0;
+//
+	}
+//
+//
+//  // If the device is *not* a 'live source' (e.g., it comes instead from a file or buffer), then set "fDurationInMicroseconds" here.
+	//char* x = new char[fFrameSize];
+	memmove(fTo, newFrameDataStart, fFrameSize);
+	//memmove(x, newFrameDataStart, fFrameSize);
+	//delete[] x;
+	//fTo;
+	//std::cout << this << ": max size: " << fMaxSize << std::endl;
+//  //if (fNumTruncatedBytes == 0)
+//  
+	av_free_packet(&pkt);
+//  
+//  // printf("got output%d %d\n",got_output,pkt.data);
+//  // After delivering the data, inform the reader that it is now available:
+	std::cout << this << ": paketized frame (" << fNumTruncatedBytes << " bytes missed)" << std::endl;
+	FramedSource::afterGetting(this);
+//
+	int64_t stop = av_gettime(); //fPresentationTime.tv_sec *1000000 +fPresentationTime.tv_usec;
+//  networkStartSum += start;
+//  networkStopSum += stop;
+//  //  
+//  
+////  int frequency = FPS/encodeReportsPS;
+//  
+//  /*if (counter % frequency == 0) {
+//    networkTotalStop = stop;
+//    
+//    float availableTime = (float)frequency / FPS;
+//    
+//    printf("network %.3f (theoretical max FPS: %.3f) \n", (networkStopSum-networkStartSum) * 0.001f / frequency,
+//            FPS * availableTime / ((networkTotalStop - networkTotalStart) * 0.000001));
+//    //printf("time for %d frames: %.3f secs, %.3f\n", frequency, (networkTotalStop - networkTotalStart) * 0.000001, availableTime);
+//    //logTimes(start_sum, stop_sum);
+//    networkStopSum = networkStartSum = networkTotalStop = 0;
+//    networkTotalStart = stop;
+//  }*/
+//
+//  //encodeBarrier.wait();
 }
 
 

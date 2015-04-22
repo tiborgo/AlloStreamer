@@ -37,6 +37,9 @@ public:
 		PixelAllocator& allocator);
 
 	virtual void copyFromGPUToCPU() = 0;
+
+	boost::interprocess::interprocess_mutex mutex;
+	boost::interprocess::interprocess_condition newPixelsCondition;
 };
 
 class AlloShared_API Cubemap {

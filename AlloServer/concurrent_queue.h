@@ -5,7 +5,14 @@ private:
 	std::queue<Data> the_queue;
 	mutable boost::mutex the_mutex;
 	boost::condition_variable the_condition_variable;
+	bool closed;
+
 public:
+	concurrent_queue() : closed(false)
+	{
+
+	}
+
 	void push(Data const& data)
 	{
 		boost::mutex::scoped_lock lock(the_mutex);
@@ -23,7 +30,7 @@ public:
 	bool try_pop(Data& popped_value)
 	{
 		boost::mutex::scoped_lock lock(the_mutex);
-		if (the_queue.empty())
+		if (closed || the_queue.empty())
 		{
 			return false;
 		}
@@ -33,16 +40,30 @@ public:
 		return true;
 	}
 
-	void wait_and_pop(Data& popped_value)
+	bool wait_and_pop(Data& popped_value)
 	{
 		boost::mutex::scoped_lock lock(the_mutex);
-		while (the_queue.empty())
+		while (!closed && the_queue.empty())
 		{
 			the_condition_variable.wait(lock);
 		}
 
+		if (closed)
+		{
+			return false;
+		}
+
 		popped_value = the_queue.front();
 		the_queue.pop();
+		return true;
+	}
+
+	void close()
+	{
+		boost::mutex::scoped_lock lock(the_mutex);
+		the_queue.swap(std::queue<Data>()); // clears queue
+		closed = true;
+		the_condition_variable.notify_all();
 	}
 
 };

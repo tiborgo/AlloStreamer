@@ -6,6 +6,7 @@
 #include <boost/thread/synchronized_value.hpp>
 #include "concurrent_queue.h"
 #include "AlloShared/CubemapFace.h"
+#include <boost/thread/condition.hpp>
 
 // The following class can be used to define specific encoder parameters
 
@@ -14,7 +15,7 @@ public:
 	static CubemapFaceSource* createNew(UsageEnvironment& env, CubemapFace* face);
 
 public:
-    EventTriggerId eventTriggerId;
+    static EventTriggerId eventTriggerId;
     // Note that this is defined here to be a static class variable, because this code is intended to illustrate how to
     // encapsulate a *single* device - not a set of devices.
     // You can, however, redefine this to be a non-static member variable.
@@ -37,16 +38,19 @@ public:
     static void addToBuffer(uint8_t* buf, int surfaceSizeInBytes);
 
 private:
-	void frameCubemapFace(int index);
+	void frameCubemapFace();
 
 	// Stores unencoded frames
-	boost::synchronized_value<concurrent_queue<AVFrame*>> frameBuffer;
+	//boost::synchronized_value<concurrent_queue<AVFrame*>> frameBuffer;
+	concurrent_queue<AVFrame*> frameBuffer;
 	// Here unused frames are stored. Included so that we can allocate all the frames at startup
 	// and reuse them during runtime
-	boost::synchronized_value<concurrent_queue<AVFrame*>> framePool;
+	//boost::synchronized_value<concurrent_queue<AVFrame*>> framePool;
+	concurrent_queue<AVFrame*> framePool;
 
 	// Stores encoded frames
-	boost::synchronized_value<concurrent_queue<AVPacket>> pktBuffer;
+	//boost::synchronized_value<concurrent_queue<AVPacket>> pktBuffer;
+	concurrent_queue<AVPacket> pktBuffer;
 
     static unsigned referenceCount; // used to count how many instances of this class currently exist
     //DeviceParameters fParams;
@@ -68,10 +72,14 @@ private:
 
     void logTimes(int64_t start, int64_t stop);
     
+	boost::mutex destructMutex;
+	boost::condition destructCondition;
+
     boost::thread encodeThread;
+	boost::thread frameThread;
     void encodeLoop();
     //boost::barrier encodeBarrier;
-    bool shutDownEncode;
+    bool destructing;
     unsigned int encodeSeed;
     
     int64_t encodeStartSumBuffer;
