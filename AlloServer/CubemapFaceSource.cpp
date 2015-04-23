@@ -29,9 +29,9 @@ int rgb2yuv(AVFrame *frameRGB, AVFrame *frameYUV, AVCodecContext *c) {
   char *err;
   if (img_convert_ctx == NULL) {
     // MUST BE IMPLMENTED
-	int w = 0; // image_width; //c->width;
-	int h = 0; // image_height; //c->height;
-    img_convert_ctx = sws_getContext(w, h, PIX_FMT_RGB24, w, h,
+	  int w = frameRGB->width;
+	  int h = frameRGB->width;
+    img_convert_ctx = sws_getContext(w, h, PIX_FMT_RGB32, w, h,
             c->pix_fmt, SWS_BICUBIC,
             NULL, NULL, NULL);
     if (img_convert_ctx == NULL) {
@@ -80,14 +80,14 @@ CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapFace* face)
 		  fprintf(stderr, "Could not allocate video frame\n");
 		  exit(1);
 	  }
-	  frame->format = AV_PIX_FMT_YUV420P;
+	  frame->format = AV_PIX_FMT_RGB32;
 	  frame->width = face->width;
 	  frame->height = face->height;
 	  
 	  /* the image can be allocated by any means and av_image_alloc() is
 	  * just the most convenient way if av_malloc() is to be used */
 	  if (av_image_alloc(frame->data, frame->linesize, frame->width, frame->height,
-		  AV_PIX_FMT_YUV420P, 32) < 0) {
+		  AV_PIX_FMT_RGB32, 32) < 0) {
 		  fprintf(stderr, "Could not allocate raw picture buffer\n");
 		  exit(1);
 	  }
@@ -218,7 +218,7 @@ void CubemapFaceSource::frameCubemapFace()
 			// Fill frame
 			avpicture_fill((AVPicture*)frame,
 				(uint8_t*)this->face->pixels.get(),
-				AV_PIX_FMT_YUV420P,
+				AV_PIX_FMT_RGB32,
 				this->face->width,
 				this->face->height);
 
@@ -297,21 +297,39 @@ void CubemapFaceSource::encodeLoop() {
 	  //boost::strict_lock_ptr<concurrent_queue<AVPacket>> pktBufferPtr = pktBuffer.synchronize();
 
 	  // Pop frame ptr from buffer
-	  AVFrame* frame;
-	  if (!frameBuffer.wait_and_pop(frame))
+	  AVFrame* rgbFrame;
+	  if (!frameBuffer.wait_and_pop(rgbFrame))
 	  {
 		  // queue did close
 		  return;
 	  }
-	  
 
+	  AVFrame* yuv420pFrame = avcodec_alloc_frame();
+	  if (!yuv420pFrame) {
+		  fprintf(stderr, "Could not allocate video frame\n");
+		  exit(1);
+	  }
+	  yuv420pFrame->format = AV_PIX_FMT_YUV420P;
+	  yuv420pFrame->width = rgbFrame->width;
+	  yuv420pFrame->height = rgbFrame->height;
+
+	  /* the image can be allocated by any means and av_image_alloc() is
+	  * just the most convenient way if av_malloc() is to be used */
+	  if (av_image_alloc(yuv420pFrame->data, yuv420pFrame->linesize, yuv420pFrame->width, yuv420pFrame->height,
+		  AV_PIX_FMT_YUV420P, 32) < 0) {
+		  fprintf(stderr, "Could not allocate raw picture buffer\n");
+		  exit(1);
+	  }
+
+	  rgb2yuv(rgbFrame, yuv420pFrame, codecContext);
+	  
 	  AVPacket pkt;
 
     av_init_packet(&pkt);
     pkt.data = NULL; // packet data will be allocated by the encoder
     pkt.size = 0;
     int got_output = 0;
-    int ret = avcodec_encode_video2(codecContext, &pkt, frame, &got_output);
+	int ret = avcodec_encode_video2(codecContext, &pkt, yuv420pFrame, &got_output);
     
     fprintf(myfile, "packet size: %i \n", pkt.size);
     fflush(myfile);
@@ -321,7 +339,7 @@ void CubemapFaceSource::encodeLoop() {
       exit(1);
     }
 
-	framePool.push(frame);
+	framePool.push(yuv420pFrame);
 	pktBuffer.push(pkt);
 
 	//std::cout << this << ": encoded frame" << std::endl;
