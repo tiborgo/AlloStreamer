@@ -296,6 +296,8 @@ void CubemapFaceSource::encodeLoop() {
 	  //boost::strict_lock_ptr<concurrent_queue<AVFrame*>> framePoolPtr = framePool.synchronize();
 	  //boost::strict_lock_ptr<concurrent_queue<AVPacket>> pktBufferPtr = pktBuffer.synchronize();
 
+
+
 	  // Pop frame ptr from buffer
 	  AVFrame* rgbFrame;
 	  if (!frameBuffer.wait_and_pop(rgbFrame))
@@ -304,10 +306,10 @@ void CubemapFaceSource::encodeLoop() {
 		  return;
 	  }
 
-	  AVFrame* yuv420pFrame = avcodec_alloc_frame();
+	  AVFrame* yuv420pFrame = av_frame_alloc();
 	  if (!yuv420pFrame) {
 		  fprintf(stderr, "Could not allocate video frame\n");
-		  exit(1);
+		  return;
 	  }
 	  yuv420pFrame->format = AV_PIX_FMT_YUV420P;
 	  yuv420pFrame->width = rgbFrame->width;
@@ -318,7 +320,7 @@ void CubemapFaceSource::encodeLoop() {
 	  if (av_image_alloc(yuv420pFrame->data, yuv420pFrame->linesize, yuv420pFrame->width, yuv420pFrame->height,
 		  AV_PIX_FMT_YUV420P, 32) < 0) {
 		  fprintf(stderr, "Could not allocate raw picture buffer\n");
-		  exit(1);
+		  return;
 	  }
 
 	  rgb2yuv(rgbFrame, yuv420pFrame, codecContext);
@@ -336,10 +338,10 @@ void CubemapFaceSource::encodeLoop() {
 
     if (ret < 0) {
       fprintf(stderr, "Error encoding frame\n");
-      exit(1);
+	  return;
     }
 
-	framePool.push(yuv420pFrame);
+	framePool.push(rgbFrame);
 	pktBuffer.push(pkt);
 
 	//std::cout << this << ": encoded frame" << std::endl;
@@ -348,6 +350,9 @@ void CubemapFaceSource::encodeLoop() {
 	{
 		envir().taskScheduler().triggerEvent(eventTriggerId, this);
 	}
+
+	av_freep(&yuv420pFrame->data[0]);
+	av_frame_free(&yuv420pFrame);
     //encodeStopSumEncode += av_gettime();
     
     //encodeStartSumSync += av_gettime();
