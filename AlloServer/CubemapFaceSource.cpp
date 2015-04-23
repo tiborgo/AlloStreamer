@@ -408,9 +408,8 @@ void CubemapFaceSource::deliverFrame() {
 	fprintf(myfile, "fMaxSize at beginning of function: %i \n", fMaxSize);
 	fflush(myfile);
 //
-//  // Has no effect. FPS encoded in H.264 codec
-	this->fDurationInMicroseconds = 1000000 / 30; // 30 fps
-//
+	// set FPS
+	this->fDurationInMicroseconds = 1000000 / FPS;
 //
 //
 	counter++;

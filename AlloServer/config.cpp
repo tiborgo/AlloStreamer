@@ -32,6 +32,6 @@ extern const int image_height = 1152;
 extern const int bit_rate = 15000000;
 extern const char * preset_val = "ultrafast";
 extern const char * tune_val = "zerolatency:fastdecode";
-extern const int FPS = 60;
+extern const int FPS = 30;
 extern const int randomStreamsCount = 1;
 
