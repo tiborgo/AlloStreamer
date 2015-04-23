@@ -28,7 +28,7 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 #include "H264VideoRTPSink.hh"
 #include "RandomFramedSource.h"
 #include "CubemapFaceSource.h"
-#include "H264VideoStreamFramer.hh"
+#include "H264VideoStreamDiscreteFramer.hh"
 UsageEnvironment* envi;
 
 H264VideoOnDemandServerMediaSubsession*
@@ -60,7 +60,7 @@ FramedSource* H264VideoOnDemandServerMediaSubsession::createNewStreamSource(unsi
   if (source == NULL) return NULL;
 
   // Create a framer for the Video Elementary Stream:
-  return H264VideoStreamFramer::createNew(envir(), source);
+  return H264VideoStreamDiscreteFramer::createNew(envir(), source);
 }
 
 RTPSink* H264VideoOnDemandServerMediaSubsession

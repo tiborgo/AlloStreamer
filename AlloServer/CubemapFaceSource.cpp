@@ -225,7 +225,7 @@ void CubemapFaceSource::frameCubemapFace()
 			// Make frame available to the encoder
 			frameBuffer.push(frame);
 
-			std::cout << this << ": framed face" << std::endl;
+			//std::cout << this << ": framed face" << std::endl;
 		}
 
 		// Wait for new frame
@@ -238,7 +238,7 @@ void CubemapFaceSource::doGetNextFrame() {
 	//fMaxSize = 500000;
 	//fMaxSize = 200000;
 
-	std::cout << this << ": get next frame" << std::endl;
+	//std::cout << this << ": get next frame" << std::endl;
 
   // This function is called (by our 'downstream' object) when it asks for new data.
 
@@ -324,7 +324,7 @@ void CubemapFaceSource::encodeLoop() {
 	framePool.push(frame);
 	pktBuffer.push(pkt);
 
-	std::cout << this << ": encoded frame" << std::endl;
+	//std::cout << this << ": encoded frame" << std::endl;
 
 	if (!this->destructing)
 	{
@@ -441,7 +441,11 @@ void CubemapFaceSource::deliverFrame() {
 //  
 //  // printf("got output%d %d\n",got_output,pkt.data);
 //  // After delivering the data, inform the reader that it is now available:
-	std::cout << this << ": paketized frame (" << fNumTruncatedBytes << " bytes missed)" << std::endl;
+	//std::cout << this << ": paketized frame (" << fNumTruncatedBytes << " bytes missed)" << std::endl;
+	if (fNumTruncatedBytes > 0)
+	{
+		std::cout << this << ": truncated " << fNumTruncatedBytes << " bytes" << std::endl;
+	}
 	FramedSource::afterGetting(this);
 //
 	int64_t stop = av_gettime(); //fPresentationTime.tv_sec *1000000 +fPresentationTime.tv_usec;
