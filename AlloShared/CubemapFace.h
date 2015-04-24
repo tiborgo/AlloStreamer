@@ -7,6 +7,7 @@
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/interprocess_condition.hpp>
+#include <libavutil/pixfmt.h>
 
 #ifdef _WIN32
 	#ifdef AlloShared_EXPORTS
@@ -30,10 +31,12 @@ public:
 	const boost::uint32_t height;
 	boost::interprocess::offset_ptr<void> pixels;
 	const int index;
+	const AVPixelFormat format;
 
 	CubemapFace(boost::uint32_t width,
 		boost::uint32_t height,
 		int index,
+		AVPixelFormat format,
 		PixelAllocator& allocator);
 
 	virtual void copyFromGPUToCPU() = 0;

@@ -15,6 +15,8 @@ find_package(Boost
   date_time
 )
 
+find_package(FFmpeg REQUIRED)
+
 add_library(AlloShared
 	SHARED
 	${SOURCES} ${HEADERS}
@@ -25,6 +27,7 @@ target_link_libraries(AlloShared
 target_include_directories(AlloShared
 	PRIVATE
 	${Boost_INCLUDE_DIRS}
+	${FFMPEG_INCLUDE_DIRS}
 )
 set_target_properties(AlloShared
     PROPERTIES

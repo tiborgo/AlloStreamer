@@ -3,6 +3,17 @@
 
 #if SUPPORT_D3D11
 
+static AVPixelFormat avPixel2DXGIFormat(DXGI_FORMAT format)
+{
+	switch (format)
+	{
+	case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+		return AV_PIX_FMT_RGBA;
+	default:
+		return AV_PIX_FMT_NONE;
+	}
+}
+
 CubemapFaceD3D11::CubemapFaceD3D11(
 	boost::uint32_t width,
 	boost::uint32_t height,
@@ -10,9 +21,14 @@ CubemapFaceD3D11::CubemapFaceD3D11(
 	PixelAllocator allocator,
 	ID3D11Texture2D* gpuTexturePtr,
 	ID3D11Texture2D* cpuTexturePtr,
-	D3D11_MAPPED_SUBRESOURCE resource
-	) :
-	CubemapFace(width, height, index, allocator),
+	D3D11_MAPPED_SUBRESOURCE resource,
+	D3D11_TEXTURE2D_DESC& description)
+	:
+	CubemapFace(width,
+		height,
+		index,
+		avPixel2DXGIFormat(description.Format),
+		allocator),
 	gpuTexturePtr(gpuTexturePtr),
 	cpuTexturePtr(cpuTexturePtr),
 	resource(resource) {
@@ -50,7 +66,14 @@ CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr,
 
 	CubemapFaceD3D11* addr = faceAllocator.allocate_one().get();
 
-	return new (addr) CubemapFaceD3D11(width, height, index, pixelAllocator, gpuTexturePtr, cpuTexturePtr, resource);
+	return new (addr) CubemapFaceD3D11(width,
+		height,
+		index,
+		pixelAllocator,
+		gpuTexturePtr,
+		cpuTexturePtr,
+		resource,
+		textureDescription);
 }
 
 void CubemapFaceD3D11::copyFromGPUToCPU()

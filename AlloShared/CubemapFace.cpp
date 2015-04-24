@@ -5,8 +5,10 @@ AlloShared_API boost::interprocess::offset_ptr<Cubemap> cubemap;
 CubemapFace::CubemapFace(boost::uint32_t width,
 	boost::uint32_t height,
 	int index,
+	AVPixelFormat format,
 	PixelAllocator& allocator)
-	: width(width), height(height), pixels(allocator.allocate(width * height * 4)), index(index)
+	: width(width), height(height), pixels(allocator.allocate(width * height * 4)),
+	index(index), format(format)
 {
 
 }

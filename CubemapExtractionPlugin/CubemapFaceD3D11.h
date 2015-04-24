@@ -33,7 +33,8 @@ protected:
 		PixelAllocator allocator,
 		ID3D11Texture2D* gpuTexturePtr,
 		ID3D11Texture2D* cpuTexturePtr,
-		D3D11_MAPPED_SUBRESOURCE resource
+		D3D11_MAPPED_SUBRESOURCE resource,
+		D3D11_TEXTURE2D_DESC& description
 		);
 };
 

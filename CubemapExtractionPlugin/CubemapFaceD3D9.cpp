@@ -14,7 +14,7 @@ CubemapFaceD3D9::CubemapFaceD3D9(
 	D3DFORMAT format,
 	D3DLOCKED_RECT lockedRect
 	) :
-	CubemapFace(width, height, index, allocator),
+	CubemapFace(width, height, index, AV_PIX_FMT_NONE, allocator),
 	texturePtr(texturePtr),
 	gpuSurfacePtr(gpuSurfacePtr),
 	cpuSurfacePtr(cpuSurfacePtr),

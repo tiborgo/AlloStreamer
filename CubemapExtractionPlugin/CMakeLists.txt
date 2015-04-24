@@ -19,6 +19,8 @@ find_package(Boost
   REQUIRED              # Fail with error if Boost is not found
   COMPONENTS thread date_time system chrono   # Boost libraries by their canonical name
 )                     # e.g. "date_time" for "libboost_date_time"
+ 
+find_package(FFmpeg REQUIRED)
   
 add_library(CubemapExtractionPlugin
 	SHARED
@@ -27,6 +29,7 @@ add_library(CubemapExtractionPlugin
 target_include_directories(CubemapExtractionPlugin
 	PRIVATE
 	${Boost_INCLUDE_DIRS}
+	${FFMPEG_INCLUDE_DIRS}
 )
 target_link_libraries(CubemapExtractionPlugin
 	${Boost_LIBRARIES}
