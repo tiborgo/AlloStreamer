@@ -36,6 +36,7 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 #include "AlloShared/CubemapFace.h"
 #include "AlloShared/Signals.h"
 #include "AlloServer.h"
+#include "concurrent_queue.h"
 
 //RTPSink* videoSink;
 UsageEnvironment* env;
@@ -73,31 +74,41 @@ ServerMediaSession* sms;
 
 EventTriggerId addFaceSubstreamTriggerId;
 
-void addFaceSubstream0(void* face) {
+concurrent_queue<CubemapFace*> faceBuffer;
 
-	//for (int i = 0; i < cubemap.faces.size(); i++) {
+void addFaceSubstream0(void*) {
 
-		H264VideoOnDemandServerMediaSubsession *subsession = H264VideoOnDemandServerMediaSubsession::createNew(*env, reuseFirstSource, (CubemapFace*)face);
+	CubemapFace* face;
+
+	while (faceBuffer.try_pop(face))
+	{
+		H264VideoOnDemandServerMediaSubsession *subsession = H264VideoOnDemandServerMediaSubsession::createNew(*env, reuseFirstSource, face);
 		sms->addSubsession(subsession);
-	//}
-
+		std::cout << "added face " << face->index << std::endl;
+	}
 }
 
 std::vector<H264VideoOnDemandServerMediaSubsession*> faceSubstreams;
 
 void addFaceSubstream()
 {
+	std::list<int> addedFaces;
+
 	while (true)
 	{
 		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(cubemap->mutex);
-		std::vector<CubemapFace*> facesToAdd;
-		for (int i = faceSubstreams.size(); i < cubemap->count(); i++)
+		//
+		for (int i = 0; i < cubemap->count(); i++)
 		{
-			facesToAdd.push_back(cubemap->getFace(i).get());
+			if (std::find(addedFaces.begin(), addedFaces.end(), cubemap->getFace(i)->index) == addedFaces.end())
+			{
+				faceBuffer.push(cubemap->getFace(i).get());
+				addedFaces.push_back(cubemap->getFace(i)->index);
+			}
 		}
-		for (int i = 0; i < facesToAdd.size(); i++)
+		if (!faceBuffer.empty())
 		{
-			env->taskScheduler().triggerEvent(addFaceSubstreamTriggerId, facesToAdd[i]);
+			env->taskScheduler().triggerEvent(addFaceSubstreamTriggerId, NULL);
 		}
 		cubemap->newFaceCondition.wait(lock);
 	}

@@ -19,13 +19,16 @@ protected:
 	virtual ~CubemapFaceSource();
 
 private:
-	static EventTriggerId eventTriggerId;
+	EventTriggerId eventTriggerId;
 	static void deliverFrame0(void* clientData);
 	void deliverFrame();
 
 	// redefined virtual functions:
 	virtual void doGetNextFrame();
 	//virtual void doStopGettingFrames(); // optional
+
+	int x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c);
+	SwsContext *img_convert_ctx;
 
 	// Stores unencoded frames
 	concurrent_queue<AVFrame*> frameBuffer;
@@ -51,4 +54,6 @@ private:
 	void encodeFrameLoop();
 
 	bool destructing;
+
+	int64_t lastFrameTime;
 };

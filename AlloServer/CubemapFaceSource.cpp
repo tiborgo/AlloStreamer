@@ -9,11 +9,7 @@
 #include <boost/thread.hpp>
 #include <boost/interprocess/containers/deque.hpp>
 
-EventTriggerId CubemapFaceSource::eventTriggerId;
-
-struct SwsContext *img_convert_ctx = NULL;
-
-int x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
+int CubemapFaceSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
 {
 	char *err = NULL;
 	if (img_convert_ctx == NULL)
@@ -46,14 +42,13 @@ CubemapFaceSource* CubemapFaceSource::createNew(UsageEnvironment& env, CubemapFa
 	return new CubemapFaceSource(env, face);
 }
 
-//EventTriggerId CubemapFaceSource::eventTriggerId = 0;
-
 unsigned CubemapFaceSource::referenceCount = 0;
 
 struct timeval prevtime;
 
 CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapFace* face)
-: FramedSource(env), face(face), /*encodeBarrier(2),*/ destructing(false)
+: FramedSource(env), face(face), /*encodeBarrier(2),*/ destructing(false),
+img_convert_ctx(NULL)
 {
 
 	gettimeofday(&prevtime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
@@ -139,14 +134,13 @@ CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapFace* face)
 	//
 	// If, however, the device *cannot* be accessed as a readable socket, then instead we can implement it using 'event triggers':
 	// Create an 'event trigger' for this device (if it hasn't already been done):
-	if (eventTriggerId == 0)
-	{
-		eventTriggerId = envir().taskScheduler().createEventTrigger(&deliverFrame0);
-	}
+	eventTriggerId = envir().taskScheduler().createEventTrigger(&deliverFrame0);
 
 	frameFaceThread = boost::thread(boost::bind(&CubemapFaceSource::frameFaceLoop, this));
 
 	encodeFrameThread = boost::thread(boost::bind(&CubemapFaceSource::encodeFrameLoop, this));
+
+	lastFrameTime = av_gettime();
 }
 
 CubemapFaceSource::~CubemapFaceSource()
@@ -157,7 +151,7 @@ CubemapFaceSource::~CubemapFaceSource()
 	this->destructing = true;
 	frameBuffer.close();
 	pktBuffer.close();
-	
+
 	frameFaceThread.join();
 	encodeFrameThread.join();
 
@@ -166,11 +160,12 @@ CubemapFaceSource::~CubemapFaceSource()
 	{
 		// Any global 'destruction' (i.e., resetting) of the device would be done here:
 
-		// Reclaim our 'event trigger'
-		envir().taskScheduler().deleteEventTrigger(eventTriggerId);
-		eventTriggerId = 0;
+
 	}
 
+	// Reclaim our 'event trigger'
+	envir().taskScheduler().deleteEventTrigger(eventTriggerId);
+	eventTriggerId = 0;
 	fclose(myfile);
 
 	std::cout << this << ": deconstructed" << std::endl;
@@ -217,9 +212,9 @@ void CubemapFaceSource::doGetNextFrame()
 	}
 
 	// If a new frame of data is immediately available to be delivered, then do this now:
-	if (1 /* a new frame of data is immediately available to be delivered*/ /*%%% TO BE WRITTEN %%%*/)
+	if (!pktBuffer.empty())
 	{
-		//deliverFrame();
+		deliverFrame();
 	}
 
 	// No new data is immediately available to be delivered.  We don't do anything more here.
@@ -229,24 +224,33 @@ void CubemapFaceSource::doGetNextFrame()
 
 void CubemapFaceSource::deliverFrame0(void* clientData)
 {
+	//std::cout << "deliver frame: " << ((CubemapFaceSource*)clientData)->face->index << std::endl;
 	((CubemapFaceSource*)clientData)->deliverFrame();
 }
 
 void CubemapFaceSource::encodeFrameLoop()
 {
 
+
 	while (!this->destructing)
 	{
-
 		// Pop frame ptr from buffer
 		AVFrame* xFrame;
+		AVFrame* yuv420pFrame;
+		AVPacket pkt;
+
+
+
+
 		if (!frameBuffer.wait_and_pop(xFrame))
 		{
 			// queue did close
 			return;
 		}
 
-		AVFrame* yuv420pFrame = av_frame_alloc();
+
+
+		yuv420pFrame = av_frame_alloc();
 		if (!yuv420pFrame)
 		{
 			fprintf(stderr, "Could not allocate video frame\n");
@@ -255,6 +259,8 @@ void CubemapFaceSource::encodeFrameLoop()
 		yuv420pFrame->format = AV_PIX_FMT_YUV420P;
 		yuv420pFrame->width = xFrame->width;
 		yuv420pFrame->height = xFrame->height;
+
+
 
 		/* the image can be allocated by any means and av_image_alloc() is
 		* just the most convenient way if av_malloc() is to be used */
@@ -267,13 +273,14 @@ void CubemapFaceSource::encodeFrameLoop()
 
 		x2yuv(xFrame, yuv420pFrame, codecContext);
 
-		AVPacket pkt;
-
 		av_init_packet(&pkt);
 		pkt.data = NULL; // packet data will be allocated by the encoder
 		pkt.size = 0;
 		int got_output = 0;
+
+		//mutex.lock();
 		int ret = avcodec_encode_video2(codecContext, &pkt, yuv420pFrame, &got_output);
+		//mutex.unlock();
 
 		fprintf(myfile, "packet size: %i \n", pkt.size);
 		fflush(myfile);
@@ -289,7 +296,7 @@ void CubemapFaceSource::encodeFrameLoop()
 
 		//std::cout << this << ": encoded frame" << std::endl;
 
-		if (!this->destructing)
+		if (!this->destructing && isCurrentlyAwaitingData())
 		{
 			envir().taskScheduler().triggerEvent(eventTriggerId, this);
 		}
@@ -323,21 +330,26 @@ void CubemapFaceSource::deliverFrame()
 	//         to set this variable, because - in this case - data will never arrive 'early'.
 	// Note the code below.
 
-	static int64_t lastTime = av_gettime();
-	int64_t thisTime = av_gettime();
+
 
 	if (!isCurrentlyAwaitingData())
 	{
 		return; // we're not ready for the data yet
 	}
 
+
+	int64_t thisTime = av_gettime();
+
 	fprintf(myfile, "fMaxSize at beginning of function: %i \n", fMaxSize);
 	fflush(myfile);
 
 	// set the duration of this frame since we have variable frame rate
-	this->fDurationInMicroseconds = thisTime - lastTime;
+	// %% Time has to be fixed
+	this->fDurationInMicroseconds = 1000000 / 70;// thisTime - lastFrameTime;
 
 	gettimeofday(&fPresentationTime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
+
+	std::cout << this << ": pktBuffer size: " << pktBuffer.size() << std::endl;
 
 	AVPacket pkt;
 	if (!pktBuffer.wait_and_pop(pkt))
@@ -348,11 +360,6 @@ void CubemapFaceSource::deliverFrame()
 
 	u_int8_t* newFrameDataStart = (u_int8_t*)pkt.data;
 	unsigned newFrameSize = pkt.size;
-
-	std::cout << pkt.pts << std::endl;
-	std::cout << pkt.dts << std::endl;
-	std::cout << AV_NOPTS_VALUE << std::endl;
-	std::cout << codecContext->time_base.num << " " << codecContext->time_base.den << std::endl;
 
 	// Deliver the data here:
 	if (newFrameSize > fMaxSize)
@@ -382,5 +389,5 @@ void CubemapFaceSource::deliverFrame()
 	// Tell live555 that a new frame is available
 	FramedSource::afterGetting(this);
 
-	lastTime = thisTime;
+	lastFrameTime = thisTime;
 }

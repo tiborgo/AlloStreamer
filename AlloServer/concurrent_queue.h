@@ -66,4 +66,10 @@ public:
 		the_condition_variable.notify_all();
 	}
 
+	size_t size()
+	{
+		boost::mutex::scoped_lock lock(the_mutex);
+		return the_queue.size();
+	}
+
 };
