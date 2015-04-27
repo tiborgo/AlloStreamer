@@ -27,3 +27,5 @@ Assets/Plugins/Debug/AlloShared.*
 Assets/Plugins/Release/AlloShared.*
 Assets/Plugins/Debug/AlloServer.*
 Assets/Plugins/Release/AlloServer.*
+Assets/Plugins/Debug/AlloPlayer.*
+Assets/Plugins/Release/AlloPlayer.*
