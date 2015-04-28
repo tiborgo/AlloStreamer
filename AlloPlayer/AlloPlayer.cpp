@@ -1,6 +1,7 @@
-#include "BasicUsageEnvironment.hh"
-#include "GroupsockHelper.hh"
-#include "liveMedia.hh"
+#include <BasicUsageEnvironment.hh>
+#include <GroupsockHelper.hh>
+#include <liveMedia.hh>
+#include "H264WindowSink.h"
 
 char const* progName;
 UsageEnvironment* env;
@@ -148,19 +149,16 @@ void createOutputFiles(char const* periodicFilenameSuffix)
 			subsession->codecName(), ++streamCounter, periodicFilenameSuffix);
 
 
-		FileSink* fileSink = NULL;
+		MediaSink* sink = NULL;
 		if (strcmp(subsession->mediumName(), "video") == 0)
 		{
 			if (strcmp(subsession->codecName(), "H264") == 0)
 			{
-				// For H.264 video stream, we use a special sink that adds 'start codes',
-				// and (at the start) the SPS and PPS NAL units:
-				fileSink = H264VideoFileSink::createNew(*env, outFileName,
-					subsession->fmtp_spropparametersets(),
-					fileSinkBufferSize);
+				// Open window displaying the H.264 video
+				sink = H264WindowSink::createNew(*env, fileSinkBufferSize);
 			}
 		}
-		subsession->sink = fileSink;
+		subsession->sink = sink;
 
 		if (subsession->sink == NULL)
 		{
@@ -172,23 +170,6 @@ void createOutputFiles(char const* periodicFilenameSuffix)
 			*env << "Outputting data from the \"" << subsession->mediumName()
 				<< "/" << subsession->codecName()
 				<< "\" subsession to \"" << outFileName << "\"\n";
-			
-
-			if (strcmp(subsession->mediumName(), "video") == 0 &&
-				strcmp(subsession->codecName(), "MP4V-ES") == 0 &&
-				subsession->fmtp_config() != NULL)
-			{
-				// For MPEG-4 video RTP streams, the 'config' information
-				// from the SDP description contains useful VOL etc. headers.
-				// Insert this data at the front of the output file:
-				unsigned configLen;
-				unsigned char* configData
-					= parseGeneralConfigStr(subsession->fmtp_config(), configLen);
-				struct timeval timeNow;
-				gettimeofday(&timeNow, NULL);
-				fileSink->addData(configData, configLen, timeNow);
-				delete[] configData;
-			}
 
 			subsession->sink->startPlaying(*(subsession->readSource()),
 				subsessionAfterPlaying,
