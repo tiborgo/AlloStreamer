@@ -1,10 +1,8 @@
 set(SOURCES
-	openRTSP.cpp
-	playCommon.cpp
+	AlloPlayer
 )
 	
 set(HEADERS
-	playCommon.hh
 )
 
 # include Boost, FFMpeg, live555, x264
