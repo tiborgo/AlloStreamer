@@ -114,6 +114,7 @@ img_convert_ctx(NULL)
 	codecContext->gop_size = 20; /* emit one intra frame every ten frames */
 	codecContext->max_b_frames = 0;
 	codecContext->pix_fmt = AV_PIX_FMT_YUV420P;
+	//codecContext->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
 	av_opt_set(codecContext->priv_data, "preset", preset_val, 0);
 	av_opt_set(codecContext->priv_data, "tune", tune_val, 0);
@@ -349,7 +350,7 @@ void CubemapFaceSource::deliverFrame()
 
 	gettimeofday(&fPresentationTime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
 
-	std::cout << this << ": pktBuffer size: " << pktBuffer.size() << std::endl;
+	//std::cout << this << ": pktBuffer size: " << pktBuffer.size() << std::endl;
 
 	AVPacket pkt;
 	if (!pktBuffer.wait_and_pop(pkt))
@@ -358,8 +359,47 @@ void CubemapFaceSource::deliverFrame()
 		return;
 	}
 
-	u_int8_t* newFrameDataStart = (u_int8_t*)pkt.data;
-	unsigned newFrameSize = pkt.size;
+	// Live555 does not like start codes.
+	// So, we remove the start code which is there in front of every nal unit.  
+	// the start code might be 0x00000001 or 0x000001. so detect it and remove it.
+	int truncateBytes = 0;
+	if (pkt.size >= 4 &&
+		pkt.data[0] == 0 &&
+		pkt.data[1] == 0 &&
+		pkt.data[2] == 0 &&
+		pkt.data[3] == 1)
+	{
+		truncateBytes = 4;
+	}
+	else if (pkt.size >= 3 &&
+		pkt.data[0] == 0 &&
+		pkt.data[1] == 0 &&
+		pkt.data[2] == 1)
+	{
+		truncateBytes = 3;
+	}
+
+	u_int8_t* newFrameDataStart = (u_int8_t*)(pkt.data + truncateBytes);
+	unsigned newFrameSize = pkt.size - truncateBytes;
+
+	u_int8_t nal_unit_type = newFrameDataStart[0] & 0x1F;
+
+	if (nal_unit_type == 8) // PPS
+	{
+		envir() << "PPS seen\n";
+	}
+	else if (nal_unit_type == 7) // SPS
+	{
+		envir() << "SPS seen; siz\n";
+	}
+	else
+	{
+		//envir() << nal_unit_type << " seen; size: " << frameSize << "\n";
+	}
+	
+
+	
+
 
 	// Deliver the data here:
 	if (newFrameSize > fMaxSize)

@@ -6,6 +6,7 @@ extern "C" {
 #include <libavutil/imgutils.h>
 #include <libavutil/time.h>
 #include <libswscale/swscale.h>
+#include <libavformat/avformat.h>
 #include <x264.h>
 }
 

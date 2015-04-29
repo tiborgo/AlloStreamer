@@ -13,9 +13,9 @@ set(HEADERS
 #  REQUIRED              # Fail with error if Boost is not found
 #  COMPONENTS thread date_time system chrono   # Boost libraries by their canonical name
 #)                     # e.g. "date_time" for "libboost_date_time"
-#find_package(FFmpeg REQUIRED)
+find_package(FFmpeg REQUIRED)
 find_package(Live555 REQUIRED)
-#find_package(X264 REQUIRED)
+find_package(X264 REQUIRED)
 
 add_executable(AlloPlayer
 	${SOURCES}
@@ -25,11 +25,14 @@ target_include_directories(AlloPlayer
 	PRIVATE
 	#${Boost_INCLUDE_DIRS}
 	${Live555_INCLUDE_DIRS}
-	#${FFMPEG_INCLUDE_DIRS}
-	#${X264_INCLUDE_DIRS}
+	${FFMPEG_INCLUDE_DIRS}
+	${X264_INCLUDE_DIRS}
 )
 target_link_libraries(AlloPlayer
+	#${Boost_LIBRARIES}
+	${FFMPEG_LIBRARIES}
 	${Live555_LIBRARIES}
+	${X264_LIBRARIES}
 	ws2_32
 	winmm
 )

@@ -2,6 +2,10 @@
 #include <GroupsockHelper.hh>
 #include <liveMedia.hh>
 #include "H264WindowSink.h"
+extern "C" {
+#include <libavformat/avformat.h>
+}
+
 
 char const* progName;
 UsageEnvironment* env;
@@ -86,6 +90,17 @@ void checkForPacketArrival(void* /*clientData*/)
 		(TaskFunc*)checkForPacketArrival, NULL);
 }
 
+void continueAfterDESCRIBE2(RTSPClient*, int resultCode, char* resultString)
+{
+	static int count = 0;
+	char* sdpDescription = resultString;
+	*env << "Opened URL \"" << streamURL << "\", returning a SDP description:\n" << sdpDescription << "\n";
+	if (count == 0)
+	{
+		ourClient->sendDescribeCommand(continueAfterDESCRIBE2);
+	}
+	count++;
+}
 
 void continueAfterPLAY(RTSPClient*, int resultCode, char* resultString)
 {
@@ -111,6 +126,8 @@ void continueAfterPLAY(RTSPClient*, int resultCode, char* resultString)
 	// Watch for incoming packets (if desired):
 	checkForPacketArrival(NULL);
 	//checkInterPacketGaps(NULL);
+
+	//ourClient->sendDescribeCommand(continueAfterDESCRIBE2);
 }
 
 
@@ -155,7 +172,7 @@ void createOutputFiles(char const* periodicFilenameSuffix)
 			if (strcmp(subsession->codecName(), "H264") == 0)
 			{
 				// Open window displaying the H.264 video
-				sink = H264WindowSink::createNew(*env, fileSinkBufferSize);
+				sink = H264WindowSink::createNew(*env, fileSinkBufferSize, *subsession);
 			}
 		}
 		subsession->sink = sink;
@@ -312,6 +329,8 @@ void continueAfterDESCRIBE(RTSPClient*, int resultCode, char* resultString)
 			*env << ")\n";
 			madeProgress = True;
 
+			
+
 			if (subsession->rtpSource() != NULL)
 			{
 				// Because we're saving the incoming data, rather than playing
@@ -364,7 +383,6 @@ void continueAfterDESCRIBE(RTSPClient*, int resultCode, char* resultString)
 	setupStreams();
 }
 
-
 void continueAfterOPTIONS(RTSPClient*, int resultCode, char* resultString)
 {
 	delete[] resultString;
@@ -375,6 +393,9 @@ void continueAfterOPTIONS(RTSPClient*, int resultCode, char* resultString)
 
 int main(int argc, char** argv)
 {
+	avcodec_register_all();
+	avformat_network_init();
+
 	// Begin by setting up our usage environment:
 	TaskScheduler* scheduler = BasicTaskScheduler::createNew();
 	env = BasicUsageEnvironment::createNew(*scheduler);

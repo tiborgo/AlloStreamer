@@ -44,7 +44,7 @@ target_link_libraries(AlloServer
 	${FFMPEG_LIBRARIES}
 	${Live555_LIBRARIES}
 	${X264_LIBRARIES}
-	Ws2_32.lib # for live555 sockets
+	Ws2_32 # for live555 sockets
 	AlloShared
 )
 
