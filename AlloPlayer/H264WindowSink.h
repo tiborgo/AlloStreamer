@@ -1,5 +1,7 @@
 #pragma once
 
+//#include <windows.h>
+
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/opt.h>
@@ -10,6 +12,8 @@ extern "C" {
 }
 #include <MediaSink.hh>
 #include <MediaSession.hh>
+
+#include "AlloServer/concurrent_queue.h"
 
 class H264WindowSink : public MediaSink
 {
@@ -29,17 +33,29 @@ protected:
 
 	virtual Boolean continuePlaying();
 
-	static void H264WindowSink::afterGettingFrame(void*clientData,
+	static void afterGettingFrame(void*clientData,
 		unsigned frameSize,
 		unsigned numTruncatedBytes,
 		timeval presentationTime,
 		unsigned durationInMicroseconds);
 
+	static LRESULT WINAPI MsgProc0(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	LRESULT MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 private:
 	unsigned int bufferSize;
 	unsigned char* buffer;
-	AVFrame* frame;
+	//AVFrame* frame;
 	AVCodecContext* codecContext;
 	MediaSubsession& subSession;
+	HWND hWnd;
+	concurrent_queue<AVFrame*> frameBuffer;
+	concurrent_queue<AVFrame*> framePool;
+
+	void windowLoop();
+
+	SwsContext *img_convert_ctx;
+
+	int x2y(AVFrame *srcFrame, AVFrame *dstFrame, AVCodecContext *c);
 };
 

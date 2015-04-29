@@ -8,11 +8,11 @@ set(HEADERS
 )
 
 # include Boost, FFMpeg, live555, x264
-#find_package(Boost
-#  1.57                  # Minimum version
-#  REQUIRED              # Fail with error if Boost is not found
-#  COMPONENTS thread date_time system chrono   # Boost libraries by their canonical name
-#)                     # e.g. "date_time" for "libboost_date_time"
+find_package(Boost
+  1.57                  # Minimum version
+  REQUIRED              # Fail with error if Boost is not found
+  COMPONENTS thread date_time system chrono   # Boost libraries by their canonical name
+)                     # e.g. "date_time" for "libboost_date_time"
 find_package(FFmpeg REQUIRED)
 find_package(Live555 REQUIRED)
 find_package(X264 REQUIRED)
@@ -23,13 +23,13 @@ add_executable(AlloPlayer
 )
 target_include_directories(AlloPlayer
 	PRIVATE
-	#${Boost_INCLUDE_DIRS}
+	${Boost_INCLUDE_DIRS}
 	${Live555_INCLUDE_DIRS}
 	${FFMPEG_INCLUDE_DIRS}
 	${X264_INCLUDE_DIRS}
 )
 target_link_libraries(AlloPlayer
-	#${Boost_LIBRARIES}
+	${Boost_LIBRARIES}
 	${FFMPEG_LIBRARIES}
 	${Live555_LIBRARIES}
 	${X264_LIBRARIES}
