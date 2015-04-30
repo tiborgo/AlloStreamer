@@ -4,6 +4,7 @@
 #include <map>
 #include "H264WindowSink.h"
 #include <boost/thread.hpp>
+#include <GroupsockHelper.hh>
 
 static std::map<HWND, H264WindowSink*> hwndThisMap;
 
@@ -64,119 +65,139 @@ void H264WindowSink::afterGettingFrame(unsigned frameSize,
 	unsigned numTruncatedBytes,
 	timeval presentationTime)
 {
-	FramedSource* s = source();
+	struct timeval currentTime;
+	gettimeofday(&currentTime, NULL);
 
-	u_int8_t nal_unit_type;
-	if (frameSize >= 1)
+	long relativePresentationTimeMicroSec = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec -
+		(currentTime.tv_sec * 1000000 + currentTime.tv_usec);
+
+	long acceptedDelayMicroSec = 2000;
+
+	std::cout << this << " " << -relativePresentationTimeMicroSec << " microseconds to late" << std::endl;
+
+	if (relativePresentationTimeMicroSec + acceptedDelayMicroSec >= 0)
 	{
-		nal_unit_type = buffer[0] & 0x1F;
 
-		
 
-		if (nal_unit_type == 8) // PPS
+
+		u_int8_t nal_unit_type;
+		if (frameSize >= 1)
 		{
-			//envir() << "PPS seen; size: " << frameSize << "\n";
-		}
-		else if (nal_unit_type == 7) // SPS
-		{
-			//envir() << "SPS seen; size: " << frameSize << "\n";
-		}
-		else
-		{
-			//envir() << nal_unit_type << " seen; size: " << frameSize << "\n";
-		}
-	}
+			nal_unit_type = buffer[0] & 0x1F;
 
 
-	//envir() << "sprop - parameter - sets: " << subSession.fmtp_spropparametersets() << "\n";
-	unsigned char const start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
-	unsigned char const end_code[2] = { 0x00, 0x00 };
-	int len, got_frame;
-	AVPacket pkt;
-	av_init_packet(&pkt);
 
-	char* data = new char[frameSize + sizeof(start_code)/* + sizeof(end_code)*/];
-	pkt.size = frameSize + sizeof(start_code);// +5;// + sizeof(end_code);
-	
-	memcpy(data, start_code, sizeof(start_code));
-	memcpy(data + sizeof(start_code), buffer, frameSize);
-	//memcpy(data + sizeof(start_code)+frameSize, end_code, sizeof(end_code));
-	pkt.data = (uint8_t*)data;
-
-	AVFrame* yuvFrame = av_frame_alloc();
-	if (!yuvFrame)
-	{
-		fprintf(stderr, "Could not allocate video frame\n");
-		exit(1);
-	}
-	len = avcodec_decode_video2(codecContext, yuvFrame, &got_frame, &pkt);
-	//got_frame = 1;
-
-	//envir() << "(" << nal_unit_type << ", " << frameSize << ", " << len << ", " << got_frame << ")\n";
-
-	if (len < 0)
-	{
-		//std::cout << this << ": error decoding frame" << std::endl;
-	}
-	else if (len == 0)
-	{
-		std::cout << this << ": no frame could be decoded" << std::endl;
-	}
-	else if (got_frame == 1)
-	{
-		//std::cout << this << ": decoded frame (" << yuvFrame->width << ", " << yuvFrame->height << ")" << std::endl;
-	
-
-		AVFrame* frame;
-		framePool.wait_and_pop(frame);
-
-		if (!frame->data[0])
-		{
-			frame->width = yuvFrame->width;
-			frame->height = yuvFrame->height;
-
-			/* the image can be allocated by any means and av_image_alloc() is
-			* just the most convenient way if av_malloc() is to be used */
-			if (av_image_alloc(frame->data, frame->linesize, frame->width, frame->height,
-				(AVPixelFormat)frame->format, 32) < 0)
+			if (nal_unit_type == 8) // PPS
 			{
-				fprintf(stderr, "Could not allocate raw picture buffer\n");
-				exit(1);
+				//envir() << "PPS seen; size: " << frameSize << "\n";
+			}
+			else if (nal_unit_type == 7) // SPS
+			{
+				//envir() << "SPS seen; size: " << frameSize << "\n";
+			}
+			else
+			{
+				//envir() << nal_unit_type << " seen; size: " << frameSize << "\n";
 			}
 		}
 
-		//x2y(yuvFrame, frame, codecContext);
 
-		if (!img_convert_ctx)
+		//envir() << "sprop - parameter - sets: " << subSession.fmtp_spropparametersets() << "\n";
+		unsigned char const start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
+		unsigned char const end_code[2] = { 0x00, 0x00 };
+		int len, got_frame;
+		AVPacket pkt;
+		av_init_packet(&pkt);
+
+		char* data = new char[frameSize + sizeof(start_code)/* + sizeof(end_code)*/];
+		pkt.size = frameSize + sizeof(start_code);// +5;// + sizeof(end_code);
+
+		memcpy(data, start_code, sizeof(start_code));
+		memcpy(data + sizeof(start_code), buffer, frameSize);
+		//memcpy(data + sizeof(start_code)+frameSize, end_code, sizeof(end_code));
+		pkt.data = (uint8_t*)data;
+
+		AVFrame* yuvFrame = av_frame_alloc();
+		if (!yuvFrame)
 		{
-			img_convert_ctx = sws_getContext(
-				yuvFrame->width, yuvFrame->height, (AVPixelFormat)yuvFrame->format,
-				frame->width, frame->height, (AVPixelFormat)frame->format,
-				SWS_BICUBIC, NULL, NULL, NULL);
+			fprintf(stderr, "Could not allocate video frame\n");
+			exit(1);
+		}
+		len = avcodec_decode_video2(codecContext, yuvFrame, &got_frame, &pkt);
+		//got_frame = 1;
+
+		//envir() << "(" << nal_unit_type << ", " << frameSize << ", " << len << ", " << got_frame << ")\n";
+
+		if (len < 0)
+		{
+			//std::cout << this << ": error decoding frame" << std::endl;
+		}
+		else if (len == 0)
+		{
+			std::cout << this << ": no frame could be decoded" << std::endl;
+		}
+		else if (got_frame == 1)
+		{
+			//std::cout << this << ": decoded frame (" << yuvFrame->width << ", " << yuvFrame->height << ")" << std::endl;
+
+
+			AVFrame* frame;
+			framePool.wait_and_pop(frame);
+
+			if (!frame->data[0])
+			{
+				frame->width = yuvFrame->width;
+				frame->height = yuvFrame->height;
+
+				/* the image can be allocated by any means and av_image_alloc() is
+				* just the most convenient way if av_malloc() is to be used */
+				if (av_image_alloc(frame->data, frame->linesize, frame->width, frame->height,
+					(AVPixelFormat)frame->format, 32) < 0)
+				{
+					fprintf(stderr, "Could not allocate raw picture buffer\n");
+					exit(1);
+				}
+			}
+
+			//x2y(yuvFrame, frame, codecContext);
+
+			if (!img_convert_ctx)
+			{
+				img_convert_ctx = sws_getContext(
+					yuvFrame->width, yuvFrame->height, (AVPixelFormat)yuvFrame->format,
+					frame->width, frame->height, (AVPixelFormat)frame->format,
+					SWS_BICUBIC, NULL, NULL, NULL);
+			}
+
+			int x = sws_scale(img_convert_ctx, yuvFrame->data,
+				yuvFrame->linesize, 0, yuvFrame->height,
+				frame->data, frame->linesize);
+
+			// Flip image vertically
+			for (int i = 0; i < 4; i++)
+			{
+				frame->data[i] += frame->linesize[i] * (frame->height - 1);
+				frame->linesize[i] = -frame->linesize[i];
+			}
+
+			//std::cout << this << ": afterGettingFrame: " << frame << "\n";
+
+			//printf("%ld.%06ld\n", presentationTime.tv_sec, presentationTime.tv_usec);
+
+			av_free(yuvFrame);
+			//av_frame_free(&yuvFrame);
+
+			frameBuffer.push(frame);
+
+			InvalidateRect(hWnd, NULL, TRUE);
 		}
 
-		int x = sws_scale(img_convert_ctx, yuvFrame->data,
-			yuvFrame->linesize, 0, yuvFrame->height,
-			frame->data, frame->linesize);
-
-		// Flip image vertically
-		for (int i = 0; i < 4; i++)
-		{
-			frame->data[i] += frame->linesize[i] * (frame->height - 1);
-			frame->linesize[i] = -frame->linesize[i];
-		}
-
-		std::cout << this << ": afterGettingFrame: " << frame << "\n";
-
-		av_free(yuvFrame);
-		//av_frame_free(&yuvFrame);
-
-		frameBuffer.push(frame);
-
-		InvalidateRect(hWnd, NULL, TRUE);
+		//std::cout << this << "frame" << std::endl;
 	}
-
-	//std::cout << this << "frame" << std::endl;
+	else
+	{
+		std::cout << this << " skipped frame" << std::endl;
+	}
 
 	// Then try getting the next frame:
 	continuePlaying();
@@ -287,7 +308,7 @@ LRESULT H264WindowSink::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 		frameBuffer.wait_and_pop(frame);
 
-		std::cout << this << ": WM_PAINT         : " << frame << "\n";
+		//std::cout << this << ": WM_PAINT         : " << frame << "\n";
 
 		int wWidth = frame->width;
 		int wHeight = frame->height;

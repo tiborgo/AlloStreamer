@@ -378,7 +378,7 @@ void CubemapFaceSource::deliverFrame()
 
 	// set the duration of this frame since we have variable frame rate
 	// %% Time has to be fixed
-	this->fDurationInMicroseconds = 1000000 / 70;// thisTime - lastFrameTime;
+	//this->fDurationInMicroseconds = 1000000 / 70;// thisTime - lastFrameTime;
 
 	gettimeofday(&fPresentationTime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
 
