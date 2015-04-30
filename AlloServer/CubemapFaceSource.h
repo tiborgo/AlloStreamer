@@ -39,6 +39,7 @@ private:
 	// Stores encoded frames
 	//boost::synchronized_value<concurrent_queue<AVPacket>> pktBuffer;
 	concurrent_queue<AVPacket> pktBuffer;
+	concurrent_queue<AVPacket> pktPool;
 
 	static unsigned referenceCount; // used to count how many instances of this class currently exist
 

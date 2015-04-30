@@ -64,7 +64,7 @@ img_convert_ctx(NULL)
 	myfile = fopen("C:/Users/Tibor/Desktop/Logs/deviceglxgears.log", "w");
 
 	// initialize frame pool
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		AVFrame* frame = av_frame_alloc();
 		if (!frame)
@@ -86,6 +86,13 @@ img_convert_ctx(NULL)
 		}
 
 		framePool.push(frame);
+	}
+
+	for (int i = 0; i < 1; i++)
+	{
+		AVPacket pkt;
+		av_init_packet(&pkt);
+		pktPool.push(pkt);
 	}
 
 	// Initialize codec and encoder
@@ -152,6 +159,8 @@ CubemapFaceSource::~CubemapFaceSource()
 	this->destructing = true;
 	frameBuffer.close();
 	pktBuffer.close();
+	framePool.close();
+	pktPool.close();
 
 	frameFaceThread.join();
 	encodeFrameThread.join();
@@ -183,7 +192,7 @@ void CubemapFaceSource::frameFaceLoop()
 
 		// Only frame face if spare faces are available
 		// Otherwise skip this frame
-		if (framePool.try_pop(frame))
+		if (framePool.wait_and_pop(frame))
 		{
 			// Fill frame
 			avpicture_fill((AVPicture*)frame,
@@ -194,6 +203,10 @@ void CubemapFaceSource::frameFaceLoop()
 
 			// Make frame available to the encoder
 			frameBuffer.push(frame);
+		}
+		else
+		{
+			return;
 		}
 
 		// Wait for new frame
@@ -249,6 +262,12 @@ void CubemapFaceSource::encodeFrameLoop()
 			return;
 		}
 
+		if (!pktPool.wait_and_pop(pkt))
+		{
+			// queue did close
+			return;
+		}
+
 
 
 		yuv420pFrame = av_frame_alloc();
@@ -274,7 +293,6 @@ void CubemapFaceSource::encodeFrameLoop()
 
 		x2yuv(xFrame, yuv420pFrame, codecContext);
 
-		av_init_packet(&pkt);
 		pkt.data = NULL; // packet data will be allocated by the encoder
 		pkt.size = 0;
 		int got_output = 0;
@@ -302,7 +320,7 @@ void CubemapFaceSource::encodeFrameLoop()
 			envir().taskScheduler().triggerEvent(eventTriggerId, this);
 		}
 
-		av_freep(&yuv420pFrame->data[0]);
+		//av_freep(&yuv420pFrame->data[0]);
 		av_frame_free(&yuv420pFrame);
 	}
 }
@@ -350,7 +368,7 @@ void CubemapFaceSource::deliverFrame()
 
 	gettimeofday(&fPresentationTime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
 
-	//std::cout << this << ": pktBuffer size: " << pktBuffer.size() << std::endl;
+	std::cout << this << ": pktBuffer size: " << pktBuffer.size() << std::endl;
 
 	AVPacket pkt;
 	if (!pktBuffer.wait_and_pop(pkt))
@@ -382,20 +400,20 @@ void CubemapFaceSource::deliverFrame()
 	u_int8_t* newFrameDataStart = (u_int8_t*)(pkt.data + truncateBytes);
 	unsigned newFrameSize = pkt.size - truncateBytes;
 
-	u_int8_t nal_unit_type = newFrameDataStart[0] & 0x1F;
+	//u_int8_t nal_unit_type = newFrameDataStart[0] & 0x1F;
 
-	if (nal_unit_type == 8) // PPS
-	{
-		envir() << "PPS seen\n";
-	}
-	else if (nal_unit_type == 7) // SPS
-	{
-		envir() << "SPS seen; siz\n";
-	}
-	else
-	{
-		//envir() << nal_unit_type << " seen; size: " << frameSize << "\n";
-	}
+	//if (nal_unit_type == 8) // PPS
+	//{
+	//	envir() << "PPS seen\n";
+	//}
+	//else if (nal_unit_type == 7) // SPS
+	//{
+	//	envir() << "SPS seen; siz\n";
+	//}
+	//else
+	//{
+	//	//envir() << nal_unit_type << " seen; size: " << frameSize << "\n";
+	//}
 	
 
 	
@@ -420,6 +438,7 @@ void CubemapFaceSource::deliverFrame()
 
 
 	av_free_packet(&pkt);
+	pktPool.push(pkt);
 
 	if (fNumTruncatedBytes > 0)
 	{
