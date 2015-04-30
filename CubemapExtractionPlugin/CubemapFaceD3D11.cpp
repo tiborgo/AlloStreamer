@@ -1,5 +1,6 @@
 #include "CubemapExtractionPlugin.h"
 #include "CubemapFaceD3D11.h"
+#include <boost/thread/mutex.hpp>
 
 #if SUPPORT_D3D11
 
@@ -76,15 +77,20 @@ CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr,
 		textureDescription);
 }
 
+static boost::mutex d3D11DeviceContextMutex;
+
 void CubemapFaceD3D11::copyFromGPUToCPU()
 {
-	boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(mutex);
-
-	ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
-	g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
-
-	// copy data from GPU to CPU
-	g_D3D11DeviceContext->CopyResource(this->cpuTexturePtr, this->gpuTexturePtr);
+	{
+		// DirectX 11 is not thread-safe
+		boost::mutex::scoped_lock lock(d3D11DeviceContextMutex);
+		
+		ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
+		g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
+	
+		// copy data from GPU to CPU
+		g_D3D11DeviceContext->CopyResource(this->cpuTexturePtr, this->gpuTexturePtr);
+	}
 		
 	/*ZeroMemory(&this->resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
 	unsigned int subresource = D3D11CalcSubresource(0, 0, 0);
@@ -97,6 +103,8 @@ void CubemapFaceD3D11::copyFromGPUToCPU()
 			pixels[i + j] = ((char*)this->resource.pData)[i + 2 - j];
 		}
 	}*/
+	boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(mutex);
+
 	memcpy(this->pixels.get(), this->resource.pData, this->width * this->height * 4);
 		
 	//g_D3D11DeviceContext->Unmap(this->cpuTexturePtr, subresource);

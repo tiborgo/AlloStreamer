@@ -144,6 +144,8 @@ img_convert_ctx(NULL)
 	// Create an 'event trigger' for this device (if it hasn't already been done):
 	eventTriggerId = envir().taskScheduler().createEventTrigger(&deliverFrame0);
 
+	std::cout << this << ": eventTriggerId: " << eventTriggerId  << std::endl;
+
 	frameFaceThread = boost::thread(boost::bind(&CubemapFaceSource::frameFaceLoop, this));
 
 	encodeFrameThread = boost::thread(boost::bind(&CubemapFaceSource::encodeFrameLoop, this));
@@ -210,7 +212,14 @@ void CubemapFaceSource::frameFaceLoop()
 		}
 
 		// Wait for new frame
-		face->newPixelsCondition.wait(lock);
+		while (!face->newPixelsCondition.timed_wait(lock,
+			boost::get_system_time() + boost::posix_time::milliseconds(100)))
+		{
+			if (destructing)
+			{
+				return;
+			}
+		}
 	}
 }
 
@@ -241,6 +250,8 @@ void CubemapFaceSource::deliverFrame0(void* clientData)
 	//std::cout << "deliver frame: " << ((CubemapFaceSource*)clientData)->face->index << std::endl;
 	((CubemapFaceSource*)clientData)->deliverFrame();
 }
+
+boost::mutex triggerEventMutex;
 
 void CubemapFaceSource::encodeFrameLoop()
 {
@@ -315,9 +326,11 @@ void CubemapFaceSource::encodeFrameLoop()
 
 		//std::cout << this << ": encoded frame" << std::endl;
 
-		if (!this->destructing && isCurrentlyAwaitingData())
+		//if (!this->destructing && isCurrentlyAwaitingData())
 		{
+			boost::mutex::scoped_lock lock(triggerEventMutex);
 			envir().taskScheduler().triggerEvent(eventTriggerId, this);
+			std::cout << this << ": event triggered" << std::endl;
 		}
 
 		//av_freep(&yuv420pFrame->data[0]);
@@ -353,6 +366,7 @@ void CubemapFaceSource::deliverFrame()
 
 	if (!isCurrentlyAwaitingData())
 	{
+		std::cout << this << ": deliver skipped" << std::endl;
 		return; // we're not ready for the data yet
 	}
 
@@ -368,7 +382,7 @@ void CubemapFaceSource::deliverFrame()
 
 	gettimeofday(&fPresentationTime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
 
-	std::cout << this << ": pktBuffer size: " << pktBuffer.size() << std::endl;
+	//std::cout << this << ": pktBuffer size: " << pktBuffer.size() << std::endl;
 
 	AVPacket pkt;
 	if (!pktBuffer.wait_and_pop(pkt))
@@ -449,4 +463,6 @@ void CubemapFaceSource::deliverFrame()
 	FramedSource::afterGetting(this);
 
 	lastFrameTime = thisTime;
+
+	std::cout << this << ": delivered" << std::endl;
 }

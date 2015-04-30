@@ -208,8 +208,8 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 
 #if SUPPORT_D3D9 || SUPPORT_D3D11
 	// D3D9 case
-	if (g_DeviceType == kGfxRendererD3D9 && multithreaded)
-	{
+	//if (g_DeviceType == kGfxRendererD3D9 && multithreaded)
+	//{
 		boost::thread* threads = new boost::thread[cubemap->count()];
 
 		for (int i = 0; i < cubemap->count(); i++) {
@@ -220,12 +220,12 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 			threads[i].join();
 		}
 
-	}
-	else if (g_DeviceType == kGfxRendererD3D11 || !multithreaded) {
-		for (int i = 0; i < cubemap->count(); i++) {
-			cubemap->getFace(i)->copyFromGPUToCPU();
-		}
-	}
+	//}
+	//else if (g_DeviceType == kGfxRendererD3D11 || !multithreaded) {
+	//	for (int i = 0; i < cubemap->count(); i++) {
+	//		cubemap->getFace(i)->copyFromGPUToCPU();
+	//	}
+	//}
 
 	RepaintPreviewWindow();
 #endif
