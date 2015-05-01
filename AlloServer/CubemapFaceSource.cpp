@@ -354,7 +354,7 @@ void CubemapFaceSource::encodeFrameLoop()
 			//std::cout << this << ": event triggered" << std::endl;
 		}
 
-		//av_freep(&yuv420pFrame->data[0]);
+		av_freep(&yuv420pFrame->data[0]);
 		av_frame_free(&yuv420pFrame);
 	}
 }

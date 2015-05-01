@@ -71,7 +71,7 @@ void H264WindowSink::afterGettingFrame(unsigned frameSize,
 	long relativePresentationTimeMicroSec = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec -
 		(currentTime.tv_sec * 1000000 + currentTime.tv_usec);
 
-	long acceptedDelayMicroSec = 100000; // 100 milliseconds
+	long acceptedDelayMicroSec = 10000000; // 10000 milliseconds
 
 	if (relativePresentationTimeMicroSec + acceptedDelayMicroSec >= 0)
 	{
@@ -182,8 +182,8 @@ void H264WindowSink::afterGettingFrame(unsigned frameSize,
 
 			//printf("%ld.%06ld\n", presentationTime.tv_sec, presentationTime.tv_usec);
 
-			av_free(yuvFrame);
-			//av_frame_free(&yuvFrame);
+			//av_freep(&yuvFrame->data[0]);
+			av_frame_free(&yuvFrame);
 
 			frameBuffer.push(frame);
 
