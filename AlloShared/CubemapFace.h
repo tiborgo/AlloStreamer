@@ -8,6 +8,7 @@
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/interprocess_condition.hpp>
 #include <libavutil/pixfmt.h>
+#include <boost/chrono/system_clocks.hpp>
 
 #ifdef _WIN32
 	#ifdef AlloShared_EXPORTS
@@ -43,6 +44,11 @@ public:
 
 	boost::interprocess::interprocess_mutex mutex;
 	boost::interprocess::interprocess_condition newPixelsCondition;
+
+	boost::chrono::system_clock::time_point getPresentationTime();
+
+protected:
+	boost::chrono::system_clock::time_point presentationTime;
 };
 
 class AlloShared_API Cubemap {

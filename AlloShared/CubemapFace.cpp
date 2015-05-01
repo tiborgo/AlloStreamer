@@ -13,6 +13,11 @@ CubemapFace::CubemapFace(boost::uint32_t width,
 
 }
 
+boost::chrono::system_clock::time_point CubemapFace::getPresentationTime()
+{
+	return presentationTime;
+}
+
 Cubemap::Cubemap(FacePtrAllocator& allocator)
 : faces(allocator)
 {

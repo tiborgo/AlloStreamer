@@ -13,8 +13,9 @@ find_package(Boost
   REQUIRED
   signals
   date_time
+  chrono
+  system
 )
-
 find_package(FFmpeg REQUIRED)
 
 add_library(AlloShared

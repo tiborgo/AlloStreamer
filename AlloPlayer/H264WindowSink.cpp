@@ -71,9 +71,7 @@ void H264WindowSink::afterGettingFrame(unsigned frameSize,
 	long relativePresentationTimeMicroSec = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec -
 		(currentTime.tv_sec * 1000000 + currentTime.tv_usec);
 
-	long acceptedDelayMicroSec = 2000;
-
-	std::cout << this << " " << -relativePresentationTimeMicroSec << " microseconds to late" << std::endl;
+	long acceptedDelayMicroSec = 100000; // 100 milliseconds
 
 	if (relativePresentationTimeMicroSec + acceptedDelayMicroSec >= 0)
 	{
@@ -193,10 +191,18 @@ void H264WindowSink::afterGettingFrame(unsigned frameSize,
 		}
 
 		//std::cout << this << "frame" << std::endl;
+
+		struct timeval currentTime;
+		gettimeofday(&currentTime, NULL);
+
+		long relativePresentationTimeMicroSec = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec -
+			(currentTime.tv_sec * 1000000 + currentTime.tv_usec);
+
+		std::cout << this << " " << -relativePresentationTimeMicroSec/1000.0 << " milliseconds to late" << std::endl;
 	}
 	else
 	{
-		std::cout << this << " skipped frame" << std::endl;
+		//std::cout << this << " skipped frame" << std::endl;
 	}
 
 	// Then try getting the next frame:

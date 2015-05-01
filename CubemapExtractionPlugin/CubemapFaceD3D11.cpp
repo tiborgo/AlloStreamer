@@ -81,6 +81,8 @@ static boost::mutex d3D11DeviceContextMutex;
 
 void CubemapFaceD3D11::copyFromGPUToCPU()
 {
+	presentationTime = boost::chrono::system_clock::now();
+
 	{
 		// DirectX 11 is not thread-safe
 		boost::mutex::scoped_lock lock(d3D11DeviceContextMutex);

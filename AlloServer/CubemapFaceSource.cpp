@@ -8,6 +8,11 @@
 #include <time.h>
 #include <boost/thread.hpp>
 #include <boost/interprocess/containers/deque.hpp>
+#include <ctime>
+#include <chrono>
+#include <iomanip>
+
+namespace bc = boost::chrono;
 
 int CubemapFaceSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
 {
@@ -203,6 +208,20 @@ void CubemapFaceSource::frameFaceLoop()
 				this->face->width,
 				this->face->height);
 
+			// Set the actual presentation time
+			// It is in the past probably but we will try our best
+			AVRational microSecBase = { 1, 1000000 };
+			bc::microseconds presentationTimeSinceEpochMicroSec =
+				bc::duration_cast<bc::microseconds>(face->getPresentationTime().time_since_epoch());
+			
+			
+			const time_t time = bc::system_clock::to_time_t(face->getPresentationTime());
+
+			// Maybe the put_time will be implemented later?
+			std::cout << std::put_time(std::localtime(&time), "%c") << std::endl;
+			
+			frame->pts = av_rescale_q(presentationTimeSinceEpochMicroSec.count(), microSecBase, codecContext->time_base);
+
 			// Make frame available to the encoder
 			frameBuffer.push(frame);
 		}
@@ -321,6 +340,8 @@ void CubemapFaceSource::encodeFrameLoop()
 			return;
 		}
 
+		pkt.pts = xFrame->pts;
+
 		framePool.push(xFrame);
 		pktBuffer.push(pkt);
 
@@ -330,7 +351,7 @@ void CubemapFaceSource::encodeFrameLoop()
 		{
 			boost::mutex::scoped_lock lock(triggerEventMutex);
 			envir().taskScheduler().triggerEvent(eventTriggerId, this);
-			std::cout << this << ": event triggered" << std::endl;
+			//std::cout << this << ": event triggered" << std::endl;
 		}
 
 		//av_freep(&yuv420pFrame->data[0]);
@@ -366,7 +387,7 @@ void CubemapFaceSource::deliverFrame()
 
 	if (!isCurrentlyAwaitingData())
 	{
-		std::cout << this << ": deliver skipped" << std::endl;
+		//std::cout << this << ": deliver skipped" << std::endl;
 		return; // we're not ready for the data yet
 	}
 
@@ -380,7 +401,8 @@ void CubemapFaceSource::deliverFrame()
 	// %% Time has to be fixed
 	//this->fDurationInMicroseconds = 1000000 / 70;// thisTime - lastFrameTime;
 
-	gettimeofday(&fPresentationTime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
+	
+	//gettimeofday(&fPresentationTime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
 
 	//std::cout << this << ": pktBuffer size: " << pktBuffer.size() << std::endl;
 
@@ -390,6 +412,13 @@ void CubemapFaceSource::deliverFrame()
 		// queue did close
 		return;
 	}
+
+	// Set the presentation time of this frame
+	AVRational secBase = { 1, 1 };
+	AVRational microSecBase = { 1, 1000000 };
+	fPresentationTime.tv_sec = av_rescale_q(pkt.pts, codecContext->time_base, secBase);
+	fPresentationTime.tv_usec = av_rescale_q(pkt.pts, codecContext->time_base, microSecBase) -
+		fPresentationTime.tv_sec * 1000000;
 
 	// Live555 does not like start codes.
 	// So, we remove the start code which is there in front of every nal unit.  
@@ -464,5 +493,5 @@ void CubemapFaceSource::deliverFrame()
 
 	lastFrameTime = thisTime;
 
-	std::cout << this << ": delivered" << std::endl;
+	//std::cout << this << ": delivered" << std::endl;
 }
