@@ -1,9 +1,4 @@
-
-#include "CubemapFaceSource.h"
-#include "AlloShared/Signals.h"
 #include <GroupsockHelper.hh> // for "gettimeofday()"
-#include "config.h"
-//#include "stdafx.h"
 #include <stdint.h>
 #include <time.h>
 #include <boost/thread.hpp>
@@ -11,6 +6,9 @@
 #include <ctime>
 #include <chrono>
 #include <iomanip>
+
+#include "config.h"
+#include "CubemapFaceSource.h"
 
 namespace bc = boost::chrono;
 
@@ -42,7 +40,7 @@ int CubemapFaceSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext 
 		yuvFrame->data, yuvFrame->linesize);
 }
 
-CubemapFaceSource* CubemapFaceSource::createNew(UsageEnvironment& env, CubemapFace* face)
+CubemapFaceSource* CubemapFaceSource::createNew(UsageEnvironment& env, CubemapImpl::Face* face)
 {
 	return new CubemapFaceSource(env, face);
 }
@@ -51,7 +49,7 @@ unsigned CubemapFaceSource::referenceCount = 0;
 
 struct timeval prevtime;
 
-CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapFace* face)
+CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapImpl::Face* face)
 : FramedSource(env), face(face), /*encodeBarrier(2),*/ destructing(false),
 img_convert_ctx(NULL)
 {

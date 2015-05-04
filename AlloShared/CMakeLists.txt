@@ -1,11 +1,11 @@
 set(SOURCES
 	CubemapFace.cpp
-	Signals.cpp
+	CubemapFace.inl
 )
 	
 set(HEADERS
 	CubemapFace.h
-	Signals.h
+	API.h
 )
 
 find_package(Boost

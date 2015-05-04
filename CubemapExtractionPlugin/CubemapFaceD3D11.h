@@ -7,9 +7,12 @@
 
 #include <d3d11.h>
 
-class CubemapFaceD3D11 : public CubemapFace {
+template <typename MemoryAlgorithm>
+class CubemapFaceD3D11 : public CubemapFace<MemoryAlgorithm>
+{
 public:
-	typedef boost::interprocess::allocator<CubemapFaceD3D11, CubemapFace::SegmentManager> FaceAllocator;
+	typedef boost::interprocess::allocator<CubemapFaceD3D11, typename CubemapFace::SegmentManager>
+		FaceAllocator;
 	typedef boost::interprocess::offset_ptr<CubemapFaceD3D11> Ptr;
 
 	ID3D11Texture2D* const gpuTexturePtr;
@@ -37,5 +40,7 @@ protected:
 		D3D11_TEXTURE2D_DESC& description
 		);
 };
+
+#include "CubemapFaceD3D11.inl"
 
 #endif

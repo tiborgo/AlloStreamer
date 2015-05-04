@@ -71,7 +71,7 @@ void H264WindowSink::afterGettingFrame(unsigned frameSize,
 	long relativePresentationTimeMicroSec = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec -
 		(currentTime.tv_sec * 1000000 + currentTime.tv_usec);
 
-	long acceptedDelayMicroSec = 10000000; // 10000 milliseconds
+	long acceptedDelayMicroSec = 100000; // 10000 milliseconds
 
 	if (relativePresentationTimeMicroSec + acceptedDelayMicroSec >= 0)
 	{

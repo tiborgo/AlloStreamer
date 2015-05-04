@@ -1,8 +1,8 @@
 set(SOURCES
 	CubemapExtractionPlugin.cpp
 	PreviewWindow.cpp
-	CubemapFaceD3D9.cpp
-	CubemapFaceD3D11.cpp
+	CubemapFaceD3D9.inl
+	CubemapFaceD3D11.inl
 )
 	
 set(HEADERS

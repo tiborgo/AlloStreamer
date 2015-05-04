@@ -12,7 +12,7 @@ more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this library; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
- **********/
+**********/
 // "liveMedia"
 // Copyright (c) 1996-2013 Live Networks, Inc.  All rights reserved.
 // A 'ServerMediaSubsession' object that creates new, unicast, "RTPSink"s
@@ -33,51 +33,58 @@ UsageEnvironment* envi;
 
 H264VideoOnDemandServerMediaSubsession*
 H264VideoOnDemandServerMediaSubsession::createNew(UsageEnvironment& env,
-        Boolean reuseFirstSource,
-		CubemapFace* face) {
+Boolean reuseFirstSource,
+CubemapImpl::Face* face)
+{
 	return new H264VideoOnDemandServerMediaSubsession(env, reuseFirstSource, face);
 }
 
 H264VideoOnDemandServerMediaSubsession::H264VideoOnDemandServerMediaSubsession(UsageEnvironment& env,
 	Boolean reuseFirstSource,
-	CubemapFace* face)
-: OnDemandServerMediaSubsession(env, reuseFirstSource),
-fAuxSDPLine(NULL), fDoneFlag(0), fDummyRTPSink(NULL), face(face) {
-  envi = &env;
+	CubemapImpl::Face* face)
+	: OnDemandServerMediaSubsession(env, reuseFirstSource),
+	fAuxSDPLine(NULL), fDoneFlag(0), fDummyRTPSink(NULL), face(face)
+{
+	envi = &env;
 }
 
-H264VideoOnDemandServerMediaSubsession::~H264VideoOnDemandServerMediaSubsession() {
-  delete[] fAuxSDPLine;
+H264VideoOnDemandServerMediaSubsession::~H264VideoOnDemandServerMediaSubsession()
+{
+	delete[] fAuxSDPLine;
 }
 
-FramedSource* H264VideoOnDemandServerMediaSubsession::createNewStreamSource(unsigned /*clientSessionId*/, unsigned& estBitrate) {
-  estBitrate = 4000; // kbps, estimate
+FramedSource* H264VideoOnDemandServerMediaSubsession::createNewStreamSource(unsigned /*clientSessionId*/, unsigned& estBitrate)
+{
+	estBitrate = 4000; // kbps, estimate
 
-  //RandomFramedSource* source = RandomFramedSource::createNew(*envi, name);
+	//RandomFramedSource* source = RandomFramedSource::createNew(*envi, name);
 
-  CubemapFaceSource* source = CubemapFaceSource::createNew(*envi, face);
+	CubemapFaceSource* source = CubemapFaceSource::createNew(*envi, face);
 
-  if (source == NULL) return NULL;
+	if (source == NULL) return NULL;
 
-  // Create a framer for the Video Elementary Stream:
-  return H264VideoStreamDiscreteFramer::createNew(envir(), source);
+	// Create a framer for the Video Elementary Stream:
+	return H264VideoStreamDiscreteFramer::createNew(envir(), source);
 }
 
 RTPSink* H264VideoOnDemandServerMediaSubsession
 ::createNewRTPSink(Groupsock* rtpGroupsock,
-        unsigned char rtpPayloadTypeIfDynamic,
-        FramedSource* /*inputSource*/) {
-  return H264VideoRTPSink::createNew(envir(), rtpGroupsock, rtpPayloadTypeIfDynamic);
+unsigned char rtpPayloadTypeIfDynamic,
+FramedSource* /*inputSource*/)
+{
+	return H264VideoRTPSink::createNew(envir(), rtpGroupsock, rtpPayloadTypeIfDynamic);
 }
 
-static void afterPlayingDummy(void* clientData) {
-  H264VideoOnDemandServerMediaSubsession* subsess = (H264VideoOnDemandServerMediaSubsession*) clientData;
-  subsess->afterPlayingDummy1();
+static void afterPlayingDummy(void* clientData)
+{
+	H264VideoOnDemandServerMediaSubsession* subsess = (H264VideoOnDemandServerMediaSubsession*)clientData;
+	subsess->afterPlayingDummy1();
 }
 
-void H264VideoOnDemandServerMediaSubsession::afterPlayingDummy1() {
-  // Unschedule any pending 'checking' task:
-  envir().taskScheduler().unscheduleDelayedTask(nextTask());
-  // Signal the event loop that we're done:
-  setDoneFlag();
+void H264VideoOnDemandServerMediaSubsession::afterPlayingDummy1()
+{
+	// Unschedule any pending 'checking' task:
+	envir().taskScheduler().unscheduleDelayedTask(nextTask());
+	// Signal the event loop that we're done:
+	setDoneFlag();
 }

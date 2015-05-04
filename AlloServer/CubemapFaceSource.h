@@ -11,10 +11,10 @@
 class CubemapFaceSource : public FramedSource
 {
 public:
-	static CubemapFaceSource* createNew(UsageEnvironment& env, CubemapFace* face);
+	static CubemapFaceSource* createNew(UsageEnvironment& env, CubemapImpl::Face* face);
 
 protected:
-	CubemapFaceSource(UsageEnvironment& env, CubemapFace* face);
+	CubemapFaceSource(UsageEnvironment& env, CubemapImpl::Face* face);
 	// called only by createNew(), or by subclass constructors
 	virtual ~CubemapFaceSource();
 
@@ -43,7 +43,7 @@ private:
 
 	static unsigned referenceCount; // used to count how many instances of this class currently exist
 
-	CubemapFace* face;
+	CubemapImpl::Face* face;
 	AVCodecContext* codecContext;
 
 	FILE * myfile;

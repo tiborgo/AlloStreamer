@@ -1,9 +1,12 @@
+#pragma once
+
 #include "CubemapExtractionPlugin.h"
 #include "CubemapFaceD3D9.h"
 
 #if SUPPORT_D3D9
 
-CubemapFaceD3D9::CubemapFaceD3D9(
+template <typename MemoryAlgorithm>
+CubemapFaceD3D9<MemoryAlgorithm>::CubemapFaceD3D9(
 	boost::uint32_t width,
 	boost::uint32_t height,
 	int index,
@@ -23,10 +26,13 @@ CubemapFaceD3D9::CubemapFaceD3D9(
 
 }
 
-CubemapFaceD3D9::Ptr CubemapFaceD3D9::create(IDirect3DTexture9* texturePtr,
+template <typename MemoryAlgorithm>
+typename CubemapFaceD3D9<MemoryAlgorithm>::Ptr CubemapFaceD3D9<MemoryAlgorithm>::create(
+	IDirect3DTexture9* texturePtr,
 	int index,
 	FaceAllocator& faceAllocator,
-	PixelAllocator& pixelAllocator) {
+	PixelAllocator& pixelAllocator)
+{
 
 	D3DSURFACE_DESC textureDescription;
 	HRESULT hr = texturePtr->GetLevelDesc(0, &textureDescription);
@@ -54,7 +60,9 @@ CubemapFaceD3D9::Ptr CubemapFaceD3D9::create(IDirect3DTexture9* texturePtr,
 		gpuSurfacePtr, cpuSurfacePtr, textureDescription.Format, lockedRect);
 }
 
-void CubemapFaceD3D9::copyFromGPUToCPU() {
+template <typename MemoryAlgorithm>
+void CubemapFaceD3D9<MemoryAlgorithm>::copyFromGPUToCPU()
+{
 
 	// copy data from GPU to CPU
 	HRESULT hr = g_D3D9Device->GetRenderTargetData(this->gpuSurfacePtr, this->cpuSurfacePtr);

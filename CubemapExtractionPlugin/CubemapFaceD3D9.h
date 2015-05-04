@@ -8,9 +8,12 @@
 
 #include <d3d9.h>
 
-class CubemapFaceD3D9 : public CubemapFace {
+template <typename MemoryAlgorithm>
+class CubemapFaceD3D9 : public CubemapFace<MemoryAlgorithm>
+{
 public:
-	typedef boost::interprocess::allocator<CubemapFaceD3D9, CubemapFace::SegmentManager> FaceAllocator;
+	typedef boost::interprocess::allocator<CubemapFaceD3D9, typename CubemapFace::SegmentManager>
+		FaceAllocator;
 	typedef boost::interprocess::offset_ptr<CubemapFaceD3D9> Ptr;
 
 	IDirect3DTexture9* const texturePtr;
@@ -39,5 +42,7 @@ protected:
 		D3DLOCKED_RECT lockedRect
 		);
 };
+
+#include "CubemapFaceD3D9.inl"
 
 #endif

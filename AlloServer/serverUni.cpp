@@ -34,7 +34,6 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 #include "config.h"
 #include "RandomFramedSource.h"
 #include "AlloShared/CubemapFace.h"
-#include "AlloShared/Signals.h"
 #include "AlloServer.h"
 #include "concurrent_queue.h"
 
@@ -74,11 +73,11 @@ ServerMediaSession* sms;
 
 EventTriggerId addFaceSubstreamTriggerId;
 
-concurrent_queue<CubemapFace*> faceBuffer;
+concurrent_queue<CubemapImpl::Face*> faceBuffer;
 
 void addFaceSubstream0(void*) {
 
-	CubemapFace* face;
+	CubemapImpl::Face* face;
 
 	while (faceBuffer.try_pop(face))
 	{

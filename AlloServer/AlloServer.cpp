@@ -291,7 +291,7 @@ main(int argc, char *argv[])
 	  boost::interprocess::managed_shared_memory(boost::interprocess::open_only,
 	  "MySharedMemory");
 
-  cubemap = shm.find<Cubemap>("Cubemap").first;
+  cubemap = shm.find<CubemapImpl>("Cubemap").first;
   
   startRTSP();
 

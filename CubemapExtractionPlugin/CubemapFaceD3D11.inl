@@ -1,3 +1,5 @@
+#pragma once
+
 #include "CubemapExtractionPlugin.h"
 #include "CubemapFaceD3D11.h"
 #include <boost/thread/mutex.hpp>
@@ -15,7 +17,8 @@ static AVPixelFormat avPixel2DXGIFormat(DXGI_FORMAT format)
 	}
 }
 
-CubemapFaceD3D11::CubemapFaceD3D11(
+template <typename MemoryAlgorithm>
+CubemapFaceD3D11<MemoryAlgorithm>::CubemapFaceD3D11(
 	boost::uint32_t width,
 	boost::uint32_t height,
 	int index,
@@ -26,19 +29,23 @@ CubemapFaceD3D11::CubemapFaceD3D11(
 	D3D11_TEXTURE2D_DESC& description)
 	:
 	CubemapFace(width,
-		height,
-		index,
-		avPixel2DXGIFormat(description.Format),
-		allocator),
+	height,
+	index,
+	avPixel2DXGIFormat(description.Format),
+	allocator),
 	gpuTexturePtr(gpuTexturePtr),
 	cpuTexturePtr(cpuTexturePtr),
-	resource(resource) {
+	resource(resource)
+{
 }
 
-CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr,
+template <typename MemoryAlgorithm>
+CubemapFaceD3D11<MemoryAlgorithm>* CubemapFaceD3D11<MemoryAlgorithm>::create(
+	ID3D11Texture2D* texturePtr,
 	int index,
 	FaceAllocator& faceAllocator,
-	PixelAllocator& pixelAllocator) {
+	PixelAllocator& pixelAllocator)
+{
 
 	ID3D11Texture2D* gpuTexturePtr = (ID3D11Texture2D*)texturePtr;
 
@@ -67,7 +74,7 @@ CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr,
 
 	CubemapFaceD3D11* addr = faceAllocator.allocate_one().get();
 
-	return new (addr) CubemapFaceD3D11(width,
+	return new (addr)CubemapFaceD3D11(width,
 		height,
 		index,
 		pixelAllocator,
@@ -79,36 +86,37 @@ CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr,
 
 static boost::mutex d3D11DeviceContextMutex;
 
-void CubemapFaceD3D11::copyFromGPUToCPU()
+template <typename MemoryAlgorithm>
+void CubemapFaceD3D11<MemoryAlgorithm>::copyFromGPUToCPU()
 {
 	presentationTime = boost::chrono::system_clock::now();
 
 	{
 		// DirectX 11 is not thread-safe
 		boost::mutex::scoped_lock lock(d3D11DeviceContextMutex);
-		
+
 		ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
 		g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
-	
+
 		// copy data from GPU to CPU
 		g_D3D11DeviceContext->CopyResource(this->cpuTexturePtr, this->gpuTexturePtr);
 	}
-		
+
 	/*ZeroMemory(&this->resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
 	unsigned int subresource = D3D11CalcSubresource(0, 0, 0);
 	HRESULT hr = g_D3D11DeviceContext->Map(this->cpuTexturePtr, subresource, D3D11_MAP_READ, 0, &this->resource);*/
-		
+
 	// DirectX 11 is using wrong order of colors in a pixel -> correcting it
 	/*char* pixels = (char*)this->pixels.get();
 	for (unsigned int i = 0; i < this->width * this->height * 4; i += 4) {
-		for (int j = 0; j < 3; j++) {
-			pixels[i + j] = ((char*)this->resource.pData)[i + 2 - j];
-		}
+	for (int j = 0; j < 3; j++) {
+	pixels[i + j] = ((char*)this->resource.pData)[i + 2 - j];
+	}
 	}*/
 	boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(mutex);
 
 	memcpy(this->pixels.get(), this->resource.pData, this->width * this->height * 4);
-		
+
 	//g_D3D11DeviceContext->Unmap(this->cpuTexturePtr, subresource);
 
 	newPixelsCondition.notify_all();
