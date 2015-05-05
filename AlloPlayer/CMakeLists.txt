@@ -5,6 +5,7 @@ set(SOURCES
 	shader.cpp
 	texture.cpp
 	tutorial05.cpp
+	cubemaps_skybox_optimized.cpp
 )
 	
 set(HEADERS
@@ -34,6 +35,7 @@ FIND_PACKAGE(GLEW REQUIRED)
 FIND_PACKAGE(GLFW REQUIRED)
 FIND_PACKAGE(GLM REQUIRED)
 FIND_PACKAGE(OPENGL REQUIRED)
+FIND_PACKAGE(SOIL REQUIRED)
 
 add_executable(AlloPlayer
 	${SOURCES}
@@ -49,6 +51,7 @@ target_include_directories(AlloPlayer
 	${GLEW_INCLUDE_DIR}
 	${GLFW_INCLUDE_DIR}
 	${GLM_INCLUDE_DIR}
+	${SOIL_INCLUDE_DIR}
 )
 target_link_libraries(AlloPlayer
 	${Boost_LIBRARIES}
@@ -58,12 +61,13 @@ target_link_libraries(AlloPlayer
 	${GLEW_LIBRARY}
 	${GLFW_LIBRARY}
 	${OPENGL_gl_LIBRARY}
+	${SOIL_LIBRARY}
 	ws2_32
 	winmm
 )
 target_compile_definitions(AlloPlayer
 	PRIVATE
-	AlloPlayer_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+	AlloPlayer_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/
 )
 
 set_target_properties(AlloPlayer
