@@ -5,7 +5,7 @@ set(SOURCES
 	shader.cpp
 	texture.cpp
 	tutorial05.cpp
-	cubemaps_skybox_optimized.cpp
+	CubemapPreviewWindow.cpp
 )
 	
 set(HEADERS
@@ -13,12 +13,14 @@ set(HEADERS
 	H264RawPixelsSink.h
 	shader.hpp
 	texture.hpp
+	CubemapPreviewWindow.h
 )
 
 set(RESOURCES
 	TextureFragmentShader.fragmentshader
 	TransformVertexShader.vertexshader
 	uvtemplate.DDS
+	
 )
 
 

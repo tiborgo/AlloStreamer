@@ -281,7 +281,27 @@ void H264RawPixelsSink::decodeFrameLoop()
 
 		counter++;
 
-		framePool.push(frame);
+		frameBuffer.push(frame);
 		pktPool.push(pkt);
 	}
+}
+
+Frame* H264RawPixelsSink::getNextFrame()
+{
+	AVFrame* avFrame;
+
+	frameBuffer.wait_and_pop(avFrame);
+
+	boost::interprocess::managed_heap_memory heapMemory(avFrame->width * avFrame->height * 4);
+	Allocator<HeapSegmentManager> heapAllocator(heapMemory.get_segment_manager());
+	Frame* frame = new Frame(avFrame->width, avFrame->height, (AVPixelFormat)avFrame->format, heapAllocator);
+	
+
+	int ret = avpicture_layout((AVPicture*)frame, (AVPixelFormat)frame->format,
+		frame->width, frame->height, (unsigned char*)frame->pixels.get(), frame->width * frame->height * 4);
+
+
+	framePool.push(avFrame);
+
+	return frame;
 }
