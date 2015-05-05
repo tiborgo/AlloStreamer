@@ -11,6 +11,7 @@ extern "C"
 }
 #include <MediaSink.hh>
 #include <MediaSession.hh>
+#include <boost/thread.hpp>
 
 #include "AlloServer/concurrent_queue.h"
 #include "AlloShared/CubemapFace.h"
@@ -45,7 +46,13 @@ private:
 	AVCodecContext* codecContext;
 	concurrent_queue<AVFrame*> frameBuffer;
 	concurrent_queue<AVFrame*> framePool;
+	concurrent_queue<AVPacket*> pktBuffer;
+	concurrent_queue<AVPacket*> pktPool;
 
 	SwsContext *img_convert_ctx;
+
+	boost::thread decodeFrameThread;
+
+	void decodeFrameLoop();
 };
 

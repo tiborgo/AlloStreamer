@@ -6,6 +6,8 @@
 #include <boost/thread.hpp>
 #include <GroupsockHelper.hh>
 
+namespace bc = boost::chrono;
+
 H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
 	unsigned int bufferSize)
 {
@@ -28,6 +30,9 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 		frame->format = AV_PIX_FMT_BGRA;
 
 		framePool.push(frame);
+
+		AVPacket* pkt = new AVPacket;
+		pktPool.push(pkt);
 	}
 
 
@@ -53,7 +58,11 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 		fprintf(stderr, "could not open codec\n");
 		return;
 	}
+
+	decodeFrameThread = boost::thread(boost::bind(&H264RawPixelsSink::decodeFrameLoop, this));
 }
+
+int counter = 0;
 
 void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 	unsigned numTruncatedBytes,
@@ -67,9 +76,9 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 
 	long acceptedDelayMicroSec = 100000; // 10000 milliseconds
 
-	if (relativePresentationTimeMicroSec + acceptedDelayMicroSec >= 0)
+	if (true /*relativePresentationTimeMicroSec + acceptedDelayMicroSec >= 0*/)
 	{
-
+		
 
 
 		u_int8_t nal_unit_type;
@@ -93,32 +102,106 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 			}
 		}
 
+		
 
 		//envir() << "sprop - parameter - sets: " << subSession.fmtp_spropparametersets() << "\n";
 		unsigned char const start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
 		unsigned char const end_code[2] = { 0x00, 0x00 };
-		int len, got_frame;
-		AVPacket pkt;
-		av_init_packet(&pkt);
+		
+		AVPacket* pkt;
+		if (!pktPool.wait_and_pop(pkt))
+		{
+			// queue did close
+			return;
+		}
 
-		char* data = new char[frameSize + sizeof(start_code)/* + sizeof(end_code)*/];
-		pkt.size = frameSize + sizeof(start_code);// +5;// + sizeof(end_code);
+		av_init_packet(pkt);
 
-		memcpy(data, start_code, sizeof(start_code));
-		memcpy(data + sizeof(start_code), buffer, frameSize);
-		//memcpy(data + sizeof(start_code)+frameSize, end_code, sizeof(end_code));
-		pkt.data = (uint8_t*)data;
+		AVRational microSecBase = { 1, 1000000 };
 
-		AVFrame* yuvFrame = av_frame_alloc();
+		pkt->size = frameSize + sizeof(start_code);
+		pkt->data = (uint8_t*)new char[frameSize + sizeof(start_code)];
+		pkt->pts = av_rescale_q(presentationTime.tv_sec * 1000000 + presentationTime.tv_usec,
+			microSecBase,
+			codecContext->time_base);
+
+		memcpy(pkt->data, start_code, sizeof(start_code));
+		memcpy(pkt->data + sizeof(start_code), buffer, frameSize);
+
+		pktBuffer.push(pkt);
+
+		struct timeval currentTime;
+		gettimeofday(&currentTime, NULL);
+
+		long relativePresentationTimeMicroSec = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec -
+			(currentTime.tv_sec * 1000000 + currentTime.tv_usec);
+
+		//std::cout << this << " " << -relativePresentationTimeMicroSec / 1000.0 << " milliseconds to late" << std::endl;
+	}
+	else
+	{
+		//std::cout << this << " skipped frame" << std::endl;
+	}
+
+	// Then try getting the next frame:
+	continuePlaying();
+
+	counter++;
+
+	
+}
+
+Boolean H264RawPixelsSink::continuePlaying()
+{
+	fSource->getNextFrame(buffer, bufferSize,
+		afterGettingFrame, this,
+		onSourceClosure, this);
+
+	return True;
+}
+
+void H264RawPixelsSink::afterGettingFrame(void*clientData,
+	unsigned frameSize,
+	unsigned numTruncatedBytes,
+	timeval presentationTime,
+	unsigned durationInMicroseconds)
+{
+	H264RawPixelsSink* sink = (H264RawPixelsSink*)clientData;
+	sink->afterGettingFrame(frameSize, numTruncatedBytes, presentationTime);
+}
+
+void H264RawPixelsSink::decodeFrameLoop()
+{
+
+
+	while (true)
+	{
+		// Pop frame ptr from buffer
+		AVFrame* frame;
+		AVFrame* yuvFrame;
+		AVPacket* pkt;
+
+
+		if (!pktBuffer.wait_and_pop(pkt))
+		{
+			// queue did close
+			return;
+		}
+
+		if (!framePool.wait_and_pop(frame))
+		{
+			// queue did close
+			return;
+		}
+
+		yuvFrame = av_frame_alloc();
 		if (!yuvFrame)
 		{
 			fprintf(stderr, "Could not allocate video frame\n");
 			exit(1);
 		}
-		len = avcodec_decode_video2(codecContext, yuvFrame, &got_frame, &pkt);
-		//got_frame = 1;
-
-		//envir() << "(" << nal_unit_type << ", " << frameSize << ", " << len << ", " << got_frame << ")\n";
+		int got_frame;
+		int len = avcodec_decode_video2(codecContext, yuvFrame, &got_frame, pkt);
 
 		if (len < 0)
 		{
@@ -130,12 +213,6 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 		}
 		else if (got_frame == 1)
 		{
-			//std::cout << this << ": decoded frame (" << yuvFrame->width << ", " << yuvFrame->height << ")" << std::endl;
-
-
-			AVFrame* frame;
-			framePool.wait_and_pop(frame);
-
 			if (!frame->data[0])
 			{
 				frame->width = yuvFrame->width;
@@ -178,44 +255,36 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 
 			//av_freep(&yuvFrame->data[0]);
 			av_frame_free(&yuvFrame);
-
-			frameBuffer.push(frame);
 		}
 
-		//std::cout << this << "frame" << std::endl;
+		bc::microseconds nowSinceEpoch =
+			bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
 
-		struct timeval currentTime;
-		gettimeofday(&currentTime, NULL);
+		AVRational microSecBase = { 1, 1000000 };
+		bc::microseconds presentationTimeSinceEpoch =
+			bc::microseconds(av_rescale_q(pkt->pts, codecContext->time_base, microSecBase));
 
-		long relativePresentationTimeMicroSec = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec -
-			(currentTime.tv_sec * 1000000 + currentTime.tv_usec);
 
-		std::cout << this << " " << -relativePresentationTimeMicroSec / 1000.0 << " milliseconds to late" << std::endl;
+		bc::microseconds relativePresentationTime = presentationTimeSinceEpoch - nowSinceEpoch;
+
+		static long sumRelativePresentationTimeMicroSec = 0;
+		static long maxRelativePresentationTimeMicroSec = 0;
+
+		sumRelativePresentationTimeMicroSec += relativePresentationTime.count();
+		if (maxRelativePresentationTimeMicroSec > relativePresentationTime.count())
+		{
+			maxRelativePresentationTimeMicroSec = relativePresentationTime.count();
+		}
+
+		const long frequency = 100;
+		if (counter % frequency == 0)
+		{
+			std::cout << this << " delay: avg " << -sumRelativePresentationTimeMicroSec / 1000.0 / frequency << " ms; max " << -maxRelativePresentationTimeMicroSec / 1000.0 << " ms" << std::endl;
+			sumRelativePresentationTimeMicroSec = 0;
+			maxRelativePresentationTimeMicroSec = 0;
+		}
+
+		framePool.push(frame);
+		pktPool.push(pkt);
 	}
-	else
-	{
-		//std::cout << this << " skipped frame" << std::endl;
-	}
-
-	// Then try getting the next frame:
-	continuePlaying();
-}
-
-Boolean H264RawPixelsSink::continuePlaying()
-{
-	fSource->getNextFrame(buffer, bufferSize,
-		afterGettingFrame, this,
-		onSourceClosure, this);
-
-	return True;
-}
-
-void H264RawPixelsSink::afterGettingFrame(void*clientData,
-	unsigned frameSize,
-	unsigned numTruncatedBytes,
-	timeval presentationTime,
-	unsigned durationInMicroseconds)
-{
-	H264RawPixelsSink* sink = (H264RawPixelsSink*)clientData;
-	sink->afterGettingFrame(frameSize, numTruncatedBytes, presentationTime);
 }

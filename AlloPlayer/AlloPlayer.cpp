@@ -1,10 +1,12 @@
 #include <BasicUsageEnvironment.hh>
 #include <GroupsockHelper.hh>
 #include <liveMedia.hh>
-#include "H264WindowSink.h"
-extern "C" {
-#include <libavformat/avformat.h>
+extern "C"
+{
+	#include <libavformat/avformat.h>
 }
+
+#include "H264RawPixelsSink.h"
 
 
 char const* progName;
@@ -172,7 +174,7 @@ void createOutputFiles(char const* periodicFilenameSuffix)
 			if (strcmp(subsession->codecName(), "H264") == 0)
 			{
 				// Open window displaying the H.264 video
-				sink = H264WindowSink::createNew(*env, fileSinkBufferSize, *subsession);
+				sink = H264RawPixelsSink::createNew(*env, fileSinkBufferSize);
 			}
 		}
 		subsession->sink = sink;
@@ -404,7 +406,7 @@ int main(int argc, char** argv)
 
 	gettimeofday(&startTime, NULL);
 
-	streamURL = argv[1];
+	streamURL = "rtsp://128.111.26.125:8554/h264ESVideoTest";// argv[1];
 
 	ourClient = RTSPClient::createNew(*env, streamURL, verbosityLevel, progName, tunnelOverHTTPPortNum);
 	
