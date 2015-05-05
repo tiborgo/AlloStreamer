@@ -54,5 +54,9 @@ private:
 	boost::thread decodeFrameThread;
 
 	void decodeFrameLoop();
+
+	int counter = 0;
+	long sumRelativePresentationTimeMicroSec = 0;
+	long maxRelativePresentationTimeMicroSec = 0;
 };
 

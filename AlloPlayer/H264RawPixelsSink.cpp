@@ -62,8 +62,6 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 	decodeFrameThread = boost::thread(boost::bind(&H264RawPixelsSink::decodeFrameLoop, this));
 }
 
-int counter = 0;
-
 void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 	unsigned numTruncatedBytes,
 	timeval presentationTime)
@@ -146,7 +144,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 	// Then try getting the next frame:
 	continuePlaying();
 
-	counter++;
+	
 
 	
 }
@@ -267,9 +265,6 @@ void H264RawPixelsSink::decodeFrameLoop()
 
 		bc::microseconds relativePresentationTime = presentationTimeSinceEpoch - nowSinceEpoch;
 
-		static long sumRelativePresentationTimeMicroSec = 0;
-		static long maxRelativePresentationTimeMicroSec = 0;
-
 		sumRelativePresentationTimeMicroSec += relativePresentationTime.count();
 		if (maxRelativePresentationTimeMicroSec > relativePresentationTime.count())
 		{
@@ -283,6 +278,8 @@ void H264RawPixelsSink::decodeFrameLoop()
 			sumRelativePresentationTimeMicroSec = 0;
 			maxRelativePresentationTimeMicroSec = 0;
 		}
+
+		counter++;
 
 		framePool.push(frame);
 		pktPool.push(pkt);
