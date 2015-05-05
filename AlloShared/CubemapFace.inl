@@ -1,34 +1,39 @@
 #pragma once
 
-#include "CubemapFace.h"
+template <typename SegmentManager>
+Frame::Frame(boost::uint32_t width,
+	boost::uint32_t height,
+	AVPixelFormat format,
+	Allocator<SegmentManager>& allocator)
+	: width(width),
+	height(height),
+	pixels(allocator.allocate(width * height * 4)),
+	format(format)
+{
 
-template <typename MemoryAlgorithm>
-CubemapFace<MemoryAlgorithm>::CubemapFace(boost::uint32_t width,
+}
+
+template <typename SegmentManager>
+CubemapFace::CubemapFace(boost::uint32_t width,
 	boost::uint32_t height,
 	int index,
 	AVPixelFormat format,
-	PixelAllocator& allocator)
-	: width(width), height(height), pixels(allocator.allocate(width * height * 4)),
-	index(index), format(format)
+	Allocator<SegmentManager>& allocator)
+	: Frame(width, height, format, allocator),
+	index(index)
 {
 
 }
 
-template <typename MemoryAlgorithm>
-boost::chrono::system_clock::time_point CubemapFace<MemoryAlgorithm>::getPresentationTime()
-{
-	return presentationTime;
-}
-
-template <typename MemoryAlgorithm>
-Cubemap<MemoryAlgorithm>::Cubemap(FacePtrAllocator& allocator)
-: faces(allocator)
+template <typename SegmentManager>
+Cubemap<SegmentManager>::Cubemap(Allocator<SegmentManager>& allocator)
+: faces(FacePtrAllocator(allocator.get_segment_manager()))
 {
 
 }
 
-template <typename MemoryAlgorithm>
-void Cubemap<MemoryAlgorithm>::setFace(typename CubemapFace<MemoryAlgorithm>::Ptr& face)
+template <typename SegmentManager>
+void Cubemap<SegmentManager>::setFace(CubemapFace::Ptr& face)
 {
 	boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(mutex);
 	if (faces.size() <= face->index) {
@@ -38,14 +43,14 @@ void Cubemap<MemoryAlgorithm>::setFace(typename CubemapFace<MemoryAlgorithm>::Pt
 	newFaceCondition.notify_all();
 }
 
-template <typename MemoryAlgorithm>
-typename CubemapFace<MemoryAlgorithm>::Ptr Cubemap<MemoryAlgorithm>::getFace(int index)
+template <typename SegmentManager>
+CubemapFace::Ptr Cubemap<SegmentManager>::getFace(int index)
 {
 	return faces[index];
 }
 
-template <typename MemoryAlgorithm>
-int Cubemap<MemoryAlgorithm>::count()
+template <typename SegmentManager>
+int Cubemap<SegmentManager>::count()
 {
 	return faces.size();
 }

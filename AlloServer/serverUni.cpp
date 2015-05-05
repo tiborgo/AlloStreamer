@@ -73,11 +73,11 @@ ServerMediaSession* sms;
 
 EventTriggerId addFaceSubstreamTriggerId;
 
-concurrent_queue<CubemapImpl::Face*> faceBuffer;
+concurrent_queue<CubemapFace*> faceBuffer;
 
 void addFaceSubstream0(void*) {
 
-	CubemapImpl::Face* face;
+	CubemapFace* face;
 
 	while (faceBuffer.try_pop(face))
 	{

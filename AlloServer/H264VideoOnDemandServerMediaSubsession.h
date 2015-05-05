@@ -33,7 +33,7 @@ public:
     static H264VideoOnDemandServerMediaSubsession*
     createNew(UsageEnvironment& env,
 		Boolean reuseFirstSource,
-		CubemapImpl::Face* face);
+		CubemapFace* face);
 
     // Used to implement "getAuxSDPLine()":
     //void checkForAuxSDPLine1();
@@ -42,7 +42,7 @@ public:
 protected:
     H264VideoOnDemandServerMediaSubsession(UsageEnvironment& env,
             Boolean reuseFirstSource,
-			CubemapImpl::Face* face);
+			CubemapFace* face);
     // called only by createNew();
     virtual ~H264VideoOnDemandServerMediaSubsession();
 
@@ -62,7 +62,7 @@ private:
     char* fAuxSDPLine;
     char fDoneFlag; // used when setting up "fAuxSDPLine"
     RTPSink* fDummyRTPSink; // ditto
-	CubemapImpl::Face* face;
+	CubemapFace* face;
 
 };
 

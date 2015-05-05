@@ -5,12 +5,12 @@
 
 #if SUPPORT_D3D9
 
-template <typename MemoryAlgorithm>
-CubemapFaceD3D9<MemoryAlgorithm>::CubemapFaceD3D9(
+template <typename SegmentManager>
+CubemapFaceD3D9::CubemapFaceD3D9(
 	boost::uint32_t width,
 	boost::uint32_t height,
 	int index,
-	PixelAllocator& allocator,
+	Allocator<SegmentManager>& allocator,
 	IDirect3DTexture9* texturePtr,
 	IDirect3DSurface9* gpuSurfacePtr,
 	IDirect3DSurface9* cpuSurfacePtr,
@@ -26,12 +26,11 @@ CubemapFaceD3D9<MemoryAlgorithm>::CubemapFaceD3D9(
 
 }
 
-template <typename MemoryAlgorithm>
-typename CubemapFaceD3D9<MemoryAlgorithm>::Ptr CubemapFaceD3D9<MemoryAlgorithm>::create(
+template <typename SegmentManager>
+CubemapFaceD3D9::Ptr CubemapFaceD3D9::create(
 	IDirect3DTexture9* texturePtr,
 	int index,
-	FaceAllocator& faceAllocator,
-	PixelAllocator& pixelAllocator)
+	Allocator<SegmentManager>& allocator)
 {
 
 	D3DSURFACE_DESC textureDescription;
@@ -54,14 +53,13 @@ typename CubemapFaceD3D9<MemoryAlgorithm>::Ptr CubemapFaceD3D9<MemoryAlgorithm>:
 	hr = cpuSurfacePtr->LockRect(&lockedRect, 0, D3DLOCK_READONLY);
 	hr = cpuSurfacePtr->UnlockRect();
 
-	CubemapFaceD3D9* addr = faceAllocator.allocate_one().get();
+	CubemapFaceD3D9* addr = (CubemapFaceD3D9*)allocator.allocate(sizeof(CubemapFaceD3D9)).get();
 	
-	return new (addr) CubemapFaceD3D9(width, height, index, pixelAllocator, texturePtr,
+	return new (addr) CubemapFaceD3D9(width, height, index, allocator, texturePtr,
 		gpuSurfacePtr, cpuSurfacePtr, textureDescription.Format, lockedRect);
 }
 
-template <typename MemoryAlgorithm>
-void CubemapFaceD3D9<MemoryAlgorithm>::copyFromGPUToCPU()
+void CubemapFaceD3D9::copyFromGPUToCPU()
 {
 
 	// copy data from GPU to CPU

@@ -1,10 +1,12 @@
 set(SOURCES
 	AlloPlayer.cpp
 	H264WindowSink.cpp
+	H264RawPixelsSink.cpp
 )
 	
 set(HEADERS
 	H264WindowSink.h
+	H264RawPixelsSink.h
 )
 
 # include Boost, FFMpeg, live555, x264

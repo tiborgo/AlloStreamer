@@ -34,14 +34,14 @@ UsageEnvironment* envi;
 H264VideoOnDemandServerMediaSubsession*
 H264VideoOnDemandServerMediaSubsession::createNew(UsageEnvironment& env,
 Boolean reuseFirstSource,
-CubemapImpl::Face* face)
+CubemapFace* face)
 {
 	return new H264VideoOnDemandServerMediaSubsession(env, reuseFirstSource, face);
 }
 
 H264VideoOnDemandServerMediaSubsession::H264VideoOnDemandServerMediaSubsession(UsageEnvironment& env,
 	Boolean reuseFirstSource,
-	CubemapImpl::Face* face)
+	CubemapFace* face)
 	: OnDemandServerMediaSubsession(env, reuseFirstSource),
 	fAuxSDPLine(NULL), fDoneFlag(0), fDummyRTPSink(NULL), face(face)
 {

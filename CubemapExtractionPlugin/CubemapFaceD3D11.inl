@@ -17,12 +17,12 @@ static AVPixelFormat avPixel2DXGIFormat(DXGI_FORMAT format)
 	}
 }
 
-template <typename MemoryAlgorithm>
-CubemapFaceD3D11<MemoryAlgorithm>::CubemapFaceD3D11(
+template <typename SegmentManager>
+CubemapFaceD3D11::CubemapFaceD3D11(
 	boost::uint32_t width,
 	boost::uint32_t height,
 	int index,
-	PixelAllocator allocator,
+	Allocator<SegmentManager>& allocator,
 	ID3D11Texture2D* gpuTexturePtr,
 	ID3D11Texture2D* cpuTexturePtr,
 	D3D11_MAPPED_SUBRESOURCE resource,
@@ -39,12 +39,11 @@ CubemapFaceD3D11<MemoryAlgorithm>::CubemapFaceD3D11(
 {
 }
 
-template <typename MemoryAlgorithm>
-CubemapFaceD3D11<MemoryAlgorithm>* CubemapFaceD3D11<MemoryAlgorithm>::create(
+template <typename SegmentManager>
+CubemapFaceD3D11* CubemapFaceD3D11::create(
 	ID3D11Texture2D* texturePtr,
 	int index,
-	FaceAllocator& faceAllocator,
-	PixelAllocator& pixelAllocator)
+	Allocator<SegmentManager>& allocator)
 {
 
 	ID3D11Texture2D* gpuTexturePtr = (ID3D11Texture2D*)texturePtr;
@@ -72,12 +71,12 @@ CubemapFaceD3D11<MemoryAlgorithm>* CubemapFaceD3D11<MemoryAlgorithm>::create(
 	hr = g_D3D11DeviceContext->Map(cpuTexturePtr, subresource, D3D11_MAP_READ, 0, &resource);
 	g_D3D11DeviceContext->Unmap(cpuTexturePtr, subresource);
 
-	CubemapFaceD3D11* addr = faceAllocator.allocate_one().get();
+	CubemapFaceD3D11* addr = (CubemapFaceD3D11*)allocator.allocate(sizeof(CubemapFaceD3D11)).get();
 
 	return new (addr)CubemapFaceD3D11(width,
 		height,
 		index,
-		pixelAllocator,
+		allocator,
 		gpuTexturePtr,
 		cpuTexturePtr,
 		resource,
@@ -86,8 +85,7 @@ CubemapFaceD3D11<MemoryAlgorithm>* CubemapFaceD3D11<MemoryAlgorithm>::create(
 
 static boost::mutex d3D11DeviceContextMutex;
 
-template <typename MemoryAlgorithm>
-void CubemapFaceD3D11<MemoryAlgorithm>::copyFromGPUToCPU()
+void CubemapFaceD3D11::copyFromGPUToCPU()
 {
 	presentationTime = boost::chrono::system_clock::now();
 

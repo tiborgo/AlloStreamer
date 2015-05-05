@@ -7,33 +7,31 @@
 
 #include <d3d11.h>
 
-template <typename MemoryAlgorithm>
-class CubemapFaceD3D11 : public CubemapFace<MemoryAlgorithm>
+class CubemapFaceD3D11 : public CubemapFace
 {
 public:
-	typedef boost::interprocess::allocator<CubemapFaceD3D11, typename CubemapFace::SegmentManager>
-		FaceAllocator;
 	typedef boost::interprocess::offset_ptr<CubemapFaceD3D11> Ptr;
 
 	ID3D11Texture2D* const gpuTexturePtr;
 	ID3D11Texture2D* const cpuTexturePtr;
 	D3D11_MAPPED_SUBRESOURCE resource;
 
+	template <typename SegmentManager>
 	static CubemapFaceD3D11* create(ID3D11Texture2D*
 		texturePtr,
 		int face,
-		FaceAllocator& faceAllocator,
-		PixelAllocator& pixelAllocator);
+		Allocator<SegmentManager>& allocator);
 
 	void copyFromGPUToCPU();
 
 protected:
 
+	template <typename SegmentManager>
 	CubemapFaceD3D11(
 		boost::uint32_t width,
 		boost::uint32_t height,
 		int index,
-		PixelAllocator allocator,
+		Allocator<SegmentManager>& allocator,
 		ID3D11Texture2D* gpuTexturePtr,
 		ID3D11Texture2D* cpuTexturePtr,
 		D3D11_MAPPED_SUBRESOURCE resource,

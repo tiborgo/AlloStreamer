@@ -5,6 +5,7 @@
 #include <boost/interprocess/containers/vector.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/interprocess/managed_heap_memory.hpp>
 #include <boost/interprocess/segment_manager.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/interprocess_condition.hpp>
@@ -13,31 +14,27 @@
 
 #include "API.h"
 
-template<typename MemoryAlgorithm>
-class CubemapFace {
+template<typename SegmentManager>
+using Allocator = boost::interprocess::allocator<boost::uint8_t, SegmentManager>;
 
+class AlloShared_API Frame
+{
 public:
-	typedef boost::interprocess::segment_manager_base<MemoryAlgorithm> SegmentManager;
-	//typedef boost::interprocess::managed_shared_memory::segment_manager SegmentManager;
-	typedef boost::interprocess::allocator<char, SegmentManager> PixelAllocator;
-	typedef boost::interprocess::offset_ptr<CubemapFace<MemoryAlgorithm>> Ptr;
+	//template<typename MemoryAlgorithm>
+	//using SegmentManager = boost::interprocess::segment_manager_base<MemoryAlgorithm>;
+	
+	typedef boost::interprocess::offset_ptr<Frame> Ptr;
 
 	const boost::uint32_t width;
 	const boost::uint32_t height;
 	boost::interprocess::offset_ptr<void> pixels;
-	const int index;
 	const AVPixelFormat format;
 
-	CubemapFace(boost::uint32_t width,
+	template<typename SegmentManager>
+	Frame(boost::uint32_t width,
 		boost::uint32_t height,
-		int index,
 		AVPixelFormat format,
-		PixelAllocator& allocator);
-
-	virtual void copyFromGPUToCPU() = 0;
-
-	boost::interprocess::interprocess_mutex mutex;
-	boost::interprocess::interprocess_condition newPixelsCondition;
+		Allocator<SegmentManager>& allocator);
 
 	boost::chrono::system_clock::time_point getPresentationTime();
 
@@ -45,34 +42,55 @@ protected:
 	boost::chrono::system_clock::time_point presentationTime;
 };
 
-template<typename MemoryAlgorithm>
-class Cubemap {
+class CubemapFace : public Frame
+{
 
 public:
-	typedef CubemapFace<MemoryAlgorithm> Face;
-	typedef boost::interprocess::allocator<typename Face::Ptr, typename Face::SegmentManager>
-		FacePtrAllocator;
-	typedef boost::interprocess::allocator<typename Face, typename Face::SegmentManager>
-		FaceAllocator;
+	typedef boost::interprocess::offset_ptr<CubemapFace> Ptr;
+
+	const int index;
+
+	template<typename SegmentManager>
+	CubemapFace(boost::uint32_t width,
+		boost::uint32_t height,
+		int index,
+		AVPixelFormat format,
+		Allocator<SegmentManager>& allocator);
+
+	virtual void copyFromGPUToCPU() = 0;
+
+	boost::interprocess::interprocess_mutex mutex;
+	boost::interprocess::interprocess_condition newPixelsCondition;
+};
+
+template<typename SegmentManager>
+class Cubemap
+{
+public:
+	/*typedef boost::interprocess::allocator<typename Face, typename Face::SegmentManager>
+		FaceAllocator;*/
 	typedef boost::interprocess::offset_ptr<Cubemap> Ptr;
 
-	Cubemap(FacePtrAllocator& allocator);
+	Cubemap(Allocator<SegmentManager>& allocator);
 
-	void setFace(typename Face::Ptr& face);
-	typename Face::Ptr getFace(int index);
+	void setFace(CubemapFace::Ptr& face);
+	typename CubemapFace::Ptr getFace(int index);
 	int count();
 
 	boost::interprocess::interprocess_mutex mutex;
 	boost::interprocess::interprocess_condition newFaceCondition;
 
 private:
-	boost::interprocess::vector<typename Face::Ptr, FacePtrAllocator> faces;
+	typedef boost::interprocess::allocator<CubemapFace::Ptr, SegmentManager>
+		FacePtrAllocator;
+
+	boost::interprocess::vector<CubemapFace::Ptr, FacePtrAllocator> faces;
 };
 
+typedef boost::interprocess::managed_heap_memory::segment_manager HeapSegmentManager;
 // Create the cubemap in shared memory
-typedef boost::interprocess::managed_shared_memory::segment_manager::memory_algorithm
-	ShmMemoryAlgorithm;
-typedef Cubemap<ShmMemoryAlgorithm> CubemapImpl;
+typedef boost::interprocess::managed_shared_memory::segment_manager ShmSegmentManager;
+typedef Cubemap<ShmSegmentManager> CubemapImpl;
 extern AlloShared_API boost::interprocess::offset_ptr<CubemapImpl> cubemap;
 
 #include "CubemapFace.inl"

@@ -40,7 +40,7 @@ int CubemapFaceSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext 
 		yuvFrame->data, yuvFrame->linesize);
 }
 
-CubemapFaceSource* CubemapFaceSource::createNew(UsageEnvironment& env, CubemapImpl::Face* face)
+CubemapFaceSource* CubemapFaceSource::createNew(UsageEnvironment& env, CubemapFace* face)
 {
 	return new CubemapFaceSource(env, face);
 }
@@ -49,7 +49,7 @@ unsigned CubemapFaceSource::referenceCount = 0;
 
 struct timeval prevtime;
 
-CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapImpl::Face* face)
+CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapFace* face)
 : FramedSource(env), face(face), /*encodeBarrier(2),*/ destructing(false),
 img_convert_ctx(NULL)
 {
@@ -201,10 +201,10 @@ void CubemapFaceSource::frameFaceLoop()
 		{
 			// Fill frame
 			avpicture_fill((AVPicture*)frame,
-				(uint8_t*)this->face->pixels.get(),
+				(uint8_t*)face->pixels.get(),
 				face->format,
-				this->face->width,
-				this->face->height);
+				face->width,
+				face->height);
 
 			// Set the actual presentation time
 			// It is in the past probably but we will try our best
