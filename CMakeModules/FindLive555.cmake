@@ -4,18 +4,22 @@
 #  Live555_INCLUDE_DIRS
 #  Live555_LIBRARIES
 
-# Uncomment the following line to print which directory CMake is looking in.
-#MESSAGE(STATUS "PART4_ROOT_DIR: " ${PART4_ROOT_DIR})
-
 if (NOT Live555_FOUND)
 	
 	set(_Live555_FOUND ON)
 	
-	foreach (library BasicUsageEnvironment groupsock liveMedia UsageEnvironment)
+	foreach (library BasicUsageEnvironment Groupsock liveMedia UsageEnvironment)
 
+    string(TOLOWER ${library} lowercase_library)
+    
 		find_path(Live555_${library}_INCLUDE_DIR
-			NAMES ${library}.hh
-			PATHS ${Live555_ROOT}/live/${library}/include
+			NAMES
+			${library}.hh
+			${lowercase_library}.hh
+			PATHS
+			${Live555_ROOT}/live/${library}/include
+			/usr/local/include/${library}
+			/usr/local/include/${lowercase_library}
 		)
 		
 		if (Live555_${library}_INCLUDE_DIR)
@@ -26,8 +30,11 @@ if (NOT Live555_FOUND)
 
 		foreach (mode DEBUG RELEASE)
 			find_library(Live555_${library}_LIBRARY_${mode}
-				NAMES ${library}
-				PATHS ${Live555_ROOT}/lib/${mode}
+				NAMES
+				${library}
+				${lowercase_library}
+				PATHS
+				${Live555_ROOT}/lib/${mode}
 			)
 			if (Live555_${library}_LIBRARY_${mode})
 				if (${mode} STREQUAL RELEASE) 

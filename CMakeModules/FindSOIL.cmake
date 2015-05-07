@@ -12,11 +12,16 @@
 #
 # revisions: github.com/zwookie
 
-find_path(SOIL_INCLUDE_DIR SOIL.h
+find_path(SOIL_INCLUDE_DIR
+  NAME  
+  SOIL.h
+	PATHS
 	/usr/include
 	/usr/local/include
 	/opt/local/include
 	${SOIL_ROOT}/src
+	PATH_SUFFIXES
+	SOIL
 )
 
 find_library(SOIL_LIBRARY SOIL

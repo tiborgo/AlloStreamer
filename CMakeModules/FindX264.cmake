@@ -15,8 +15,10 @@ if (NOT X264_FOUND)
 	)
 
 	find_library(X264_LIBRARY
-		NAMES libx264.lib
-		PATHS ${X264_ROOT}
+		NAMES x264
+		PATHS
+		${X264_ROOT}
+		/usr/local/lib
 	)
 
 	if (X264_INCLUDE_DIR AND X264_LIBRARY)

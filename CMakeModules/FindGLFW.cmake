@@ -23,7 +23,8 @@
 FIND_PATH(GLFW_INCLUDE_DIR GLFW/glfw3.h DOC "Path to GLFW include directory."
   HINTS
   $ENV{GLFW_ROOT}
-  PATH_SUFFIXES include
+  PATH_SUFFIXES
+  include
   PATHS
   /usr/include/
   /usr/local/include/
@@ -31,6 +32,7 @@ FIND_PATH(GLFW_INCLUDE_DIR GLFW/glfw3.h DOC "Path to GLFW include directory."
   /usr/include/GLFW
   /usr/local/include/GLFW
   ${GLFW_ROOT}/include/ # added by ptr
+  /usr/include/GL
 )
 
 FIND_LIBRARY(GLFW_LIBRARY_TEMP DOC "Absolute path to GLFW library."

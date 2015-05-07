@@ -5,7 +5,6 @@ set(SOURCES
 	
 set(HEADERS
 	CubemapFace.h
-	API.h
 )
 
 find_package(Boost
