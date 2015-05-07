@@ -12,12 +12,10 @@
 #include <libavutil/pixfmt.h>
 #include <boost/chrono/system_clocks.hpp>
 
-#include "API.h"
-
 template<typename SegmentManager>
 using Allocator = boost::interprocess::allocator<boost::uint8_t, SegmentManager>;
 
-class AlloShared_API Frame
+class Frame
 {
 public:
 	//template<typename MemoryAlgorithm>
@@ -91,6 +89,6 @@ typedef boost::interprocess::managed_heap_memory::segment_manager HeapSegmentMan
 // Create the cubemap in shared memory
 typedef boost::interprocess::managed_shared_memory::segment_manager ShmSegmentManager;
 typedef Cubemap<ShmSegmentManager> CubemapImpl;
-extern AlloShared_API boost::interprocess::offset_ptr<CubemapImpl> cubemap;
+extern boost::interprocess::offset_ptr<CubemapImpl> cubemap;
 
 #include "CubemapFace.inl"

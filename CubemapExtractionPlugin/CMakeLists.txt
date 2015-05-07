@@ -39,7 +39,5 @@ target_link_libraries(CubemapExtractionPlugin
 
 set_target_properties(CubemapExtractionPlugin
     PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}"
-    LIBRARY_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}"
     RUNTIME_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}"
 )

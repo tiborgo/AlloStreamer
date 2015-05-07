@@ -19,7 +19,7 @@ find_package(Boost
 find_package(FFmpeg REQUIRED)
 
 add_library(AlloShared
-	SHARED
+	STATIC
 	${SOURCES} ${HEADERS}
 )
 target_link_libraries(AlloShared
@@ -32,7 +32,5 @@ target_include_directories(AlloShared
 )
 set_target_properties(AlloShared
     PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}"
-    LIBRARY_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}"
-    RUNTIME_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}"
+	ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Lib"
 )

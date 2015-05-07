@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.0)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules/")
 
-project(AlloPresenter)
+project(AlloUnity)
 
 # Boost setup
 set(Boost_USE_STATIC_RUNTIME OFF)
