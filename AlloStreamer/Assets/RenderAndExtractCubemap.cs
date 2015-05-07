@@ -17,7 +17,7 @@ public class RenderAndExtractCubemap : MonoBehaviour {
 
     private static System.String[] cubemapFaceNames = {
         "LeftEye/PositiveX",
-        "LeftEye/NegativeX",
+        "LeftEye/NegativeX"/*,
         "LeftEye/PositiveY",
         "LeftEye/NegativeY",
         "LeftEye/PositiveZ",

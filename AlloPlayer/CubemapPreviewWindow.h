@@ -23,6 +23,7 @@
 #include <SOIL.h>
 
 #include <boost/thread.hpp>
+#include "H264RawPixelsSink.h"
 
 #define QUOTE(x) #x
 #define STR(x) QUOTE(x)
@@ -33,6 +34,8 @@ class CubemapPreviewWindow
 public:
 
 	CubemapPreviewWindow();
+
+	void addSink(H264RawPixelsSink* sink);
 
 	// Function prototypes
 	static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -53,4 +56,6 @@ public:
 
 	boost::thread gameThread;
 
+	boost::mutex sinkMutex;
+	std::vector<H264RawPixelsSink*> sinks;
 };

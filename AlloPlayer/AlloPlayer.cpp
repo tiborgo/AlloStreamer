@@ -27,6 +27,7 @@ double initialSeekTime = 0.0f;
 char* initialAbsoluteSeekTime = NULL;
 double endTime;
 TaskToken arrivalCheckTimerTask = NULL;
+CubemapPreviewWindow* cubemapPreviewWindow = NULL;
 
 void shutdown(int exitCode = 1)
 {
@@ -167,14 +168,14 @@ void createOutputFiles(char const* periodicFilenameSuffix)
 		sprintf(outFileName, "%s-%s-%d%s", subsession->mediumName(),
 			subsession->codecName(), ++streamCounter, periodicFilenameSuffix);
 
-
-		MediaSink* sink = NULL;
+		H264RawPixelsSink* sink = NULL;
 		if (strcmp(subsession->mediumName(), "video") == 0)
 		{
 			if (strcmp(subsession->codecName(), "H264") == 0)
 			{
 				// Open window displaying the H.264 video
 				sink = H264RawPixelsSink::createNew(*env, fileSinkBufferSize);
+				cubemapPreviewWindow->addSink(sink);
 			}
 		}
 		subsession->sink = sink;
@@ -398,6 +399,8 @@ int main(int argc, char** argv)
 	avcodec_register_all();
 	avformat_network_init();
 
+	cubemapPreviewWindow = new CubemapPreviewWindow();
+
 	// Begin by setting up our usage environment:
 	TaskScheduler* scheduler = BasicTaskScheduler::createNew();
 	env = BasicUsageEnvironment::createNew(*scheduler);
@@ -420,8 +423,6 @@ int main(int argc, char** argv)
 
 	// Begin by sending an "OPTIONS" command:
 	ourClient->sendOptionsCommand(continueAfterOPTIONS);
-
-	CubemapPreviewWindow cubemapPreviewWindow;
 
 	// All subsequent activity takes place within the event loop:
 	env->taskScheduler().doEventLoop(); // does not return

@@ -27,7 +27,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 			fprintf(stderr, "Could not allocate video frame\n");
 			exit(1);
 		}
-		frame->format = AV_PIX_FMT_BGRA;
+		frame->format = AV_PIX_FMT_RGBA;
 
 		framePool.push(frame);
 
@@ -241,11 +241,11 @@ void H264RawPixelsSink::decodeFrameLoop()
 				frame->data, frame->linesize);
 
 			// Flip image vertically
-			for (int i = 0; i < 4; i++)
+			/*for (int i = 0; i < 4; i++)
 			{
 				frame->data[i] += frame->linesize[i] * (frame->height - 1);
 				frame->linesize[i] = -frame->linesize[i];
-			}
+			}*/
 
 			//std::cout << this << ": afterGettingFrame: " << frame << "\n";
 
@@ -281,7 +281,7 @@ void H264RawPixelsSink::decodeFrameLoop()
 
 		counter++;
 
-		frameBuffer.push(frame);
+		frameBuffer.push(frame) ;
 		pktPool.push(pkt);
 	}
 }
@@ -292,16 +292,17 @@ Frame* H264RawPixelsSink::getNextFrame()
 
 	frameBuffer.wait_and_pop(avFrame);
 
-	boost::interprocess::managed_heap_memory heapMemory(avFrame->width * avFrame->height * 4);
-	Allocator<HeapSegmentManager> heapAllocator(heapMemory.get_segment_manager());
-	Frame* frame = new Frame(avFrame->width, avFrame->height, (AVPixelFormat)avFrame->format, heapAllocator);
+	//boost::interprocess::managed_heap_memory heapMemory(avFrame->width * avFrame->height * 4 + 1024);
+	//Allocator<HeapSegmentManager> heapAllocator(heapMemory.get_segment_manager());
+	//Frame* frame = new Frame(avFrame->width, avFrame->height, (AVPixelFormat)avFrame->format, heapAllocator);
 	
+	unsigned char* pixels = new unsigned char[avFrame->width * avFrame->height * 4];
 
-	int ret = avpicture_layout((AVPicture*)frame, (AVPixelFormat)frame->format,
-		frame->width, frame->height, (unsigned char*)frame->pixels.get(), frame->width * frame->height * 4);
+	int ret = avpicture_layout((AVPicture*)avFrame, (AVPixelFormat)avFrame->format,
+		avFrame->width, avFrame->height, pixels/*(unsigned char*)frame->pixels.get()*/, avFrame->width * avFrame->height * 4);
 
 
 	framePool.push(avFrame);
 
-	return frame;
+	return (Frame*)pixels;
 }

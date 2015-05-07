@@ -190,6 +190,56 @@ void CubemapPreviewWindow::gameLoop()
     // Game loop
     while (!glfwWindowShouldClose(window))
     {
+		{
+			glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+			boost::mutex::scoped_lock lock(sinkMutex);
+			Frame* frame;
+
+			int width = 1024;
+			int height = 1024;
+
+			// Get the pixels
+			for (int i = 0; i < sinks.size(); i++)
+			{
+				frame = sinks[i]->getNextFrame();
+
+				//char* pixels = new char[frame->width * frame->height * 4];
+				//memcpy(pixels, frame->pixels.get(), frame->width * frame->height * 4);
+
+				/*int r = rand();
+				for (int j = 0; j < frame->width * frame->height * 4; j++)
+				{
+					pixels[j] = (j + r) % 255;
+				}*/
+
+				void* pixels = frame;
+
+				glTexImage2D(
+					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA,
+					width, height,
+					0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+			}
+
+			/*for (int i = sinks.size(); i < 6; i++)
+			{
+				char* pixels = new char[width * height * 4];
+
+				int r = rand();
+				for (int j = 0; j < width * height * 4; j++)
+				{
+					pixels[j] = (j + r) % 255;
+				}
+
+				glTexImage2D(
+					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA,
+					width, height,
+					0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+			}*/
+
+			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+		}
+		
+
         // Set frame time
         GLfloat currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -254,14 +304,20 @@ GLuint CubemapPreviewWindow::loadCubemap(std::vector<const GLchar*> faces)
     glGenTextures(1, &textureID);
     glActiveTexture(GL_TEXTURE0);
 
-    int width, height;
+    int width = 1024, height = 1024;
     unsigned char* image;
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
     for (GLuint i = 0; i < faces.size(); i++)
     {
-        image = SOIL_load_image(faces[i], &width, &height, 0, SOIL_LOAD_RGB);
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+        //image = SOIL_load_image(faces[i], &width, &height, 0, SOIL_LOAD_RGB);
+		image = new unsigned char[width * height * 4];
+		int r = rand();
+		for (int j = 0; j < width * height * 4; j++)
+		{
+			image[j] = (j + r) % 255;
+		}
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -348,6 +404,12 @@ void CubemapPreviewWindow::mouse_callback(GLFWwindow* window, double xpos, doubl
 void CubemapPreviewWindow::scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(yoffset);
+}
+
+void CubemapPreviewWindow::addSink(H264RawPixelsSink* sink)
+{
+	boost::mutex::scoped_lock lock(sinkMutex);
+	sinks.push_back(sink);
 }
 
 #pragma endregion
