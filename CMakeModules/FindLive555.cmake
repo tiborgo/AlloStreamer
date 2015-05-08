@@ -8,7 +8,7 @@ if (NOT Live555_FOUND)
 	
 	set(_Live555_FOUND ON)
 	
-	foreach (library BasicUsageEnvironment Groupsock liveMedia UsageEnvironment)
+	foreach (library liveMedia BasicUsageEnvironment Groupsock UsageEnvironment)
 
     string(TOLOWER ${library} lowercase_library)
     

@@ -18,6 +18,11 @@ set(UNITY_PROJECT_PLUGIN_DIR "${CMAKE_SOURCE_DIR}/AlloStreamer/Assets/Plugins")
 # so that each project can include the other project's headers
 include_directories(${CMAKE_SOURCE_DIR})
 
+# Enable C++11
+if(CMAKE_COMPILER_IS_GNUCXX)
+   list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
+endif()
+
 # make exes and libs profilable on windows
 if(MSVC)
 	set(CMAKE_SHARED_LINKER_FLAGS_DEBUG

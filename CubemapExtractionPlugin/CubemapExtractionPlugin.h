@@ -39,7 +39,7 @@ extern ID3D11Device* g_D3D11Device;
 		#include <gl/GL.h>
 	#else
 		//		#include <OpenGL/OpenGL.h>
-		#include <OpenGL/gl.h>
+        #include <GL/gl.h>
 	#endif
 #endif
 

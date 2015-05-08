@@ -67,8 +67,9 @@ public:
 	void close()
 	{
 		boost::mutex::scoped_lock lock(the_mutex);
-		the_queue.swap(std::queue<Data>()); // clears queue
-		closed = true;
+        std::queue<Data> emptyQueue;
+        the_queue.swap(emptyQueue); // clears queue
+        closed = true;
 		the_condition_variable.notify_all();
 	}
 

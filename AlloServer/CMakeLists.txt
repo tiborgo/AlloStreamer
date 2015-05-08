@@ -44,11 +44,15 @@ target_link_libraries(AlloServer
 	${FFMPEG_LIBRARIES}
 	${Live555_LIBRARIES}
 	${X264_LIBRARIES}
-	Ws2_32 # for live555 sockets
 	AlloShared
 )
-
 set_target_properties(AlloServer
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin"
 )
+
+if(WIN32)
+target_link_libraries(AlloPlayer
+        ws2_32
+)
+endif()

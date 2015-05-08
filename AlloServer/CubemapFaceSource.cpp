@@ -216,8 +216,11 @@ void CubemapFaceSource::frameFaceLoop()
 			const time_t time = bc::system_clock::to_time_t(face->getPresentationTime());
 
 			// Maybe the put_time will be implemented later?
-			std::cout << std::put_time(std::localtime(&time), "%c") << std::endl;
-			
+            struct tm* tm = localtime(&time);
+            char timeStr[128];
+            strftime (timeStr, sizeof(timeStr), "%c",tm);
+
+
 			frame->pts = av_rescale_q(presentationTimeSinceEpochMicroSec.count(), microSecBase, codecContext->time_base);
 
 			// Make frame available to the encoder

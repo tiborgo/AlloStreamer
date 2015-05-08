@@ -1,6 +1,6 @@
 set(SOURCES
 	AlloPlayer.cpp
-	H264WindowSink.cpp
+	#H264WindowSink.cpp
 	H264RawPixelsSink.cpp
 	shader.cpp
 	texture.cpp
@@ -9,7 +9,7 @@ set(SOURCES
 )
 	
 set(HEADERS
-	H264WindowSink.h
+	#H264WindowSink.h
 	H264RawPixelsSink.h
 	shader.hpp
 	texture.hpp
@@ -64,15 +64,19 @@ target_link_libraries(AlloPlayer
 	${GLFW_LIBRARY}
 	${OPENGL_gl_LIBRARY}
 	${SOIL_LIBRARY}
-	ws2_32
-	winmm
 )
 target_compile_definitions(AlloPlayer
 	PRIVATE
 	AlloPlayer_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/
 )
-
 set_target_properties(AlloPlayer
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin"
 )
+
+if(WIN32)
+target_link_libraries(AlloPlayer
+        ws2_32
+        winmm
+)
+endif()
