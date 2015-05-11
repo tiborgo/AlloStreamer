@@ -6,6 +6,7 @@ set(SOURCES
 	texture.cpp
 	tutorial05.cpp
 	CubemapPreviewWindow.cpp
+        showCubeMapFaces.cpp
 )
 	
 set(HEADERS
@@ -38,6 +39,15 @@ FIND_PACKAGE(GLFW REQUIRED)
 FIND_PACKAGE(GLM REQUIRED)
 FIND_PACKAGE(OpenGL REQUIRED)
 FIND_PACKAGE(SOIL REQUIRED)
+find_package(Allocore REQUIRED)
+find_package(Alloutil REQUIRED)
+
+# packages for allocore
+find_package(GLUT REQUIRED)
+find_package(APR REQUIRED)
+find_package(Portaudio REQUIRED)
+find_package(Jsoncpp REQUIRED)
+find_package(FreeImage REQUIRED)
 
 add_executable(AlloPlayer
 	${SOURCES}
@@ -54,6 +64,8 @@ target_include_directories(AlloPlayer
 	${GLFW_INCLUDE_DIR}
 	${GLM_INCLUDE_DIR}
 	${SOIL_INCLUDE_DIR}
+        ${ALLOCORE_INCLUDE_DIR}
+        ${ALLOUTIL_INCLUDE_DIR}
 )
 target_link_libraries(AlloPlayer
 	${Boost_LIBRARIES}
@@ -64,6 +76,13 @@ target_link_libraries(AlloPlayer
 	${GLFW_LIBRARY}
 	${OPENGL_gl_LIBRARY}
 	${SOIL_LIBRARY}
+        ${ALLOUTIL_LIBRARY}
+        ${ALLOCORE_LIBRARY}
+        ${GLUT_glut_LIBRARY}
+        ${APR_LIBRARY}
+        ${PORTAUDIO_LIBRARY}
+        ${Jsoncpp_LIBRARY}
+        ${FREEIMAGE_LIBRARY}
 )
 target_compile_definitions(AlloPlayer
 	PRIVATE

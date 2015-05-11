@@ -394,7 +394,7 @@ void continueAfterOPTIONS(RTSPClient*, int resultCode, char* resultString)
 	ourClient->sendDescribeCommand(continueAfterDESCRIBE);
 }
 
-int main(int argc, char** argv)
+int main_(int argc, char** argv)
 {
 	avcodec_register_all();
 	avformat_network_init();
