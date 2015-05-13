@@ -7,6 +7,10 @@ set(SOURCES
 	tutorial05.cpp
 	CubemapPreviewWindow.cpp
         showCubeMapFaces.cpp
+        cubemap.cpp
+        omni.cpp
+        cubemaps_skybox_optimized.cpp
+        main.cpp
 )
 	
 set(HEADERS
@@ -15,6 +19,7 @@ set(HEADERS
 	shader.hpp
 	texture.hpp
 	CubemapPreviewWindow.h
+        H264StreamCubemap.h
 )
 
 set(RESOURCES

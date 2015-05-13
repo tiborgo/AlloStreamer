@@ -1,25 +1,25 @@
 #include "alloutil/al_OmniApp.hpp"
 using namespace al;
 
-struct MyApp : OmniApp {
+struct MyApp2 : OmniApp {
   Mesh mesh;
 
-  MyApp() {
+  MyApp2() {
     mesh.primitive(Graphics::TRIANGLES);
     addCube(mesh);
-//    mesh.color(Color(0, 0, 0));
-//    mesh.color(Color(0, 0, 1));
-//    mesh.color(Color(0, 1, 0));
-//    mesh.color(Color(0, 1, 1));
-//    mesh.color(Color(1, 0, 0));
-//    mesh.color(Color(1, 0, 1));
-//    mesh.color(Color(1, 1, 0));
-//    mesh.color(Color(1, 1, 1));
+    mesh.color(Color(0, 0, 0));
+    mesh.color(Color(0, 0, 1));
+    mesh.color(Color(0, 1, 0));
+    mesh.color(Color(0, 1, 1));
+    mesh.color(Color(1, 0, 0));
+    mesh.color(Color(1, 0, 1));
+    mesh.color(Color(1, 1, 0));
+    mesh.color(Color(1, 1, 1));
     mesh.generateNormals();
   }
   // omni_face
 
-  virtual std::string vertexCode() {
+  /*virtual std::string vertexCode() {
     return AL_STRINGIFY(
       varying vec4 vy_CubeMapFaceColor;
       varying vec4 color;
@@ -75,9 +75,9 @@ struct MyApp : OmniApp {
         gl_FragColor = vy_CubeMapFaceColor;
       }
     );
-  }
+  }*/
 
-  virtual ~MyApp() {}
+  virtual ~MyApp2() {}
 
   virtual void onDraw(Graphics& g) {
     shader().uniform("lighting", 0.0);
@@ -87,7 +87,7 @@ struct MyApp : OmniApp {
   virtual void onAnimate(al_sec dt) {}
 };
 
-int main(int argc, char* argv[]) {
-  MyApp().start();
+int main__(int argc, char* argv[]) {
+  MyApp2().start();
   return 0;
 }
