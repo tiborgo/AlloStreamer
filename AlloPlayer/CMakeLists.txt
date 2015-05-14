@@ -9,6 +9,8 @@ set(SOURCES
         showCubeMapFaces.cpp
         cubemap.cpp
         omni.cpp
+        cubemap2.cpp
+        omni2.cpp
         cubemaps_skybox_optimized.cpp
         main.cpp
 )

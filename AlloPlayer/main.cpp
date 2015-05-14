@@ -22,6 +22,6 @@ int main(int argc, char* argv[])
         std::cout << glGetString( GL_EXTENSIONS ) << std::endl;*/
 
     //mainCubemapsSkyboxOptimized();
-    //mainOmni(argc, argv);
-    mainCubemap();
+    mainOmni(argc, argv);
+    //mainCubemap();
 }
