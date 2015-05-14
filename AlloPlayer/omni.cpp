@@ -3,6 +3,11 @@
 #include "alloutil/al_CubeMapFBO.hpp"
 using namespace al;
 
+#include <SOIL.h>
+
+#define QUOTE(x) #x
+#define STR(x) QUOTE(x)
+
 struct Scene : Drawable {
 
     Mesh mesh, grid;
@@ -63,6 +68,9 @@ struct MyApp : OmniApp {
 //    unsigned drawMode = 1;
     Scene scene;
     al_sec now;
+    
+    int width, height;
+    unsigned char* image[6];
 
     ShaderProgram cubemapShader;
 
@@ -83,42 +91,42 @@ struct MyApp : OmniApp {
 
   std::string cubeFragmentCode() {
 
-      return AL_STRINGIFY(
-            //\n#version 330 core\n
-            //in vec3 TexCoords;
-            //out vec4 color;
+//      return AL_STRINGIFY(
+//            //\n#version 330 core\n
+//            //in vec3 TexCoords;
+//            //out vec4 color;
+//
+//            uniform samplerCube skybox;
+//
+//            void main()
+//            {
+//                gl_FragColor = textureCube(skybox, gl_TexCoord[0].stp);
+//            }
+//      );
 
-            uniform samplerCube skybox;
+    return AL_STRINGIFY(uniform float lighting; uniform float texture;
+                        uniform samplerCube texture0; varying vec4 color;
+                        varying vec3 normal, lightDir, eyeVec; void main() {
 
-            void main()
-            {
-                gl_FragColor = textureCube(skybox, gl_TexCoord[0].stp);
-            }
-      );
+      vec4 colorMixed;
+      if (texture > 0.0) {
+        vec4 textureColor = textureCube(texture0, gl_TexCoord[0].stp);
+        colorMixed = mix(color, textureColor, texture);
+      } else {
+        colorMixed = color;
+      }
 
-//    return AL_STRINGIFY(uniform float lighting; uniform float texture;
-//                        uniform samplerCube texture0; varying vec4 color;
-//                        varying vec3 normal, lightDir, eyeVec; void main() {
-
-//      vec4 colorMixed;
-//      if (texture > 0.0) {
-//        vec4 textureColor = texture(texture0, gl_TexCoord[0].st);
-//        colorMixed = mix(color, textureColor, texture);
-//      } else {
-//        colorMixed = color;
-//      }
-
-//      vec4 final_color = colorMixed * gl_LightSource[0].ambient;
-//      vec3 N = normalize(normal);
-//      vec3 L = lightDir;
-//      float lambertTerm = max(dot(N, L), 0.0);
-//      final_color += gl_LightSource[0].diffuse * colorMixed * lambertTerm;
-//      vec3 E = eyeVec;
-//      vec3 R = reflect(-L, N);
-//      float spec = pow(max(dot(R, E), 0.0), 0.9 + 1e-20);
-//      final_color += gl_LightSource[0].specular * spec;
-//      gl_FragColor = mix(colorMixed, final_color, lighting);
-//    });
+      vec4 final_color = colorMixed * gl_LightSource[0].ambient;
+      vec3 N = normalize(normal);
+      vec3 L = lightDir;
+      float lambertTerm = max(dot(N, L), 0.0);
+      final_color += gl_LightSource[0].diffuse * colorMixed * lambertTerm;
+      vec3 E = eyeVec;
+      vec3 R = reflect(-L, N);
+      float spec = pow(max(dot(R, E), 0.0), 0.9 + 1e-20);
+      final_color += gl_LightSource[0].specular * spec;
+      gl_FragColor = mix(colorMixed, final_color, lighting);
+    });
   }
 
   bool onCreate() {
@@ -137,6 +145,31 @@ struct MyApp : OmniApp {
       std::cout << "OpenGL version: " << glGetString(GL_VERSION) << ", GLSL version " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
                                                                                                      
 
+      std::vector<const GLchar*> faces;
+      
+      // back
+      faces.push_back(STR(AlloPlayer_RESOURCE_DIR) "skybox_small/right.jpg");
+      // front
+      faces.push_back(STR(AlloPlayer_RESOURCE_DIR) "skybox_small/left.jpg");
+      // top
+      faces.push_back(STR(AlloPlayer_RESOURCE_DIR) "skybox_small/top.jpg");
+      // bottom
+      faces.push_back(STR(AlloPlayer_RESOURCE_DIR) "skybox_small/bottom.jpg");
+      // left
+      faces.push_back(STR(AlloPlayer_RESOURCE_DIR) "skybox_small/back.jpg");
+      // right
+      faces.push_back(STR(AlloPlayer_RESOURCE_DIR) "skybox_small/front.jpg");
+      
+      
+      
+      
+      
+      for (GLuint i = 0; i < faces.size(); i++)
+      {
+          image[i] = SOIL_load_image(faces[i], &width, &height, 0, SOIL_LOAD_RGB);
+          //glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+      }
+      
       return OmniApp::onCreate();
   }
 
@@ -155,7 +188,7 @@ struct MyApp : OmniApp {
 
       GLint currentProgramID;
       glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgramID);
-      std::cout << "onFrame program id: " << currentProgramID << std::endl;
+      //std::cout << "onFrame program id: " << currentProgramID << std::endl;
 
       //return true;
       return OmniApp::onFrame();
@@ -167,9 +200,9 @@ struct MyApp : OmniApp {
 
       GLint currentProgramID;
       glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgramID);
-      std::cout << "onDraw program id: " << currentProgramID << std::endl;
+      //std::cout << "onDraw program id: " << currentProgramID << std::endl;
 
-        //glUseProgram(0);
+        glUseProgram(0);
 
       // first, draw it as a cylindrical map in the background:
       // ortho for 2D, ranging from 0..1 in each axis:
@@ -184,8 +217,27 @@ struct MyApp : OmniApp {
       // second, use it to texture a rotating object:
       //gl.projection(Matrix4d::perspective(70, width()/(double)height(), lens().near(), lens().far()));
       //gl.modelView(Matrix4d::lookAt(Vec3d(0, 0, 4), Vec3d(0, 0, 2), Vec3d(0, 1, 0)));
+      
+      char pixels[100 * 100 * 4];
+      for (int i = 0; i < 100 * 100 * 4; i++) {
+          pixels[i] = 255;
+      }
+      
+      //if (mOmni.face() == 5) {
+          glDepthMask(GL_FALSE);
+          glDrawPixels(width,//mOmni.resolution(),
+                       height,//mOmni.resolution(),
+                       GL_RGB,
+                       GL_UNSIGNED_BYTE,
+                       image[mOmni.face()]);
+          //std::cout << gluErrorString(glGetError()) << std::endl;
+      //std::cout << mOmni.face() << std::endl;
+          glDepthMask(GL_TRUE);
+      //}
+
 
       cubemapShader.begin();
+      cubemapShader.uniform("texture", 0.5);
       mOmni.uniforms(cubemapShader);
 
       gl.pushMatrix();
