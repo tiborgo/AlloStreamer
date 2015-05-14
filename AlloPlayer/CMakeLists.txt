@@ -2,33 +2,33 @@ set(SOURCES
 	AlloPlayer.cpp
 	#H264WindowSink.cpp
 	H264RawPixelsSink.cpp
-	shader.cpp
-	texture.cpp
-	tutorial05.cpp
 	CubemapPreviewWindow.cpp
-        showCubeMapFaces.cpp
-        cubemap.cpp
-        omni.cpp
-        cubemap2.cpp
-        omni2.cpp
-        cubemaps_skybox_optimized.cpp
-        main.cpp
+    CubemapBackgroundApp.cpp
+    main.cpp
 )
 	
 set(HEADERS
 	#H264WindowSink.h
 	H264RawPixelsSink.h
-	shader.hpp
-	texture.hpp
 	CubemapPreviewWindow.h
-        H264StreamCubemap.h
+    H264StreamCubemap.h
+    shader.h
+    camera.h
 )
 
 set(RESOURCES
-	TextureFragmentShader.fragmentshader
-	TransformVertexShader.vertexshader
-	uvtemplate.DDS
-	
+	skybox/back.jpg
+    skybox/bottom.jpg
+    skybox/front.jpg
+    skybox/left.jpg
+    skybox/right.jpg
+    skybox/top.jpg
+    skybox_small/back.jpg
+    skybox_small/bottom.jpg
+    skybox_small/front.jpg
+    skybox_small/left.jpg
+    skybox_small/right.jpg
+    skybox_small/top.jpg
 )
 
 
