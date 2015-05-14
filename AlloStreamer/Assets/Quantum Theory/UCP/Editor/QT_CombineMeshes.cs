@@ -434,7 +434,7 @@ public class QT_CombineMeshes : EditorWindow
             //delete old to replace with prefab
             DestroyImmediate(selectionmeshes[i]);
 
-            GameObject prefab_go = PrefabUtility.InstantiatePrefab(Resources.LoadAssetAtPath(targetFolder + name + ".prefab", typeof(GameObject))) as GameObject;
+            GameObject prefab_go = PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath(targetFolder + name + ".prefab", typeof(GameObject))) as GameObject;
             //ensure prefab replacement in scene
             prefab_go.transform.parent = parent_tr;
             prefab_go.transform.position = child_pos;

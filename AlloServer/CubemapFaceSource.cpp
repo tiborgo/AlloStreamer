@@ -120,7 +120,7 @@ img_convert_ctx(NULL)
 	codecContext->width = face->width;
 	codecContext->height = face->height;
 	/* frames per second */
-	codecContext->time_base = { 1, FPS };
+	codecContext->time_base = (AVRational){ 1, FPS };
 	codecContext->gop_size = 20; /* emit one intra frame every ten frames */
 	codecContext->max_b_frames = 0;
 	codecContext->pix_fmt = AV_PIX_FMT_YUV420P;

@@ -8,13 +8,15 @@ Author:
 Graham Wakefield 2011
 */
 
+#include "learnopengl/shader.h"
+
 #include "allocore/al_Allocore.hpp"
 #include "alloutil/al_CubeMapFBO.hpp"
 #include "alloutil/al_OmniApp.hpp"
 
 #include <SOIL.h>
 
-#include "learnopengl/shader.h"
+
 
 //#define TEST
 

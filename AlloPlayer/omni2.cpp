@@ -1,7 +1,11 @@
+#include <GL/glew.h>
+
 #include "alloutil/al_OmniApp.hpp"
 #include "alloutil/al_TextureGL.hpp"
 #include "alloutil/al_CubeMapFBO.hpp"
 using namespace al;
+
+
 
 // GLFW
 #include <GLFW/glfw3.h>

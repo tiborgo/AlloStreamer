@@ -123,7 +123,7 @@ static void initEncoder()
 	contexts[i]->width = 2048;//image_width;
 	contexts[i]->height = 2048;// image_height;
     /* frames per second */
-    contexts[i]->time_base= {1,FPS};
+    contexts[i]->time_base= (AVRational){1,FPS};
     contexts[i]->gop_size = 20; /* emit one intra frame every ten frames */
     contexts[i]->max_b_frames=0;
     contexts[i]->pix_fmt = AV_PIX_FMT_YUV420P;

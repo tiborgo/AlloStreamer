@@ -17,7 +17,7 @@ public class RenderAndExtractCubemap : MonoBehaviour {
 
     private static System.String[] cubemapFaceNames = {
         "LeftEye/PositiveX",
-        "LeftEye/NegativeX"/*,
+        "LeftEye/NegativeX",
         "LeftEye/PositiveY",
         "LeftEye/NegativeY",
         "LeftEye/PositiveZ",
@@ -76,7 +76,7 @@ public class RenderAndExtractCubemap : MonoBehaviour {
             go.transform.eulerAngles = cubemapFaceRotations[i];
             go.transform.parent = cubemap.transform;
 
-            SetCubemapFaceTextureFromUnity(tex.GetNativeTexturePtr(), i);
+            //SetCubemapFaceTextureFromUnity(tex.GetNativeTexturePtr(), i);
         }
 
         // Tell native plugin that rendering has started
