@@ -32,6 +32,7 @@ extern GLuint screenWidth, screenHeight;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void error_callback(int error, const char* description);
 void Do_Movement();
 GLuint loadTexture(GLchar* path);
 GLuint loadCubemap(std::vector<const GLchar*> faces);
@@ -50,12 +51,15 @@ extern GLfloat lastFrame;
 // The MAIN function, from here we start our application and run our Game loop
 int mainCubemapsSkyboxOptimized()
 {
+    glfwSetErrorCallback(error_callback);
+    
     // Init GLFW
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // to make OS X happy
 
     GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "LearnOpenGL", nullptr, nullptr); // Windowed
     glfwMakeContextCurrent(window);
@@ -303,6 +307,11 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(yoffset);
+}
+
+void error_callback(int error, const char* description)
+{
+    puts(description);
 }
 
 #pragma endregion
