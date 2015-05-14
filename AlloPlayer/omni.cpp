@@ -84,15 +84,15 @@ struct MyApp : OmniApp {
   std::string cubeFragmentCode() {
 
       return AL_STRINGIFY(
-            \n#version 330 core\n
-            in vec3 TexCoords;
-            out vec4 color;
+            //\n#version 330 core\n
+            //in vec3 TexCoords;
+            //out vec4 color;
 
             uniform samplerCube skybox;
 
             void main()
             {
-                color = texture(skybox, TexCoords);
+                gl_FragColor = textureCube(skybox, gl_TexCoord[0].stp);
             }
       );
 
@@ -133,6 +133,9 @@ struct MyApp : OmniApp {
       cubemapShader.uniform("lighting", lightingAmount);
       cubemapShader.uniform("texture", 0.0);
       cubemapShader.end();
+      
+      std::cout << "OpenGL version: " << glGetString(GL_VERSION) << ", GLSL version " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+                                                                                                     
 
       return OmniApp::onCreate();
   }

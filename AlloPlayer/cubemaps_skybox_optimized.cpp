@@ -63,6 +63,8 @@ int mainCubemapsSkyboxOptimized()
 
     GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "LearnOpenGL", nullptr, nullptr); // Windowed
     glfwMakeContextCurrent(window);
+    
+    std::cout << "OpenGL version: " << glGetString(GL_VERSION) << ", GLSL version " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
 
     // Set the required callback functions
     glfwSetKeyCallback(window, key_callback);
