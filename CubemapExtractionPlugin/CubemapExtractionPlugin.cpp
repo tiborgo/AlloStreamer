@@ -10,6 +10,7 @@
 #include "PreviewWindow.h"
 #include "CubemapFaceD3D9.h"
 #include "CubemapFaceD3D11.h"
+#include "CubemapFaceOpenGL.h"
 
 // --------------------------------------------------------------------------
 // Helper utilities
@@ -159,7 +160,11 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 	// OpenGL case
 	if (g_DeviceType == kGfxRendererOpenGL)
 	{
-		// to be implemented
+        CubemapFace::Ptr face = CubemapFaceOpenGL::create(
+            (GLuint)(size_t)texturePtr,
+            index,
+            *shmAllocator);
+        cubemap->setFace(face);
 	}
 #endif
 }
@@ -172,10 +177,8 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 
 extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 {
-#if SUPPORT_D3D9 || SUPPORT_D3D11
-	// D3D9 case
-	//if (g_DeviceType == kGfxRendererD3D9 && multithreaded)
-	//{
+	if (g_DeviceType == kGfxRendererD3D9 || g_DeviceType == kGfxRendererD3D11)
+	{
 		boost::thread* threads = new boost::thread[cubemap->count()];
 
 		for (int i = 0; i < cubemap->count(); i++) {
@@ -186,13 +189,12 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 			threads[i].join();
 		}
 
-	//}
-	//else if (g_DeviceType == kGfxRendererD3D11 || !multithreaded) {
-	//	for (int i = 0; i < cubemap->count(); i++) {
-	//		cubemap->getFace(i)->copyFromGPUToCPU();
-	//	}
-	//}
+	}
+	else {
+		for (int i = 0; i < cubemap->count(); i++) {
+			cubemap->getFace(i)->copyFromGPUToCPU();
+		}
+	}
 
 	RepaintPreviewWindow();
-#endif
 }

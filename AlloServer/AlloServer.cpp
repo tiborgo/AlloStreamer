@@ -261,8 +261,7 @@ count++;
 int
 main(int argc, char *argv[])
 {
-	logz = fopen("C:/Users/Tibor/Desktop/Logs/AlloServer.log", "w");
-
+	logz = fopen("/Users/tiborgoldschwendt/Desktop/Logs/AlloServer.log", "w");
 
   avcodec_register_all();
   initEncoder();

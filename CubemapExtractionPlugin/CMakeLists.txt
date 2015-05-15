@@ -3,6 +3,7 @@ set(SOURCES
 #PreviewWindow.cpp
 	CubemapFaceD3D9.inl
 	CubemapFaceD3D11.inl
+    CubemapFaceOpenGL.inl
     wxPreviewWindow.cpp
 )
 
@@ -12,6 +13,7 @@ set(HEADERS
 	UnityPluginInterface.h
 	CubemapFaceD3D9.h
 	CubemapFaceD3D11.h
+    CubemapFaceOpenGL.h
 )
 
 # include boost
@@ -23,6 +25,7 @@ find_package(Boost
  
 find_package(FFmpeg REQUIRED)
 find_package(wxWidgets REQUIRED net gl core base)
+find_package(OpenGL REQUIRED)
   
 add_library(CubemapExtractionPlugin
 	SHARED
@@ -38,6 +41,7 @@ target_include_directories(CubemapExtractionPlugin
 target_link_libraries(CubemapExtractionPlugin
 	${Boost_LIBRARIES}
     ${wxWidgets_LIBRARIES}
+    ${OPENGL_gl_LIBRARY}
     AlloShared
 )
 target_compile_definitions(CubemapExtractionPlugin

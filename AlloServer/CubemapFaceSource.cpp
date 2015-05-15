@@ -64,7 +64,7 @@ img_convert_ctx(NULL)
 	// Any instance-specific initialization of the device would be done here:
 
 	++referenceCount;
-	myfile = fopen("C:/Users/Tibor/Desktop/Logs/deviceglxgears.log", "w");
+	myfile = fopen("/Users/tiborgoldschwendt/Desktop/Logs/deviceglxgears.log", "w");
 
 	// initialize frame pool
 	for (int i = 0; i < 1; i++)
