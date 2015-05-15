@@ -4,7 +4,7 @@
 #define QUOTE(x) #x
 #define STR(x) QUOTE(x)
 
-struct CubemapBackgroundApp : al::OmniApp {
+struct StaticCubemapBackgroundApp : al::OmniApp {
     al::Mesh cube, sphere;
     al::Light light;
     al_sec now;
@@ -12,7 +12,7 @@ struct CubemapBackgroundApp : al::OmniApp {
     int width, height;
     unsigned char* cubemapFaces[6];
 
-  CubemapBackgroundApp() {
+  StaticCubemapBackgroundApp() {
       nav().smooth(0.8);
 
       // set up cube
@@ -60,7 +60,7 @@ struct CubemapBackgroundApp : al::OmniApp {
       }
   }
 
-  virtual ~CubemapBackgroundApp() {}
+  virtual ~StaticCubemapBackgroundApp() {}
 
   bool onCreate() {
       
@@ -116,7 +116,7 @@ struct CubemapBackgroundApp : al::OmniApp {
   virtual bool onKeyDown(const al::Keyboard& k) { return true; }
 };
 
-int mainCubemapBackgroundApp(int argc, char* argv[]) {
-  CubemapBackgroundApp().start();
+int mainStaticCubemapBackgroundApp(int argc, char* argv[]) {
+  StaticCubemapBackgroundApp().start();
   return 0;
 }

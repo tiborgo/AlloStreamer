@@ -3,7 +3,7 @@ set(SOURCES
 	#H264WindowSink.cpp
 	H264RawPixelsSink.cpp
 	CubemapPreviewWindow.cpp
-    CubemapBackgroundApp.cpp
+    StaticCubemapBackgroundApp.cpp
     main.cpp
 )
 	
@@ -12,6 +12,7 @@ set(HEADERS
 	H264RawPixelsSink.h
 	CubemapPreviewWindow.h
     H264StreamCubemap.h
+    DynamicCubemapBackgroundApp.hpp
     shader.h
     camera.h
 )

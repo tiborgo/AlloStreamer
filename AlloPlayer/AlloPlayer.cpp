@@ -1,3 +1,5 @@
+#include "DynamicCubemapBackgroundApp.hpp"
+
 #include <BasicUsageEnvironment.hh>
 #include <GroupsockHelper.hh>
 #include <liveMedia.hh>
@@ -7,7 +9,8 @@ extern "C"
 }
 
 #include "H264RawPixelsSink.h"
-#include "CubemapPreviewWindow.h"
+//#include "CubemapPreviewWindow.h"
+
 
 char const* progName;
 UsageEnvironment* env;
@@ -27,7 +30,8 @@ double initialSeekTime = 0.0f;
 char* initialAbsoluteSeekTime = NULL;
 double endTime;
 TaskToken arrivalCheckTimerTask = NULL;
-CubemapPreviewWindow* cubemapPreviewWindow = NULL;
+//CubemapPreviewWindow* cubemapPreviewWindow = NULL;
+DynamicCubemapBackgroundApp* dynamicCubemapBackgroundApp = nullptr;
 
 void shutdown(int exitCode = 1)
 {
@@ -175,7 +179,7 @@ void createOutputFiles(char const* periodicFilenameSuffix)
 			{
 				// Open window displaying the H.264 video
 				sink = H264RawPixelsSink::createNew(*env, fileSinkBufferSize);
-				cubemapPreviewWindow->addSink(sink);
+				dynamicCubemapBackgroundApp->addSink(sink);
 			}
 		}
 		subsession->sink = sink;
@@ -394,18 +398,16 @@ void continueAfterOPTIONS(RTSPClient*, int resultCode, char* resultString)
 	ourClient->sendDescribeCommand(continueAfterDESCRIBE);
 }
 
-int main_(int argc, char** argv)
+int live555Loop(const char* progName)
 {
 	avcodec_register_all();
 	avformat_network_init();
 
-	cubemapPreviewWindow = new CubemapPreviewWindow();
+	//cubemapPreviewWindow = new CubemapPreviewWindow();
 
 	// Begin by setting up our usage environment:
 	TaskScheduler* scheduler = BasicTaskScheduler::createNew();
 	env = BasicUsageEnvironment::createNew(*scheduler);
-
-	progName = argv[0];
 
 	gettimeofday(&startTime, NULL);
 
@@ -428,4 +430,11 @@ int main_(int argc, char** argv)
 	env->taskScheduler().doEventLoop(); // does not return
 
 	return 0; // only to prevent compiler warning
+}
+
+int mainAlloPlayer(int argc, char** argv)
+{
+    dynamicCubemapBackgroundApp = new DynamicCubemapBackgroundApp();
+    boost::thread live555Thread(boost::bind(&live555Loop, argv[0]));
+    dynamicCubemapBackgroundApp->start();
 }
