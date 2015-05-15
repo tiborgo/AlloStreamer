@@ -37,8 +37,9 @@ extern ID3D11Device* g_D3D11Device;
 #if SUPPORT_OPENGL
 	#if UNITY_WIN
 		#include <gl/GL.h>
-	#else
-		//		#include <OpenGL/OpenGL.h>
+	#elif UNITY_OSX
+		#include <OpenGL/OpenGL.h>
+    #else
         #include <GL/gl.h>
 	#endif
 #endif

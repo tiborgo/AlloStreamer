@@ -41,5 +41,5 @@ endif()
 
 add_subdirectory(AlloShared)
 add_subdirectory(AlloServer)
-#add_subdirectory(CubemapExtractionPlugin)
+add_subdirectory(CubemapExtractionPlugin)
 add_subdirectory(AlloPlayer)

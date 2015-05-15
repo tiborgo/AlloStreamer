@@ -45,7 +45,7 @@ void allocateCubemap()
 		shmAllocator = new Allocator<ShmSegmentManager>(shm.get_segment_manager());
 
 		shm.destroy<CubemapImpl>("Cubemap");
-		cubemap = shm.construct<CubemapImpl>("Cubemap")(*shmAllocator);
+        cubemap = shm.construct<CubemapImpl>("Cubemap")(boost::ref(*shmAllocator));
 	}
 }
 
@@ -59,25 +59,6 @@ extern "C" void EXPORT_API StartFromUnity()
 
 	// Open window for previewing cubemap
 	CreatePreviewWindow();
-
-	
-	
-
-	//Set size
-	//shm.truncate(sizeof(FrameData));
-
-	//Map the whole shared memory in this process
-	//region = mapped_region(shm, read_write);
-
-
-	//Write all the memory to 1
-	//std::memset(region.get_address(), 2, region.get_size());
-
-	//Get the address of the mapped region
-	//void * addr = region.get_address();
-
-	//Construct the shared structure in memory
-	//data = new (addr)FrameData;
 }
 
 extern "C" void EXPORT_API StopFromUnity()
@@ -191,7 +172,6 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 
 extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 {
-
 #if SUPPORT_D3D9 || SUPPORT_D3D11
 	// D3D9 case
 	//if (g_DeviceType == kGfxRendererD3D9 && multithreaded)
