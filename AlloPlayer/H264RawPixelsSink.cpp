@@ -17,7 +17,7 @@ H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
 H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 	unsigned int bufferSize)
 	: MediaSink(env), bufferSize(bufferSize), buffer(new unsigned char[bufferSize]),
-	img_convert_ctx(NULL)
+	img_convert_ctx(NULL), currentFrame(nullptr)
 {
 	for (int i = 0; i < 1; i++)
 	{
@@ -30,9 +30,6 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 		frame->format = AV_PIX_FMT_RGBA;
 
 		framePool.push(frame);
-
-		AVPacket* pkt = new AVPacket;
-		pktPool.push(pkt);
 	}
 
 
@@ -106,13 +103,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 		unsigned char const start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
 		unsigned char const end_code[2] = { 0x00, 0x00 };
 		
-		AVPacket* pkt;
-		if (!pktPool.wait_and_pop(pkt))
-		{
-			// queue did close
-			return;
-		}
-
+		AVPacket* pkt = new AVPacket;
 		av_init_packet(pkt);
 
 		AVRational microSecBase = { 1, 1000000 };
@@ -201,16 +192,11 @@ void H264RawPixelsSink::decodeFrameLoop()
 		int got_frame;
 		int len = avcodec_decode_video2(codecContext, yuvFrame, &got_frame, pkt);
 
-		if (len < 0)
+        if (got_frame == 1)
 		{
-			//std::cout << this << ": error decoding frame" << std::endl;
-		}
-		else if (len == 0)
-		{
-			std::cout << this << ": no frame could be decoded" << std::endl;
-		}
-		else if (got_frame == 1)
-		{
+            // We have a frame decode :) ->
+            // Convert to RGB pixel format and make the pixels available to the application
+            
 			if (!frame->data[0])
 			{
 				frame->width = yuvFrame->width;
@@ -239,6 +225,9 @@ void H264RawPixelsSink::decodeFrameLoop()
 			int x = sws_scale(img_convert_ctx, yuvFrame->data,
 				yuvFrame->linesize, 0, yuvFrame->height,
 				frame->data, frame->linesize);
+            
+            // Make it available to the application
+            frameBuffer.push(frame);
 
 			// Flip image vertically
 			/*for (int i = 0; i < 4; i++)
@@ -254,6 +243,24 @@ void H264RawPixelsSink::decodeFrameLoop()
 			//av_freep(&yuvFrame->data[0]);
 			av_frame_free(&yuvFrame);
 		}
+        else
+        {
+            // No frame could be decoded :( ->
+            // Put frame back to the pool so that the next packet will be read
+            
+            if (len < 0)
+            {
+                std::cout << this << ": error decoding frame" << std::endl;
+            }
+            else if (len == 0)
+            {
+                std::cout << this << ": no frame could be decoded" << std::endl;
+            }
+            
+            // Use frame for next try
+            framePool.push(frame);
+        }
+        
 
 		bc::microseconds nowSinceEpoch =
 			bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
@@ -280,29 +287,20 @@ void H264RawPixelsSink::decodeFrameLoop()
 		}
 
 		counter++;
-
-		frameBuffer.push(frame) ;
-		pktPool.push(pkt);
+		
+        delete pkt;
 	}
 }
 
-Frame* H264RawPixelsSink::getNextFrame()
+AVFrame* H264RawPixelsSink::getCurrentFrame()
 {
-	AVFrame* avFrame;
+    AVFrame* frame;
+    
+    if (frameBuffer.try_pop(frame))
+    {
+        currentFrame = av_frame_clone(frame);
+        framePool.push(frame);
+    }
 
-	frameBuffer.wait_and_pop(avFrame);
-
-	//boost::interprocess::managed_heap_memory heapMemory(avFrame->width * avFrame->height * 4 + 1024);
-	//Allocator<HeapSegmentManager> heapAllocator(heapMemory.get_segment_manager());
-	//Frame* frame = new Frame(avFrame->width, avFrame->height, (AVPixelFormat)avFrame->format, heapAllocator);
-	
-	unsigned char* pixels = new unsigned char[avFrame->width * avFrame->height * 4];
-
-	int ret = avpicture_layout((AVPicture*)avFrame, (AVPixelFormat)avFrame->format,
-		avFrame->width, avFrame->height, pixels/*(unsigned char*)frame->pixels.get()*/, avFrame->width * avFrame->height * 4);
-
-
-	framePool.push(avFrame);
-
-	return (Frame*)pixels;
+    return currentFrame;
 }

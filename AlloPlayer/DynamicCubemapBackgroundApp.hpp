@@ -12,9 +12,7 @@ struct DynamicCubemapBackgroundApp : al::OmniApp {
     al_sec now;
     std::vector<H264RawPixelsSink*> sinks;
     boost::mutex sinkMutex;
-    
-    int width, height;
-    unsigned char* cubemapFaces[6];
+    SwsContext* resizeCtx;
 
   DynamicCubemapBackgroundApp() {
       nav().smooth(0.8);
@@ -42,26 +40,7 @@ struct DynamicCubemapBackgroundApp : al::OmniApp {
       light.ambient(al::Color(0.4, 0.4, 0.4, 1.0));
       light.pos(5, 5, 5);
       
-      // load cubemap background
-      std::vector<const GLchar*> faces;
-      
-      // back
-      faces.push_back(STR(AlloPlayer_RESOURCE_DIR) "skybox_small/right.jpg");
-      // front
-      faces.push_back(STR(AlloPlayer_RESOURCE_DIR) "skybox_small/left.jpg");
-      // top
-      faces.push_back(STR(AlloPlayer_RESOURCE_DIR) "skybox_small/top.jpg");
-      // bottom
-      faces.push_back(STR(AlloPlayer_RESOURCE_DIR) "skybox_small/bottom.jpg");
-      // left
-      faces.push_back(STR(AlloPlayer_RESOURCE_DIR) "skybox_small/back.jpg");
-      // right
-      faces.push_back(STR(AlloPlayer_RESOURCE_DIR) "skybox_small/front.jpg");
-      
-      for (GLuint i = 0; i < faces.size(); i++)
-      {
-          cubemapFaces[i] = SOIL_load_image(faces[i], &width, &height, 0, SOIL_LOAD_RGB);
-      }
+      resizeCtx = nullptr;
   }
 
   virtual ~DynamicCubemapBackgroundApp() {}
@@ -80,6 +59,7 @@ struct DynamicCubemapBackgroundApp : al::OmniApp {
   void onDraw(al::Graphics& gl){
       
       int face = mOmni.face();
+      int resolution = mOmni.resolution();
       
       {
           // get next frame
@@ -87,19 +67,65 @@ struct DynamicCubemapBackgroundApp : al::OmniApp {
           
           if (sinks.size() > face)
           {
-              Frame* frame = sinks[face]->getNextFrame();
+              AVFrame* frame = sinks[face]->getCurrentFrame();
               
-              glUseProgram(0);
-              glDepthMask(GL_FALSE);
-              
-              // draw the background
-              glDrawPixels(width,
-                           height,
-                           GL_RGBA,
-                           GL_UNSIGNED_BYTE,
-                           (GLvoid*)frame);
-              
-              glDepthMask(GL_TRUE);
+              if (frame)
+              {
+                  if (!resizeCtx)
+                  {
+                      // setup resizer for received frames
+                      resizeCtx = sws_getContext(
+                                     frame->width, frame->height, (AVPixelFormat)frame->format,
+                                     resolution, resolution, AV_PIX_FMT_RGB24,
+                                     SWS_BICUBIC, NULL, NULL, NULL);
+                  }
+                  
+                  AVFrame* resizedFrame = av_frame_alloc();
+                  if (!resizedFrame)
+                  {
+                      fprintf(stderr, "Could not allocate video frame\n");
+                      exit(1);
+                  }
+                  resizedFrame->format = AV_PIX_FMT_RGB24;
+                  resizedFrame->width = resolution;
+                  resizedFrame->height = resolution;
+                  
+                  if (av_image_alloc(resizedFrame->data, resizedFrame->linesize, resizedFrame->width, resizedFrame->height,
+                                     (AVPixelFormat)resizedFrame->format, 32) < 0)
+                  {
+                      fprintf(stderr, "Could not allocate raw picture buffer\n");
+                      exit(1);
+                  }
+                  
+                  // resize frame
+                  sws_scale(resizeCtx, frame->data, frame->linesize, 0, frame->height,
+                      resizedFrame->data, resizedFrame->linesize);
+                  
+                  unsigned char* pixels = new unsigned char[resizedFrame->width * resizedFrame->height * 3];
+                  
+                  // read pixels from frame
+                  if (avpicture_layout((AVPicture*)resizedFrame, (AVPixelFormat)resizedFrame->format,
+                       resizedFrame->width, resizedFrame->height,
+                       pixels, resizedFrame->width * resizedFrame->height * 3) < 0)
+                  {
+                      fprintf(stderr, "Could not resize frame\n");
+                      exit(1);
+                  }
+                  
+                  glUseProgram(0);
+                  glDepthMask(GL_FALSE);
+                  
+                  // draw the background
+                  glDrawPixels(resizedFrame->width,
+                               resizedFrame->height,
+                               GL_RGB,
+                               GL_UNSIGNED_BYTE,
+                               (GLvoid*)pixels);
+                  
+                  glDepthMask(GL_TRUE);
+                  
+                  delete[] pixels;
+              }
           }
       }
 

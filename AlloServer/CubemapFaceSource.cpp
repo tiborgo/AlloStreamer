@@ -219,6 +219,9 @@ void CubemapFaceSource::frameFaceLoop()
             struct tm* tm = localtime(&time);
             char timeStr[128];
             strftime (timeStr, sizeof(timeStr), "%c",tm);
+            
+            //std::cout << this << " presentation time: " << timeStr << std::endl;
+            std::cout << this << " frame" << std::endl;
 
 
 			frame->pts = av_rescale_q(presentationTimeSinceEpochMicroSec.count(), microSecBase, codecContext->time_base);
@@ -299,8 +302,8 @@ void CubemapFaceSource::encodeFrameLoop()
 			return;
 		}
 
-
-
+        std::cout << this << " encode" << std::endl;
+        
 		yuv420pFrame = av_frame_alloc();
 		if (!yuv420pFrame)
 		{
@@ -413,6 +416,8 @@ void CubemapFaceSource::deliverFrame()
 		// queue did close
 		return;
 	}
+    
+    std::cout << this << " send" << std::endl;
 
 	// Set the presentation time of this frame
 	AVRational secBase = { 1, 1 };

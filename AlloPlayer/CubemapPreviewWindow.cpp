@@ -193,7 +193,7 @@ void CubemapPreviewWindow::gameLoop()
 		{
 			glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
 			boost::mutex::scoped_lock lock(sinkMutex);
-			Frame* frame;
+			AVFrame* frame;
 
 			int width = 1024;
 			int height = 1024;
@@ -201,7 +201,7 @@ void CubemapPreviewWindow::gameLoop()
 			// Get the pixels
 			for (int i = 0; i < sinks.size(); i++)
 			{
-				frame = sinks[i]->getNextFrame();
+				frame = sinks[i]->getCurrentFrame();
 
 				//char* pixels = new char[frame->width * frame->height * 4];
 				//memcpy(pixels, frame->pixels.get(), frame->width * frame->height * 4);

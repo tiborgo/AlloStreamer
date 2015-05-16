@@ -22,7 +22,7 @@ public:
 	static H264RawPixelsSink* createNew(UsageEnvironment& env,
 		unsigned int bufferSize);
 
-	Frame* getNextFrame();
+    AVFrame* getCurrentFrame();
 
 protected:
 	H264RawPixelsSink(UsageEnvironment& env,
@@ -47,12 +47,13 @@ private:
 	concurrent_queue<AVFrame*> frameBuffer;
 	concurrent_queue<AVFrame*> framePool;
 	concurrent_queue<AVPacket*> pktBuffer;
-	concurrent_queue<AVPacket*> pktPool;
 
 	SwsContext *img_convert_ctx;
 
 	boost::thread decodeFrameThread;
 
+    AVFrame* currentFrame;
+    
 	void decodeFrameLoop();
 
 	int counter = 0;
