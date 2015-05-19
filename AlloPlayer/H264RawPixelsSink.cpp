@@ -17,7 +17,8 @@ H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
 H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 	unsigned int bufferSize)
 	: MediaSink(env), bufferSize(bufferSize), buffer(new unsigned char[bufferSize]),
-	img_convert_ctx(NULL), currentFrame(nullptr)
+    img_convert_ctx(NULL), lastIFramePkt(nullptr), gotFirstIFrame(false),
+    counter(0), sumRelativePresentationTimeMicroSec(0), maxRelativePresentationTimeMicroSec(0)
 {
 	for (int i = 0; i < 1; i++)
 	{
@@ -30,6 +31,9 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 		frame->format = AV_PIX_FMT_RGBA;
 
 		framePool.push(frame);
+        
+        AVPacket* pkt = new AVPacket;
+        pktPool.push(pkt);
 	}
 
 
@@ -59,85 +63,98 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 	decodeFrameThread = boost::thread(boost::bind(&H264RawPixelsSink::decodeFrameLoop, this));
 }
 
+void H264RawPixelsSink::packageDate(AVPacket* pkt, unsigned int frameSize, timeval presentationTime)
+{
+    unsigned char const start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
+    unsigned char const end_code[2] = { 0x00, 0x00 };
+    
+    av_init_packet(pkt);
+    
+    AVRational microSecBase = { 1, 1000000 };
+    
+    pkt->size = frameSize + sizeof(start_code);
+    pkt->data = (uint8_t*)new char[frameSize + sizeof(start_code)];
+    pkt->pts = av_rescale_q(presentationTime.tv_sec * 1000000 + presentationTime.tv_usec,
+                            microSecBase,
+                            codecContext->time_base);
+    
+    memcpy(pkt->data, start_code, sizeof(start_code));
+    memcpy(pkt->data + sizeof(start_code), buffer, frameSize);
+}
+
 void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 	unsigned numTruncatedBytes,
 	timeval presentationTime)
 {
-	struct timeval currentTime;
-	gettimeofday(&currentTime, NULL);
-
-	long relativePresentationTimeMicroSec = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec -
-		(currentTime.tv_sec * 1000000 + currentTime.tv_usec);
-
-	long acceptedDelayMicroSec = 100000; // 10000 milliseconds
-
-	if (true /*relativePresentationTimeMicroSec + acceptedDelayMicroSec >= 0*/)
-	{
-		
-
-
-		u_int8_t nal_unit_type;
-		if (frameSize >= 1)
-		{
-			nal_unit_type = buffer[0] & 0x1F;
-
-
-
-			if (nal_unit_type == 8) // PPS
-			{
-				//envir() << "PPS seen; size: " << frameSize << "\n";
-			}
-			else if (nal_unit_type == 7) // SPS
-			{
-				//envir() << "SPS seen; size: " << frameSize << "\n";
-			}
-			else
-			{
-				//envir() << nal_unit_type << " seen; size: " << frameSize << "\n";
-			}
-		}
-
-		
-
-		//envir() << "sprop - parameter - sets: " << subSession.fmtp_spropparametersets() << "\n";
-		unsigned char const start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
-		unsigned char const end_code[2] = { 0x00, 0x00 };
-		
-		AVPacket* pkt = new AVPacket;
-		av_init_packet(pkt);
-
-		AVRational microSecBase = { 1, 1000000 };
-
-		pkt->size = frameSize + sizeof(start_code);
-		pkt->data = (uint8_t*)new char[frameSize + sizeof(start_code)];
-		pkt->pts = av_rescale_q(presentationTime.tv_sec * 1000000 + presentationTime.tv_usec,
-			microSecBase,
-			codecContext->time_base);
-
-		memcpy(pkt->data, start_code, sizeof(start_code));
-		memcpy(pkt->data + sizeof(start_code), buffer, frameSize);
-
-		pktBuffer.push(pkt);
-
-		struct timeval currentTime;
-		gettimeofday(&currentTime, NULL);
-
-		long relativePresentationTimeMicroSec = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec -
-			(currentTime.tv_sec * 1000000 + currentTime.tv_usec);
-
-		//std::cout << this << " " << -relativePresentationTimeMicroSec / 1000.0 << " milliseconds to late" << std::endl;
-	}
-	else
-	{
-		//std::cout << this << " skipped frame" << std::endl;
-	}
+    u_int8_t nal_unit_type = buffer[0] & 0x1F;
+    AVPacket* pkt = (pktPool.try_pop(pkt)) ? pkt : nullptr;
+    
+    if (nal_unit_type == 7)
+    {
+        int x = 0;
+    }
+    
+    if (pkt)
+    {
+        // We currently have the capacities to decode the received frame
+        
+        if (lastIFramePkt)
+        {
+            // We still have an I frame to process -> do it now
+            // Don't care about the received frame
+            pktBuffer.push(lastIFramePkt);
+            lastIFramePkt = nullptr;
+            gotFirstIFrame = true;
+        }
+        else if (nal_unit_type != 7 && gotFirstIFrame)
+        {
+            // We received a B/P frame
+            // and have the capacities to decode it -> do it
+            
+            packageDate(pkt, frameSize, presentationTime);
+            pktBuffer.push(pkt);
+        }
+        else if (nal_unit_type == 7)
+        {
+            packageDate(pkt, frameSize, presentationTime);
+            pktBuffer.push(pkt);
+            gotFirstIFrame = true;
+        }
+        else
+        {
+            pktPool.push(pkt);
+        }
+    }
+    else
+    {
+        // We currently don't have the capacities to decode the received frame
+        
+        if (nal_unit_type == 7)
+        {
+            // We received an I frame but don't have the capacities
+            // to encode it right now -> safe it for later
+            
+            if (!lastIFramePkt)
+            {
+                lastIFramePkt = new AVPacket;
+                packageDate(lastIFramePkt, frameSize, presentationTime);
+            }
+        }
+        else if (nal_unit_type != 7 && !pkt)
+        {
+            // We received a B/P frame but don't have the capacities
+            // to encode it right now.
+            // We can safely skip it.
+        }
+    }
+    
+    //if (nal_unit_type == 7)
+    //{
+        std::cout << this << " received frame " << (int)nal_unit_type << std::endl;
+    //}
 
 	// Then try getting the next frame:
 	continuePlaying();
-
-	
-
-	
 }
 
 Boolean H264RawPixelsSink::continuePlaying()
@@ -176,6 +193,8 @@ void H264RawPixelsSink::decodeFrameLoop()
 			// queue did close
 			return;
 		}
+        
+        u_int8_t nal_unit_type = pkt->data[4] & 0x1F;
 
 		if (!framePool.wait_and_pop(frame))
 		{
@@ -226,8 +245,11 @@ void H264RawPixelsSink::decodeFrameLoop()
 				yuvFrame->linesize, 0, yuvFrame->height,
 				frame->data, frame->linesize);
             
+            std::cout << "decoded frame " << (int)nal_unit_type << std::endl,
             // Make it available to the application
             frameBuffer.push(frame);
+            
+            //framePool.push(frame);
 
 			// Flip image vertically
 			/*for (int i = 0; i < 4; i++)
@@ -250,11 +272,11 @@ void H264RawPixelsSink::decodeFrameLoop()
             
             if (len < 0)
             {
-                std::cout << this << ": error decoding frame" << std::endl;
+                std::cout << this << ": error decoding frame " << (int)nal_unit_type << std::endl;
             }
             else if (len == 0)
             {
-                std::cout << this << ": no frame could be decoded" << std::endl;
+                std::cout << this << ": no frame could be decoded " << (int)nal_unit_type << std::endl;
             }
             
             // Use frame for next try
@@ -288,19 +310,21 @@ void H264RawPixelsSink::decodeFrameLoop()
 
 		counter++;
 		
-        delete pkt;
+        pktPool.push(pkt);
 	}
 }
 
-AVFrame* H264RawPixelsSink::getCurrentFrame()
+AVFrame* H264RawPixelsSink::getNextFrame()
 {
     AVFrame* frame;
     
     if (frameBuffer.try_pop(frame))
     {
-        currentFrame = av_frame_clone(frame);
         framePool.push(frame);
+        return av_frame_clone(frame);
     }
-
-    return currentFrame;
+    else
+    {
+        return nullptr;
+    }
 }

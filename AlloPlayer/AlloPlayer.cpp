@@ -343,7 +343,7 @@ void continueAfterDESCRIBE(RTSPClient*, int resultCode, char* resultString)
 				// Because we're saving the incoming data, rather than playing
 				// it in real time, allow an especially large time threshold
 				// (1 second) for reordering misordered incoming packets:
-				unsigned const thresh = 1000000; // 1 second
+				unsigned const thresh = 1; // 1 second
 				subsession->rtpSource()->setPacketReorderingThresholdTime(thresh);
 
 				// Set the RTP source's OS socket buffer size as appropriate - either if we were explicitly asked (using -B),
@@ -411,7 +411,7 @@ int live555Loop(const char* progName)
 
 	gettimeofday(&startTime, NULL);
 
-	streamURL = "rtsp://128.111.26.125:8554/h264ESVideoTest";// argv[1];
+	streamURL = "rtsp://192.168.1.185:8554/h264ESVideoTest";// argv[1];
 
 	ourClient = RTSPClient::createNew(*env, streamURL, verbosityLevel, progName, tunnelOverHTTPPortNum);
 	
@@ -434,6 +434,8 @@ int live555Loop(const char* progName)
 
 int mainAlloPlayer(int argc, char** argv)
 {
+    av_log_set_level(AV_LOG_QUIET);
+    
     dynamicCubemapBackgroundApp = new DynamicCubemapBackgroundApp();
     boost::thread live555Thread(boost::bind(&live555Loop, argv[0]));
     dynamicCubemapBackgroundApp->start();

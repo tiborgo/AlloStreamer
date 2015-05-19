@@ -22,7 +22,7 @@ public:
 	static H264RawPixelsSink* createNew(UsageEnvironment& env,
 		unsigned int bufferSize);
 
-    AVFrame* getCurrentFrame();
+    AVFrame* getNextFrame();
 
 protected:
 	H264RawPixelsSink(UsageEnvironment& env,
@@ -47,17 +47,20 @@ private:
 	concurrent_queue<AVFrame*> frameBuffer;
 	concurrent_queue<AVFrame*> framePool;
 	concurrent_queue<AVPacket*> pktBuffer;
+    concurrent_queue<AVPacket*> pktPool;
 
 	SwsContext *img_convert_ctx;
 
 	boost::thread decodeFrameThread;
-
-    AVFrame* currentFrame;
+    AVPacket* lastIFramePkt;
+    bool gotFirstIFrame;
     
 	void decodeFrameLoop();
 
-	int counter = 0;
-	long sumRelativePresentationTimeMicroSec = 0;
-	long maxRelativePresentationTimeMicroSec = 0;
+	int counter;
+	long sumRelativePresentationTimeMicroSec;
+	long maxRelativePresentationTimeMicroSec;
+    
+    void packageDate(AVPacket* pkt, unsigned int frameSize, timeval presentationTime);
 };
 

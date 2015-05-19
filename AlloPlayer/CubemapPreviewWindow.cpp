@@ -201,7 +201,7 @@ void CubemapPreviewWindow::gameLoop()
 			// Get the pixels
 			for (int i = 0; i < sinks.size(); i++)
 			{
-				frame = sinks[i]->getCurrentFrame();
+				frame = sinks[i]->getNextFrame();
 
 				//char* pixels = new char[frame->width * frame->height * 4];
 				//memcpy(pixels, frame->pixels.get(), frame->width * frame->height * 4);

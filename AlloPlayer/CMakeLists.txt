@@ -4,6 +4,7 @@ set(SOURCES
 	H264RawPixelsSink.cpp
 	CubemapPreviewWindow.cpp
     StaticCubemapBackgroundApp.cpp
+    DynamicCubemapBackgroundApp.cpp
     main.cpp
 )
 	
