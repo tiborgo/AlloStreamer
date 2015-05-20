@@ -11,6 +11,10 @@ extern "C"
 #include "H264RawPixelsSink.h"
 //#include "CubemapPreviewWindow.h"
 
+#include "AlloPlayer.h"
+
+Stats stats;
+
 
 char const* progName;
 UsageEnvironment* env;

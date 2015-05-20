@@ -6,6 +6,8 @@
 #include <boost/thread.hpp>
 #include <GroupsockHelper.hh>
 
+#include "AlloPlayer.h"
+
 namespace bc = boost::chrono;
 
 H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
@@ -105,6 +107,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
             pktBuffer.push(lastIFramePkt);
             lastIFramePkt = nullptr;
             gotFirstIFrame = true;
+            stats.droppedNALU(nal_unit_type);
         }
         else if (nal_unit_type != 7 && gotFirstIFrame)
         {
@@ -113,16 +116,19 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
             
             packageDate(pkt, frameSize, presentationTime);
             pktBuffer.push(pkt);
+            stats.addedNALU(nal_unit_type);
         }
         else if (nal_unit_type == 7)
         {
             packageDate(pkt, frameSize, presentationTime);
             pktBuffer.push(pkt);
             gotFirstIFrame = true;
+            stats.addedNALU(nal_unit_type);
         }
         else
         {
             pktPool.push(pkt);
+            stats.droppedNALU(nal_unit_type);
         }
     }
     else
@@ -146,6 +152,8 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
             // to encode it right now.
             // We can safely skip it.
         }
+        
+        stats.droppedNALU(nal_unit_type);
     }
     
     //if (nal_unit_type == 7)
@@ -306,6 +314,9 @@ void H264RawPixelsSink::decodeFrameLoop()
 			std::cout << this << " delay: avg " << -sumRelativePresentationTimeMicroSec / 1000.0 / frequency << " ms; max " << -maxRelativePresentationTimeMicroSec / 1000.0 << " ms" << std::endl;
 			sumRelativePresentationTimeMicroSec = 0;
 			maxRelativePresentationTimeMicroSec = 0;
+            
+            double naluDropRate = stats.naluDropRate(bc::microseconds(100000));
+            int x = 0;
 		}
 
 		counter++;

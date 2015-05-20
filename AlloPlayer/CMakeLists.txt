@@ -6,6 +6,7 @@ set(SOURCES
     StaticCubemapBackgroundApp.cpp
     DynamicCubemapBackgroundApp.cpp
     main.cpp
+    Stats.cpp
 )
 	
 set(HEADERS
@@ -16,6 +17,8 @@ set(HEADERS
     DynamicCubemapBackgroundApp.hpp
     shader.h
     camera.h
+    Stats.h
+    AlloPlayer.h
 )
 
 set(RESOURCES
