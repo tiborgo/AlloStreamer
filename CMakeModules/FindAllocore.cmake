@@ -46,6 +46,14 @@ find_library(ALLOCORE_LIBRARY
     ${ALLOCORE_ROOT}/build/lib
 )
 
+# on OS X allocore needs the Cocoa framework
+if(APPLE)
+	find_library(COCOA_LIBRARY Cocoa)
+	list(APPEND ALLOCORE_LIBRARY ${COCOA_LIBRARY})
+endif()
+
+
+
 #/usr/include/assimp
 #/usr/local/include
 #/opt/local/include/assimp
