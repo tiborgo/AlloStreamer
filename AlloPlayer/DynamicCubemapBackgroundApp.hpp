@@ -1,7 +1,6 @@
 #pragma once
 
 #include <alloutil/al_OmniApp.hpp>
-#include <SOIL.h>
 
 #include "H264RawPixelsSink.h"
 

@@ -9,8 +9,6 @@ set(SOURCES
 set(HEADERS
 	H264RawPixelsSink.h
     DynamicCubemapBackgroundApp.hpp
-    shader.h
-    camera.h
     Stats.h
     AlloPlayer.h
 )

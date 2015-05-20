@@ -7,7 +7,6 @@
 #include <boost/interprocess/offset_ptr.hpp>
 
 #include "CubemapExtractionPlugin.h"
-#include "PreviewWindow.h"
 #include "CubemapFaceD3D9.h"
 #include "CubemapFaceD3D11.h"
 #include "CubemapFaceOpenGL.h"
@@ -57,15 +56,10 @@ extern "C" void EXPORT_API StartFromUnity()
 {
 	// Create and/or open shared memory
 	allocateCubemap();
-
-	// Open window for previewing cubemap
-	CreatePreviewWindow();
 }
 
 extern "C" void EXPORT_API StopFromUnity()
 {
-	// Close preview window
-	DestroyPreviewWindow();
 }
 
 // --------------------------------------------------------------------------
@@ -195,6 +189,4 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 			cubemap->getFace(i)->copyFromGPUToCPU();
 		}
 	}
-
-	RepaintPreviewWindow();
 }
