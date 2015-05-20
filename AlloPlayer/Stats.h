@@ -3,6 +3,7 @@
 #include <vector>
 #include <boost/chrono/duration.hpp>
 #include <boost/accumulators/accumulators.hpp>
+#include <boost/thread/mutex.hpp>
 
 class Stats
 {
@@ -16,7 +17,12 @@ public:
     void displayedFrame();*/
     
     // statistical values
-    double naluDropRate(boost::chrono::microseconds window);
+    double naluDropRate(boost::chrono::microseconds window,
+        boost::chrono::microseconds nowSinceEpoch = boost::chrono::microseconds(0));
+    
+    // utility
+    std::string summary(boost::chrono::microseconds window);
+    void autoSummary(boost::chrono::microseconds frequency);
 
 private:
     
@@ -42,5 +48,13 @@ private:
         std::vector<TimeValueDatum<ValueType> >& data,
         boost::chrono::microseconds window,
         boost::chrono::microseconds nowSinceEpoch);
+    
+    boost::chrono::microseconds nowSinceEpoch();
+    
+    std::string formatDuration(boost::chrono::microseconds duration);
+    
+    boost::mutex mutex;
+    boost::thread autoSummaryThread;
+    void autoSummaryLoop(boost::chrono::microseconds frequency);
 };
 

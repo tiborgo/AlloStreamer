@@ -439,6 +439,7 @@ int live555Loop(const char* progName)
 int mainAlloPlayer(int argc, char** argv)
 {
     av_log_set_level(AV_LOG_QUIET);
+    stats.autoSummary(boost::chrono::seconds(10));
     
     dynamicCubemapBackgroundApp = new DynamicCubemapBackgroundApp();
     boost::thread live555Thread(boost::bind(&live555Loop, argv[0]));

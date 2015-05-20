@@ -4,6 +4,7 @@
 #include <boost/ref.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
+#include <boost/thread/thread.hpp>
 
 #include "Stats.h"
 
@@ -40,27 +41,111 @@ ba::accumulator_set<Stats::TimeValueDatum<ValueType>, Features> Stats::filterTim
     return acc;
 }
 
+bc::microseconds Stats::nowSinceEpoch()
+{
+    return bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
+}
+
+std::string Stats::formatDuration(bc::microseconds duration)
+{
+    std::stringstream result;
+    bc::microseconds remainder(duration);
+    
+    bc::hours h = bc::duration_cast<bc::hours>(remainder);
+    if (h.count() > 0)
+    {
+        result << h.count() << "h ";
+        remainder -= h;
+    }
+    
+    bc::minutes m = bc::duration_cast<bc::minutes>(remainder);
+    if (m.count() > 0)
+    {
+        result << m.count() << "m ";
+        remainder -= m;
+    }
+    
+    bc::seconds s = bc::duration_cast<bc::seconds>(remainder);
+    if (s.count() > 0)
+    {
+        result << s.count() << "s ";
+        remainder -= s;
+    }
+    
+    bc::milliseconds ms = bc::duration_cast<bc::milliseconds>(remainder);
+    if (ms.count() > 0)
+    {
+        result << ms.count() << "ms ";
+        remainder -= ms;
+    }
+    
+    bc::microseconds us = bc::duration_cast<bc::microseconds>(remainder);
+    if (us.count() > 0)
+    {
+        result << us.count() << "µs ";
+        remainder -= us;
+    }
+    
+    std::string format = result.str();
+    return format.substr(0, format.size()-1);
+}
+
 // ###### EVENTS ######
 
 void Stats::droppedNALU(int type)
 {
+    boost::mutex::scoped_lock lock(mutex);
     droppedNALUs.push_back(TimeValueDatum<int>(type));
 }
 
 void Stats::addedNALU(int type)
 {
+    boost::mutex::scoped_lock lock(mutex);
     addedNALUs.push_back(TimeValueDatum<int>(type));
 }
 
 // ###### STATISTICAL VALUES ######
 
-double Stats::naluDropRate(bc::microseconds window)
+double Stats::naluDropRate(bc::microseconds window, bc::microseconds nowSinceEpoch)
 {
-    bc::microseconds nowSinceEpoch =
-        bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
+    boost::mutex::scoped_lock lock(mutex);
+    
+    if (nowSinceEpoch.count() == 0)
+    {
+        nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
+    }
     
     auto accDropped = filterTime<ba::features<ba::tag::count> >(droppedNALUs, window, nowSinceEpoch);
     auto accAdded = filterTime<ba::features<ba::tag::count> >(addedNALUs, window, nowSinceEpoch);
     
     return (double)ba::count(accDropped) / (double)ba::count(accAdded);
+}
+
+// ###### UTILITY ######
+
+std::string Stats::summary(bc::microseconds window)
+{
+    bc::microseconds nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
+    double naluDropRateVal = naluDropRate(window, nowSinceEpoch);
+    
+    std::stringstream stream;
+    stream << "Stats for last " << formatDuration(window) << ": " << std::endl;
+    stream << "NALU drop rate " << naluDropRateVal << " ... " << std::endl;
+    
+    std::string result = stream.str();
+    return result;
+}
+
+void Stats::autoSummaryLoop(boost::chrono::microseconds frequency)
+{
+    while (true)
+    {
+        std::cout << summary(frequency);
+        boost::this_thread::sleep(boost::posix_time::microseconds(frequency.count()));
+    }
+}
+
+void Stats::autoSummary(boost::chrono::microseconds frequency)
+{
+    autoSummaryThread = boost::thread(boost::bind(&Stats::autoSummaryLoop, this, frequency));
 }

@@ -158,7 +158,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
     
     //if (nal_unit_type == 7)
     //{
-        std::cout << this << " received frame " << (int)nal_unit_type << std::endl;
+        //std::cout << this << " received frame " << (int)nal_unit_type << std::endl;
     //}
 
 	// Then try getting the next frame:
@@ -253,7 +253,7 @@ void H264RawPixelsSink::decodeFrameLoop()
 				yuvFrame->linesize, 0, yuvFrame->height,
 				frame->data, frame->linesize);
             
-            std::cout << "decoded frame " << (int)nal_unit_type << std::endl,
+            //std::cout << "decoded frame " << (int)nal_unit_type << std::endl,
             // Make it available to the application
             frameBuffer.push(frame);
             
@@ -280,11 +280,11 @@ void H264RawPixelsSink::decodeFrameLoop()
             
             if (len < 0)
             {
-                std::cout << this << ": error decoding frame " << (int)nal_unit_type << std::endl;
+                //std::cout << this << ": error decoding frame " << (int)nal_unit_type << std::endl;
             }
             else if (len == 0)
             {
-                std::cout << this << ": no frame could be decoded " << (int)nal_unit_type << std::endl;
+                //std::cout << this << ": no frame could be decoded " << (int)nal_unit_type << std::endl;
             }
             
             // Use frame for next try
@@ -311,12 +311,11 @@ void H264RawPixelsSink::decodeFrameLoop()
 		const long frequency = 100;
 		if (counter % frequency == 0)
 		{
-			std::cout << this << " delay: avg " << -sumRelativePresentationTimeMicroSec / 1000.0 / frequency << " ms; max " << -maxRelativePresentationTimeMicroSec / 1000.0 << " ms" << std::endl;
+			//std::cout << this << " delay: avg " << -sumRelativePresentationTimeMicroSec / 1000.0 / frequency << " ms; max " << -maxRelativePresentationTimeMicroSec / 1000.0 << " ms" << std::endl;
 			sumRelativePresentationTimeMicroSec = 0;
 			maxRelativePresentationTimeMicroSec = 0;
             
-            double naluDropRate = stats.naluDropRate(bc::microseconds(100000));
-            int x = 0;
+            //std::cout << stats.summary(bc::milliseconds(1001)) << std::endl;
 		}
 
 		counter++;

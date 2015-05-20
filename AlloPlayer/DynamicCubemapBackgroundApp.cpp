@@ -65,7 +65,7 @@ void DynamicCubemapBackgroundApp::onDraw(al::Graphics& gl)
             
             if(nextFrame)
             {
-                std::cout << face << " got frame" << std::endl;
+                //std::cout << face << " got frame" << std::endl;
                 
                 if (currentFrames[face])
                 {
