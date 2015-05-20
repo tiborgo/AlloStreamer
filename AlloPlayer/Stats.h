@@ -12,12 +12,21 @@ public:
     void droppedNALU(int type);
     void addedNALU(int type);
     /*void decodedNALU(int type);
-    void failedToDecodeNALU(int type);
+    void failedToDecodeNALU(int type);*/
     void displayedCubemapFace(int face);
-    void displayedFrame();*/
+    void displayedFrame();
     
     // statistical values
     double naluDropRate(boost::chrono::microseconds window,
+        boost::chrono::microseconds nowSinceEpoch = boost::chrono::microseconds(0));
+    double cubemapFacesPS(int face,
+        boost::chrono::microseconds window,
+        boost::chrono::microseconds nowSinceEpoch = boost::chrono::microseconds(0));
+    double fps(boost::chrono::microseconds window,
+        boost::chrono::microseconds nowSinceEpoch = boost::chrono::microseconds(0));
+    double receivedNALUsPS(boost::chrono::microseconds window,
+        boost::chrono::microseconds nowSinceEpoch = boost::chrono::microseconds(0));
+    double processedNALUsPS(boost::chrono::microseconds window,
         boost::chrono::microseconds nowSinceEpoch = boost::chrono::microseconds(0));
     
     // utility
@@ -37,6 +46,8 @@ private:
     
     std::vector<TimeValueDatum<int> > droppedNALUs;
     std::vector<TimeValueDatum<int> > addedNALUs;
+    std::vector<TimeValueDatum<int> > displayedCubemapFaces;
+    std::vector<TimeValueDatum<int> > displayedFrames;
     
     template <typename ValueType>
     bool isInTime(Stats::TimeValueDatum<ValueType> datum,

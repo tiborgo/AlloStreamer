@@ -1,4 +1,5 @@
 #include "DynamicCubemapBackgroundApp.hpp"
+#include "AlloPlayer.h"
 
 #define QUOTE(x) #x
 #define STR(x) QUOTE(x)
@@ -47,7 +48,9 @@ bool DynamicCubemapBackgroundApp::onFrame()
 {
     now = al::MainLoop::now();
     //std::cout << "FPS: " << FPS::fps() << std::endl;
-    return OmniApp::onFrame();
+    bool result = OmniApp::onFrame();
+    stats.displayedFrame();
+    return result;
 }
 
 void DynamicCubemapBackgroundApp::onDraw(al::Graphics& gl)
@@ -81,60 +84,62 @@ void DynamicCubemapBackgroundApp::onDraw(al::Graphics& gl)
             
             if (frame)
             {
-                if (!resizeCtx)
-                {
-                    // setup resizer for received frames
-                    resizeCtx = sws_getContext(
-                                               frame->width, frame->height, (AVPixelFormat)frame->format,
-                                               resolution, resolution, AV_PIX_FMT_RGB24,
-                                               SWS_BICUBIC, NULL, NULL, NULL);
-                }
+//                if (!resizeCtx)
+//                {
+//                    // setup resizer for received frames
+//                    resizeCtx = sws_getContext(
+//                                               frame->width, frame->height, (AVPixelFormat)frame->format,
+//                                               resolution, resolution, AV_PIX_FMT_RGB24,
+//                                               SWS_BICUBIC, NULL, NULL, NULL);
+//                }
+//                
+//                AVFrame* resizedFrame = av_frame_alloc();
+//                if (!resizedFrame)
+//                {
+//                    fprintf(stderr, "Could not allocate video frame\n");
+//                    exit(1);
+//                }
+//                resizedFrame->format = AV_PIX_FMT_RGB24;
+//                resizedFrame->width = resolution;
+//                resizedFrame->height = resolution;
+//                
+//                if (av_image_alloc(resizedFrame->data, resizedFrame->linesize, resizedFrame->width, resizedFrame->height,
+//                                   (AVPixelFormat)resizedFrame->format, 32) < 0)
+//                {
+//                    fprintf(stderr, "Could not allocate raw picture buffer\n");
+//                    exit(1);
+//                }
+//                
+//                // resize frame
+//                sws_scale(resizeCtx, frame->data, frame->linesize, 0, frame->height,
+//                          resizedFrame->data, resizedFrame->linesize);
+//                
+//                unsigned char* pixels = new unsigned char[resizedFrame->width * resizedFrame->height * 3];
+//                
+//                // read pixels from frame
+//                if (avpicture_layout((AVPicture*)resizedFrame, (AVPixelFormat)resizedFrame->format,
+//                                     resizedFrame->width, resizedFrame->height,
+//                                     pixels, resizedFrame->width * resizedFrame->height * 3) < 0)
+//                {
+//                    fprintf(stderr, "Could not resize frame\n");
+//                    exit(1);
+//                }
+//                
+//                glUseProgram(0);
+//                glDepthMask(GL_FALSE);
+//                
+//                // draw the background
+//                glDrawPixels(resizedFrame->width,
+//                             resizedFrame->height,
+//                             GL_RGB,
+//                             GL_UNSIGNED_BYTE,
+//                             (GLvoid*)pixels);
+//                
+//                glDepthMask(GL_TRUE);
+//                
+//                delete[] pixels;
                 
-                AVFrame* resizedFrame = av_frame_alloc();
-                if (!resizedFrame)
-                {
-                    fprintf(stderr, "Could not allocate video frame\n");
-                    exit(1);
-                }
-                resizedFrame->format = AV_PIX_FMT_RGB24;
-                resizedFrame->width = resolution;
-                resizedFrame->height = resolution;
-                
-                if (av_image_alloc(resizedFrame->data, resizedFrame->linesize, resizedFrame->width, resizedFrame->height,
-                                   (AVPixelFormat)resizedFrame->format, 32) < 0)
-                {
-                    fprintf(stderr, "Could not allocate raw picture buffer\n");
-                    exit(1);
-                }
-                
-                // resize frame
-                sws_scale(resizeCtx, frame->data, frame->linesize, 0, frame->height,
-                          resizedFrame->data, resizedFrame->linesize);
-                
-                unsigned char* pixels = new unsigned char[resizedFrame->width * resizedFrame->height * 3];
-                
-                // read pixels from frame
-                if (avpicture_layout((AVPicture*)resizedFrame, (AVPixelFormat)resizedFrame->format,
-                                     resizedFrame->width, resizedFrame->height,
-                                     pixels, resizedFrame->width * resizedFrame->height * 3) < 0)
-                {
-                    fprintf(stderr, "Could not resize frame\n");
-                    exit(1);
-                }
-                
-                glUseProgram(0);
-                glDepthMask(GL_FALSE);
-                
-                // draw the background
-                glDrawPixels(resizedFrame->width,
-                             resizedFrame->height,
-                             GL_RGB,
-                             GL_UNSIGNED_BYTE,
-                             (GLvoid*)pixels);
-                
-                glDepthMask(GL_TRUE);
-                
-                delete[] pixels;
+                stats.displayedCubemapFace(face);
             }
         }
     }

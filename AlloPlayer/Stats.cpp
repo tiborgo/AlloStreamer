@@ -104,6 +104,18 @@ void Stats::addedNALU(int type)
     addedNALUs.push_back(TimeValueDatum<int>(type));
 }
 
+void Stats::displayedCubemapFace(int face)
+{
+    boost::mutex::scoped_lock lock(mutex);
+    displayedCubemapFaces.push_back(TimeValueDatum<int>(face));
+}
+
+void Stats::displayedFrame()
+{
+    boost::mutex::scoped_lock lock(mutex);
+    displayedFrames.push_back(TimeValueDatum<int>(0));
+}
+
 // ###### STATISTICAL VALUES ######
 
 double Stats::naluDropRate(bc::microseconds window, bc::microseconds nowSinceEpoch)
@@ -121,16 +133,82 @@ double Stats::naluDropRate(bc::microseconds window, bc::microseconds nowSinceEpo
     return (double)ba::count(accDropped) / (double)ba::count(accAdded);
 }
 
+double Stats::cubemapFacesPS(int face,
+    boost::chrono::microseconds window,
+    boost::chrono::microseconds nowSinceEpoch)
+{
+    boost::mutex::scoped_lock lock(mutex);
+    
+    if (nowSinceEpoch.count() == 0)
+    {
+        nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
+    }
+    
+    auto accDisplayedCubemapFaces = filterTime<ba::features<ba::tag::count> >(displayedCubemapFaces, window, nowSinceEpoch);
+    
+    return (double)ba::count(accDisplayedCubemapFaces) / bc::duration_cast<bc::seconds>(window).count() / 6;
+}
+
+double Stats::fps(boost::chrono::microseconds window,
+    boost::chrono::microseconds nowSinceEpoch)
+{
+    boost::mutex::scoped_lock lock(mutex);
+    
+    if (nowSinceEpoch.count() == 0)
+    {
+        nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
+    }
+    
+    auto accDisplayedFrames = filterTime<ba::features<ba::tag::count> >(displayedFrames, window, nowSinceEpoch);
+    
+    return (double)ba::count(accDisplayedFrames) / bc::duration_cast<bc::seconds>(window).count();
+}
+
+double Stats::receivedNALUsPS(boost::chrono::microseconds window,
+    boost::chrono::microseconds nowSinceEpoch)
+{
+    boost::mutex::scoped_lock lock(mutex);
+    
+    if (nowSinceEpoch.count() == 0)
+    {
+        nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
+    }
+    
+    auto accDropped = filterTime<ba::features<ba::tag::count> >(droppedNALUs, window, nowSinceEpoch);
+    auto accAdded = filterTime<ba::features<ba::tag::count> >(addedNALUs, window, nowSinceEpoch);
+    
+    return ((double)ba::count(accDropped) + ba::count(accAdded)) / bc::duration_cast<bc::seconds>(window).count();
+}
+
+double Stats::processedNALUsPS(boost::chrono::microseconds window,
+    boost::chrono::microseconds nowSinceEpoch)
+{
+    boost::mutex::scoped_lock lock(mutex);
+    
+    if (nowSinceEpoch.count() == 0)
+    {
+        nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
+    }
+    
+    auto accAdded = filterTime<ba::features<ba::tag::count> >(addedNALUs, window, nowSinceEpoch);
+    
+    return (double)ba::count(accAdded) / bc::duration_cast<bc::seconds>(window).count();
+}
+
 // ###### UTILITY ######
 
 std::string Stats::summary(bc::microseconds window)
 {
     bc::microseconds nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
-    double naluDropRateVal = naluDropRate(window, nowSinceEpoch);
+    double receivedNALUsPSVal = receivedNALUsPS(window, nowSinceEpoch);
+    double processedNALUsPSVal = processedNALUsPS(window, nowSinceEpoch);
+    double cubemapFacesPSVal = cubemapFacesPS(0, window, nowSinceEpoch);
+    double fpsVal = fps(window, nowSinceEpoch);
     
     std::stringstream stream;
-    stream << "Stats for last " << formatDuration(window) << ": " << std::endl;
-    stream << "NALU drop rate " << naluDropRateVal << " ... " << std::endl;
+    stream << "Stats for last " << formatDuration(window) << ": ";
+    stream << "received NALUs/s: " << receivedNALUsPSVal << "; processed NALUs/s: " << processedNALUsPSVal;
+    stream << "; cubemap faces/s: " << cubemapFacesPSVal << "; fps: " << fpsVal << std::endl;
     
     std::string result = stream.str();
     return result;
