@@ -8,7 +8,7 @@ set(HEADERS
 )
 
 find_package(Boost
-  1.57                  # Minimum version
+  1.54                  # Minimum version
   REQUIRED
   signals
   date_time

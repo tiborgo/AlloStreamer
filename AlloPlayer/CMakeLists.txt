@@ -19,7 +19,7 @@ set(RESOURCES
 
 # packages for AlloPlayer
 find_package(Boost
-  1.57                  # Minimum version
+  1.54                  # Minimum version
   REQUIRED              # Fail with error if Boost is not found
   COMPONENTS thread date_time system chrono   # Boost libraries by their canonical name
 )                     # e.g. "date_time" for "libboost_date_time"
@@ -36,6 +36,7 @@ find_package(APR REQUIRED)
 find_package(Portaudio REQUIRED)
 find_package(Jsoncpp REQUIRED)
 find_package(FreeImage REQUIRED)
+find_package(GLEW REQUIRED)
 
 add_executable(AlloPlayer
 	${SOURCES}
@@ -51,6 +52,7 @@ target_include_directories(AlloPlayer
 	${SOIL_INCLUDE_DIR}
     ${ALLOCORE_INCLUDE_DIR}
     ${ALLOUTIL_INCLUDE_DIR}
+	${GLEW_INCLUDE_DIR}
 )
 target_link_libraries(AlloPlayer
 	${Boost_LIBRARIES}
@@ -65,6 +67,7 @@ target_link_libraries(AlloPlayer
     ${PORTAUDIO_LIBRARY}
     ${Jsoncpp_LIBRARY}
     ${FREEIMAGE_LIBRARY}
+	${GLEW_LIBRARY}
 )
 target_compile_definitions(AlloPlayer
 	PRIVATE

@@ -20,7 +20,7 @@ set(HEADERS
 
 # include Boost, FFMpeg, live555, x264
 find_package(Boost
-  1.57                  # Minimum version
+  1.54                  # Minimum version
   REQUIRED              # Fail with error if Boost is not found
   COMPONENTS thread date_time system chrono   # Boost libraries by their canonical name
 )                     # e.g. "date_time" for "libboost_date_time"

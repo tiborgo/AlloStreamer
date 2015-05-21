@@ -402,7 +402,7 @@ void continueAfterOPTIONS(RTSPClient*, int resultCode, char* resultString)
 	ourClient->sendDescribeCommand(continueAfterDESCRIBE);
 }
 
-int live555Loop(const char* progName)
+int live555Loop(const char* progName, const char* url)
 {
 	avcodec_register_all();
 	avformat_network_init();
@@ -415,7 +415,7 @@ int live555Loop(const char* progName)
 
 	gettimeofday(&startTime, NULL);
 
-	streamURL = "rtsp://192.168.1.185:8554/h264ESVideoTest";// argv[1];
+	streamURL = url;
 
 	ourClient = RTSPClient::createNew(*env, streamURL, verbosityLevel, progName, tunnelOverHTTPPortNum);
 	
@@ -438,10 +438,16 @@ int live555Loop(const char* progName)
 
 int mainAlloPlayer(int argc, char** argv)
 {
+	if (argc < 2)
+	{
+		std::cout << "usage: " << argv[0] << " <server url>" << std::endl; 			std::cout << "\texample: " << argv[0] << " rtsp://192.168.1.185:8554/h264ESVideoTest" << std::endl;
+		return -1;
+	}
+
     av_log_set_level(AV_LOG_QUIET);
     stats.autoSummary(boost::chrono::seconds(10));
     
     dynamicCubemapBackgroundApp = new DynamicCubemapBackgroundApp();
-    boost::thread live555Thread(boost::bind(&live555Loop, argv[0]));
+    boost::thread live555Thread(boost::bind(&live555Loop, argv[0], argv[1]));
     dynamicCubemapBackgroundApp->start();
 }
