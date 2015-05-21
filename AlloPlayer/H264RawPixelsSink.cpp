@@ -331,7 +331,11 @@ AVFrame* H264RawPixelsSink::getNextFrame()
     if (frameBuffer.try_pop(frame))
     {
         framePool.push(frame);
-        return av_frame_clone(frame);
+        AVFrame* clone = av_frame_clone(frame);
+        // av_frame_clone only copies properties and still references the sources data.
+        // Make full copy instead
+        av_frame_copy(clone, frame);
+        return clone;
     }
     else
     {
