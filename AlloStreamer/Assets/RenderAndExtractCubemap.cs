@@ -41,7 +41,7 @@ public class RenderAndExtractCubemap : MonoBehaviour {
 
     
 
-    private const int cubemapSize = /*2048;*/ /*1024;*/ 128; // 1280;
+    private const int cubemapSize = /*2048;*/ 1024; // 128; // 1280;
 
 	// Use this for initialization
     IEnumerator Start() {
