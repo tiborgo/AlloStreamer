@@ -52,7 +52,7 @@ set_target_properties(AlloServer
 )
 
 if(WIN32)
-target_link_libraries(AlloPlayer
+target_link_libraries(AlloServer
         ws2_32
 )
 endif()
