@@ -64,7 +64,7 @@ img_convert_ctx(NULL)
 	// Any instance-specific initialization of the device would be done here:
 
 	++referenceCount;
-	myfile = fopen("/Users/tiborgoldschwendt/Desktop/Logs/deviceglxgears.log", "w");
+	//myfile = fopen("/Users/tiborgoldschwendt/Desktop/Logs/deviceglxgears.log", "w");
 
 	// initialize frame pool
 	for (int i = 0; i < 1; i++)
@@ -181,7 +181,7 @@ CubemapFaceSource::~CubemapFaceSource()
 	// Reclaim our 'event trigger'
 	envir().taskScheduler().deleteEventTrigger(eventTriggerId);
 	eventTriggerId = 0;
-	fclose(myfile);
+	//fclose(myfile);
 
 	std::cout << this << ": deconstructed" << std::endl;
 }
@@ -335,8 +335,8 @@ void CubemapFaceSource::encodeFrameLoop()
 		int ret = avcodec_encode_video2(codecContext, &pkt, yuv420pFrame, &got_output);
 		//mutex.unlock();
 
-		fprintf(myfile, "packet size: %i \n", pkt.size);
-		fflush(myfile);
+//		fprintf(myfile, "packet size: %i \n", pkt.size);
+	//	fflush(myfile);
 
 		if (ret < 0)
 		{
@@ -398,8 +398,8 @@ void CubemapFaceSource::deliverFrame()
 
 	int64_t thisTime = av_gettime();
 
-	fprintf(myfile, "fMaxSize at beginning of function: %i \n", fMaxSize);
-	fflush(myfile);
+	//fprintf(myfile, "fMaxSize at beginning of function: %i \n", fMaxSize);
+	//fflush(myfile);
 
 	// set the duration of this frame since we have variable frame rate
 	// %% Time has to be fixed
@@ -473,8 +473,8 @@ void CubemapFaceSource::deliverFrame()
 	{
 		fFrameSize = fMaxSize;
 		fNumTruncatedBytes = newFrameSize - fMaxSize;
-		fprintf(myfile, "frameSize %i larger than maxSize %i\n", pkt.size, fMaxSize);
-		fflush(myfile);
+		//fprintf(myfile, "frameSize %i larger than maxSize %i\n", pkt.size, fMaxSize);
+		//fflush(myfile);
 	}
 	else
 	{

@@ -94,7 +94,7 @@ AVFrame *frame1;
 using namespace boost::interprocess;
 //unsigned char randomPixels[image_width*image_height*3];
 mapped_region region;
-FILE * logz;
+//FILE * logz;
 static void initEncoder()
 {
 
@@ -261,7 +261,7 @@ count++;
 int
 main(int argc, char *argv[])
 {
-	logz = fopen("/Users/tiborgoldschwendt/Desktop/Logs/AlloServer.log", "w");
+	//logz = fopen("/Users/tiborgoldschwendt/Desktop/Logs/AlloServer.log", "w");
 
   avcodec_register_all();
   initEncoder();
@@ -294,8 +294,8 @@ main(int argc, char *argv[])
   
   startRTSP();
 
-  fprintf(logz, "Uploading frames to libav... \n");
-  fflush(logz);
+  //fprintf(logz, "Uploading frames to libav... \n");
+  //fflush(logz);
 
  //for(int i=0; i<image_width*image_height*3; i++)
 //{
