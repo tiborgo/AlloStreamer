@@ -41,6 +41,50 @@ ba::accumulator_set<Stats::TimeValueDatum<ValueType>, Features> Stats::filterTim
     return acc;
 }
 
+template <typename Features>
+ba::accumulator_set<Stats::TimeValueDatum<int>, Features> Stats::filterTimeFace(
+    std::vector<TimeValueDatum<int> >& data,
+    bc::microseconds window,
+    bc::microseconds nowSinceEpoch,
+    int face)
+{
+    ba::accumulator_set<TimeValueDatum<int>, Features> acc;
+    auto filteredData = data
+        | bad::filtered(boost::bind(&Stats::isInTime<int>, this, _1, window, nowSinceEpoch))
+        | bad::filtered([face](Stats::TimeValueDatum<int> datum) { return datum.value == face; });
+    std::for_each(filteredData.begin(), filteredData.end(), boost::bind<void>(boost::ref(acc), _1));
+    return acc;
+}
+
+template <typename ValueType>
+boost::function<bool (Stats::TimeValueDatum<ValueType>)> Stats::timeFilter(
+    bc::microseconds window,
+    bc::microseconds nowSinceEpoch)
+{
+    return [window, nowSinceEpoch](Stats::TimeValueDatum<ValueType> datum)
+    {
+        return (nowSinceEpoch - datum.timeSinceEpoch) < window;
+    };
+}
+
+template <typename Features, typename ValueType>
+ba::accumulator_set<Stats::TimeValueDatum<ValueType>, Features> Stats::filter(
+    std::vector<TimeValueDatum<ValueType> >& data,
+    std::initializer_list<boost::function<bool (TimeValueDatum<ValueType>)> > filters)
+{
+    ba::accumulator_set<TimeValueDatum<ValueType>, Features> acc;
+    auto filteredData = data | bad::filtered([](TimeValueDatum<ValueType> datum) { return true; });
+    
+    for (auto filter : filters)
+    {
+        filteredData | bad::filtered(filter);
+    }
+    
+    std::for_each(filteredData.begin(), filteredData.end(), boost::bind<void>(boost::ref(acc), _1));
+    return acc;
+}
+
+
 bc::microseconds Stats::nowSinceEpoch()
 {
     return bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
@@ -133,7 +177,7 @@ double Stats::naluDropRate(bc::microseconds window, bc::microseconds nowSinceEpo
     return (double)ba::count(accDropped) / (double)ba::count(accAdded);
 }
 
-double Stats::cubemapFacesPS(int face,
+double Stats::cubemapFaceFramesPS(int face,
     boost::chrono::microseconds window,
     boost::chrono::microseconds nowSinceEpoch)
 {
@@ -144,7 +188,7 @@ double Stats::cubemapFacesPS(int face,
         nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
     }
     
-    auto accDisplayedCubemapFaces = filterTime<ba::features<ba::tag::count> >(displayedCubemapFaces, window, nowSinceEpoch);
+    auto accDisplayedCubemapFaces = filterTimeFace<ba::features<ba::tag::count> >(displayedCubemapFaces, window, nowSinceEpoch, face);
     
     return (double)ba::count(accDisplayedCubemapFaces) / bc::duration_cast<bc::seconds>(window).count() / 6;
 }
@@ -202,7 +246,12 @@ std::string Stats::summary(bc::microseconds window)
     bc::microseconds nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
     double receivedNALUsPSVal = receivedNALUsPS(window, nowSinceEpoch);
     double processedNALUsPSVal = processedNALUsPS(window, nowSinceEpoch);
-    double cubemapFacesPSVal = cubemapFacesPS(0, window, nowSinceEpoch);
+    int faceCount = 6;
+    std::vector<double> cubemapFacesPSVals(faceCount);
+    for (int i = 0; i < faceCount; i++)
+    {
+        cubemapFacesPSVals[i] = cubemapFaceFramesPS(i, window, nowSinceEpoch);
+    }
     double fpsVal = fps(window, nowSinceEpoch);
     
     std::stringstream stream;
@@ -210,7 +259,10 @@ std::string Stats::summary(bc::microseconds window)
     stream << "Stats for last " << formatDuration(window) << ": " << std::endl;
     stream << "received NALUs/s: " << receivedNALUsPSVal << ";" << std::endl;
     stream << "processed NALUs/s: " << processedNALUsPSVal << ";" << std::endl;
-    stream << "cubemap faces/s: " << cubemapFacesPSVal << ";" << std::endl;
+    for (int i = 0; i < faceCount; i++)
+    {
+        stream << "cubemap face " << i << " fps: " << cubemapFacesPSVals[i] << ";" << std::endl;
+    }
     stream << "fps: " << fpsVal << std::endl;
     
     std::string result = stream.str();
