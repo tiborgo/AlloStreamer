@@ -206,9 +206,12 @@ std::string Stats::summary(bc::microseconds window)
     double fpsVal = fps(window, nowSinceEpoch);
     
     std::stringstream stream;
-    stream << "Stats for last " << formatDuration(window) << ": ";
-    stream << "received NALUs/s: " << receivedNALUsPSVal << "; processed NALUs/s: " << processedNALUsPSVal;
-    stream << "; cubemap faces/s: " << cubemapFacesPSVal << "; fps: " << fpsVal << std::endl;
+    stream << "=================================================" << std::endl;
+    stream << "Stats for last " << formatDuration(window) << ": " << std::endl;
+    stream << "received NALUs/s: " << receivedNALUsPSVal << ";" << std::endl;
+    stream << "processed NALUs/s: " << processedNALUsPSVal << ";" << std::endl;
+    stream << "cubemap faces/s: " << cubemapFacesPSVal << ";" << std::endl;
+    stream << "fps: " << fpsVal << std::endl;
     
     std::string result = stream.str();
     return result;

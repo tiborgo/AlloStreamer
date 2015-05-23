@@ -165,7 +165,7 @@ void DynamicCubemapBackgroundApp::onDraw(al::Graphics& gl)
     gl.pushMatrix();
     // rotate over time:
     gl.rotate(now*30., 0.707, 0.707, 0.);
-    gl.translate(5., 5., 5.);
+    gl.translate(1., 1., 1.);
     gl.draw(sphere);
     gl.popMatrix();
     
