@@ -190,7 +190,7 @@ double Stats::cubemapFaceFramesPS(int face,
     
     auto accDisplayedCubemapFaces = filterTimeFace<ba::features<ba::tag::count> >(displayedCubemapFaces, window, nowSinceEpoch, face);
     
-    return (double)ba::count(accDisplayedCubemapFaces) / bc::duration_cast<bc::seconds>(window).count() / 6;
+    return (double)ba::count(accDisplayedCubemapFaces) / bc::duration_cast<bc::seconds>(window).count();
 }
 
 double Stats::fps(boost::chrono::microseconds window,
