@@ -6,7 +6,11 @@ using System.Reflection;
 
 
 
-public class RenderAndExtractCubemap : MonoBehaviour {
+public class RenderCubemap : MonoBehaviour {
+
+	// Parameters
+	public int resolution = 1024;
+	public int faceCount = 6;
 
     [DllImport("CubemapExtractionPlugin")]
     private static extern void SetCubemapFaceTextureFromUnity(System.IntPtr texture, int face);
@@ -16,18 +20,18 @@ public class RenderAndExtractCubemap : MonoBehaviour {
     private static extern void StopFromUnity();
 
     private static System.String[] cubemapFaceNames = {
-        "LeftEye/PositiveX"/*,
+        "LeftEye/PositiveX",
         "LeftEye/NegativeX",
         "LeftEye/PositiveY",
         "LeftEye/NegativeY",
         "LeftEye/PositiveZ",
-        "LeftEye/NegativeZ"/*,
+        "LeftEye/NegativeZ",
         "RightEye/PositiveX",
         "RightEye/NegativeX",
         "RightEye/PositiveY",
         "RightEye/NegativeY",
         "RightEye/PositiveZ",
-        "RightEye/NegativeZ"*/
+        "RightEye/NegativeZ"
     };
 
     private static Vector3[] cubemapFaceRotations = {
@@ -38,10 +42,6 @@ public class RenderAndExtractCubemap : MonoBehaviour {
         new Vector3(  0,   0, 0),
         new Vector3(  0, 180, 0),
     };
-
-    
-
-    private const int cubemapSize = /*2048;*/ 1024; // 128; // 1280;
 
 	// Use this for initialization
     IEnumerator Start() {
@@ -54,16 +54,13 @@ public class RenderAndExtractCubemap : MonoBehaviour {
         // Move the cubemap to the origin of the parent cam
         cubemap.transform.localPosition = Vector3.zero;
 
-        for (int i = 0; i < cubemapFaceNames.Length; i++)
+		for (int i = 0; i < faceCount; i++)
         {
             GameObject go = new GameObject(cubemapFaceNames[i]);
-            Camera cam = go.AddComponent<Camera>()/*.GetCopyOf(thisCam)*/;
-
-            //GameObject go = GameObject.Find(cameraNames[i]);
-            //Camera cam = go.GetComponent<Camera>();
+			Camera cam = go.AddComponent<Camera>();
 
             // Set render texture
-            RenderTexture tex = new RenderTexture(cubemapSize, cubemapSize, 1, RenderTextureFormat.ARGB32);
+			RenderTexture tex = new RenderTexture(resolution, resolution, 1, RenderTextureFormat.ARGB32);
             tex.Create();
             cam.targetTexture = tex;
             cam.aspect = 1;
@@ -98,34 +95,5 @@ public class RenderAndExtractCubemap : MonoBehaviour {
             yield return new WaitForEndOfFrame();
             GL.IssuePluginEvent(1);
         }
-    }
-}
-
-public static class MyExtensions
-{
-    // From http://answers.unity3d.com/questions/530178/how-to-get-a-component-from-an-object-and-add-it-t.html
-    public static T GetCopyOf<T>(this Component comp, T other) where T : Component
-    {
-        Type type = comp.GetType();
-        if (type != other.GetType()) return null; // type mis-match
-        BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Default | BindingFlags.DeclaredOnly;
-        PropertyInfo[] pinfos = type.GetProperties(flags);
-        foreach (var pinfo in pinfos)
-        {
-            if (pinfo.CanWrite)
-            {
-                try
-                {
-                    pinfo.SetValue(comp, pinfo.GetValue(other, null), null);
-                }
-                catch { } // In case of NotImplementedException being thrown. For some reason specifying that exception didn't seem to catch it, so I didn't catch anything specific.
-            }
-        }
-        FieldInfo[] finfos = type.GetFields(flags);
-        foreach (var finfo in finfos)
-        {
-            finfo.SetValue(comp, finfo.GetValue(other));
-        }
-        return comp as T;
     }
 }
