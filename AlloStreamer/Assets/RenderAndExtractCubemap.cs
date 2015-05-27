@@ -48,14 +48,11 @@ public class RenderAndExtractCubemap : MonoBehaviour {
 
         // Set up 6 cameras for cubemap
         Camera thisCam = GetComponent<Camera>();
-        GameObject cubemap = GameObject.CreatePrimitive(PrimitiveType.Cube); //new GameObject("Cubemap");
-        //cubemap.transform.SetParent(transform, false);
+        GameObject cubemap = new GameObject("Cubemap");
         cubemap.transform.parent = transform;
         
-        // This has no effect for some reason
-        //cubemap.transform.localEulerAngles = new Vector3(0, 0, 0);
-        //cubemap.transform.localPosition = Vector3.zero;
-        //cubemap.transform.Translate(new Vector3(50, 50, 50));
+        // Move the cubemap to the origin of the parent cam
+        cubemap.transform.localPosition = Vector3.zero;
 
         for (int i = 0; i < cubemapFaceNames.Length; i++)
         {
@@ -75,6 +72,9 @@ public class RenderAndExtractCubemap : MonoBehaviour {
             cam.fieldOfView = 90;
             go.transform.eulerAngles = cubemapFaceRotations[i];
             go.transform.parent = cubemap.transform;
+
+			// Move the cubemap to the origin of the parent cam
+			cam.transform.localPosition = Vector3.zero;
 
             SetCubemapFaceTextureFromUnity(tex.GetNativeTexturePtr(), i);
         }
