@@ -10,7 +10,7 @@ Work in progress.
 
 AlloUnity currently consists of these five modules:
 
-1. **AlloStreamer**: The Unity3D scene.
+1. **CubemapRenderingPlugin**: C# script for rendering a cubemap in Unity3D.
 2. **CubemapExtractionPlugin**: Extracts the cubemap from Unity3D and copies the texture data from the GPU to the CPU.
 3. **AlloServer**: Encodes the cubemap as six streams and provides the stream via RTSP/RTP.
 4. **AlloPlayer**: Receives the cubemap in the AlloSphere, decodes it and displays it.
@@ -28,35 +28,34 @@ Install dependencies:
 - [Unity3D 5](https://unity3d.com/)
 - [CMake](http://www.cmake.org/)
 
-Then build **source** and **Unit3D scene**.
+Then build **Unit3D scene** and **source**.
+
+### Unity3D Scene
+
+1. Create or open a Unity3D scene (placed in `<UnityProjectFolder>`)
+2. Import asset `CubemapRenderingPlugin/RenderCubemap.cs`
+3. Add `RenderCubemap.cs` to the camera that should be the viewpoint of the rendered cubemap.
+4. Build scene for your operating system (named `UnityProject`)
 
 ### Source
 
 Build source with CMake and your favourite build environment, e.g.:
 
 ```bash
-cmake -G "Unix Makefiles"
+cmake -G "Unix Makefiles" -DUNITY_PROJECT_PLUGIN_DIR:PATH=<UnityProjectFolder>/Assets/Plugin
 make
 ```
 On success, this places
 
-- *CubemapExtractionPlugin* in `AlloStreamer/Assets/Plugins/`
+- *CubemapExtractionPlugin* in `<UnityProjectFolder>/Assets/Plugins/`
 - *AlloServer* and *AlloPlayer* in `Bin/` 
 - *AlloShared* in `Lib/`
 
-Compilation tested with Visual Studio 2013 Ultimate on Windows, XCode 6 on OS X and make on Ubuntu.
-
-### Unity3D Scene
-
-In Unity3D
-
-- open project `AlloStreamer/`.
-- open scene `AlloStreamerSurround.scene`
-- build scene for your operating system, e.g. as *AlloStreamerSurround*
+Compilation tested with Visual Studio 2013 Ultimate on Windows, Xcode 6 on OS X and make on Ubuntu.
 
 ## Launching
 
-1. Start *AlloStreamerSurround* on rendering machine
+1. Start `<UnityProject>` on rendering machine
 2. Start *AlloServer* on rendering machine
 3. Start *AlloPlayer* on display machine
 
