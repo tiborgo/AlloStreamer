@@ -18,13 +18,14 @@ add_definitions(-DBOOST_ALL_DYN_LINK)
 add_definitions(-DUNICODE -D_UNICODE)
 
 # In case the libraries have to be connected to Unity
-set(UNITY_PROJECT_PLUGIN_DIR "${CMAKE_SOURCE_DIR}/AlloStreamer/Assets/Plugins")
+set(UNITY_PROJECT_PLUGIN_DIR "${CMAKE_SOURCE_DIR}/AlloStreamer/Assets/Plugins" CACHE STRING "")
 
 # so that each project can include the other project's headers
 include_directories(${CMAKE_SOURCE_DIR})
 
 # Enable C++11
-if(CMAKE_COMPILER_IS_GNUCXX)
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
+	CMAKE_COMPILER_IS_GNUCXX)
    list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
 endif()
 
