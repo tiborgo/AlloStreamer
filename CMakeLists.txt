@@ -57,3 +57,6 @@ endif()
 if(ENABLE_ALLOPLAYER)
 	add_subdirectory(AlloPlayer)
 endif()
+
+get_property(fancy_lib_location TARGET AlloShared PROPERTY LOCATION)
+message (STATUS "fancy_lib_location == ${fancy_lib_location}")

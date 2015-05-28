@@ -32,7 +32,7 @@
 #endif
 
 #include "RandomFramedSource.h"
-void startRTSP();
+void startRTSP(int port);
 void signalNewFrameData();
 #include "FrameData.h"
 #include <boost/interprocess/managed_shared_memory.hpp>
@@ -261,6 +261,12 @@ count++;
 int
 main(int argc, char *argv[])
 {
+    if (argc != 2)
+    {
+        std::cout << "usage: AlloServer <port>" << std::endl;
+        return -1;
+    }
+    
 	//logz = fopen("/Users/tiborgoldschwendt/Desktop/Logs/AlloServer.log", "w");
 
   avcodec_register_all();
@@ -292,7 +298,8 @@ main(int argc, char *argv[])
 
   cubemap = shm.find<CubemapImpl>("Cubemap").first;
   
-  startRTSP();
+    int port = atoi(argv[1]);
+  startRTSP(port);
 
   //fprintf(logz, "Uploading frames to libav... \n");
   //fflush(logz);

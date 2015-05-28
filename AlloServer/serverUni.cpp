@@ -60,13 +60,13 @@ static void onMatroskaDemuxCreation(MatroskaFileServerDemux* newDemux, void* /*c
   demux = newDemux;
   newMatroskaDemuxWatchVariable = 1;
 }
-void eventLoop();
+void eventLoop(int port);
 void addFaceSubstream();
 
-void startRTSP(){
+void startRTSP(int port){
 //    pthread_t thread;
 //    return pthread_create(&thread,NULL,eventLoop, NULL);
-    boost::thread thread1(eventLoop);
+    boost::thread thread1(boost::bind(&eventLoop, port));
 }
 
 ServerMediaSession* sms;
@@ -113,7 +113,7 @@ void addFaceSubstream()
 	}
 }
 
-void eventLoop() {
+void eventLoop(int port) {
   // Begin by setting up our usage environment:
   TaskScheduler* scheduler = BasicTaskScheduler::createNew();
   env = BasicUsageEnvironment::createNew(*scheduler);
@@ -128,7 +128,7 @@ void eventLoop() {
 #endif
 
   // Create the RTSP server:
-  RTSPServer* rtspServer = RTSPServer::createNew(*env, 8554, authDB);
+  RTSPServer* rtspServer = RTSPServer::createNew(*env, port, authDB);
 //RTSPServer* rtspServer = RTSPServer::createNew(*env, 8555, authDB);
   if (rtspServer == NULL) {
     *env << "Failed to create RTSP server: " << env->getResultMsg() << "\n";
@@ -174,11 +174,11 @@ void eventLoop() {
   // Try first with the default HTTP port (80), and then with the alternative HTTP
   // port numbers (8000 and 8080).
   
-  if (rtspServer->setUpTunnelingOverHTTP(80) || rtspServer->setUpTunnelingOverHTTP(8000) || rtspServer->setUpTunnelingOverHTTP(8080)) {
+  /*if (rtspServer->setUpTunnelingOverHTTP(80) || rtspServer->setUpTunnelingOverHTTP(8000) || rtspServer->setUpTunnelingOverHTTP(8080)) {
     *env << "\n(We use port " << rtspServer->httpServerPortNum() << " for optional RTSP-over-HTTP tunneling.)\n";
   } else {
     *env << "\n(RTSP-over-HTTP tunneling is not available.)\n";
-  }
+  }*/
     
     /*
     // Start the streaming:
