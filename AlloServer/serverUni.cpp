@@ -112,12 +112,12 @@ void addFaceSubstream0(void*) {
         state->face = face;
         
         Port rtpPort(rtpPortNum + face->index);
-        Groupsock rtpGroupsock(*env, destinationAddress, rtpPort, ttl);
-        rtpGroupsock.multicastSendOnly(); // we're a SSM source
+        Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, ttl);
+        rtpGroupsock->multicastSendOnly(); // we're a SSM source
         
         // Create a 'H264 Video RTP' sink from the RTP 'groupsock':
         OutPacketBuffer::maxSize = 100000;
-        state->sink = H264VideoRTPSink::createNew(*env, &rtpGroupsock, 96);
+        state->sink = H264VideoRTPSink::createNew(*env, rtpGroupsock, 96);
         
         ServerMediaSubsession* subsession = PassiveServerMediaSubsession::createNew(*state->sink);
         
