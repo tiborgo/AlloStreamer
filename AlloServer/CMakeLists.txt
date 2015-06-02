@@ -22,7 +22,7 @@ set(HEADERS
 find_package(Boost
   1.54                  # Minimum version
   REQUIRED              # Fail with error if Boost is not found
-  COMPONENTS thread date_time system chrono   # Boost libraries by their canonical name
+  COMPONENTS thread date_time system chrono filesystem  # Boost libraries by their canonical name
 )                     # e.g. "date_time" for "libboost_date_time"
 find_package(FFmpeg REQUIRED)
 find_package(Live555 REQUIRED)

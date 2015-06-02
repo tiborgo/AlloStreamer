@@ -3,6 +3,7 @@
 #include <BasicUsageEnvironment.hh>
 #include <GroupsockHelper.hh>
 #include <liveMedia.hh>
+#include <boost/filesystem/path.hpp>
 extern "C"
 {
 	#include <libavformat/avformat.h>
@@ -440,7 +441,9 @@ int mainAlloPlayer(int argc, char** argv)
 {
 	if (argc < 2)
 	{
-		std::cout << "usage: " << argv[0] << " <server url>" << std::endl; 			std::cout << "\texample: " << argv[0] << " rtsp://192.168.1.185:8554/h264ESVideoTest" << std::endl;
+        boost::filesystem::path exePath(argv[0]);
+		std::cout << "usage: " << exePath.filename().string() << " <RTSP url of stream>" << std::endl;
+        std::cout << "\texample: " << exePath.filename().string() << " rtsp://192.168.1.185:8554/h264ESVideoTest" << std::endl;
 		return -1;
 	}
 

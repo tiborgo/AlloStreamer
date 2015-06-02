@@ -41,11 +41,12 @@ void signalNewFrameData();
 #include <stdio.h>
 #include "shared.h"
 #include "config.h"
-extern "C" {
 #include <math.h>
 #include <stdlib.h>
-
+#include <boost/filesystem/path.hpp>
 #include <string.h>
+extern "C" {
+
 
 //#include <pthread.h>
 //#define FORSTREAMING 1
@@ -263,7 +264,8 @@ main(int argc, char *argv[])
 {
     if (argc != 2)
     {
-        std::cout << "usage: AlloServer <port>" << std::endl;
+        boost::filesystem::path exePath(argv[0]);
+        std::cout << "usage: " << exePath.filename().string() << " <stream port>" << std::endl;
         return -1;
     }
     
