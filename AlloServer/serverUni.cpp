@@ -23,6 +23,7 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 #endif
 
 #include "liveMedia.hh"
+#include <GroupsockHelper.hh>
 #define EventTime server_EventTime
 #include "BasicUsageEnvironment.hh"
 #undef EventTime
@@ -36,6 +37,7 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 #include "AlloShared/CubemapFace.h"
 #include "AlloServer.h"
 #include "concurrent_queue.h"
+#include "CubemapFaceSource.h"
 
 //RTPSink* videoSink;
 UsageEnvironment* env;
@@ -75,14 +77,57 @@ EventTriggerId addFaceSubstreamTriggerId;
 
 concurrent_queue<CubemapFace*> faceBuffer;
 
+struct in_addr destinationAddress;
+
+static struct FaceStreamState
+{
+    RTPSink* sink;
+    CubemapFace* face;
+    FramedSource* source;
+};
+
+void afterPlaying(void* clientData)
+{
+    FaceStreamState* state = (FaceStreamState*)clientData;
+    
+    *env << "stopped streaming face " << state->face->index << "\n";
+
+    state->sink->stopPlaying();
+    Medium::close(state->source);
+    // Note that this also closes the input file that this source read from.
+    
+    delete state;
+}
+
+const unsigned short rtpPortNum = 18888;
+const unsigned char ttl = 255;
+
 void addFaceSubstream0(void*) {
 
 	CubemapFace* face;
 
 	while (faceBuffer.try_pop(face))
 	{
-		H264VideoOnDemandServerMediaSubsession *subsession = H264VideoOnDemandServerMediaSubsession::createNew(*env, reuseFirstSource, face);
-		sms->addSubsession(subsession);
+        FaceStreamState* state = new FaceStreamState;
+        state->face = face;
+        
+        Port rtpPort(rtpPortNum + face->index);
+        Groupsock rtpGroupsock(*env, destinationAddress, rtpPort, ttl);
+        rtpGroupsock.multicastSendOnly(); // we're a SSM source
+        
+        // Create a 'H264 Video RTP' sink from the RTP 'groupsock':
+        OutPacketBuffer::maxSize = 100000;
+        state->sink = H264VideoRTPSink::createNew(*env, &rtpGroupsock, 96);
+        
+        ServerMediaSubsession* subsession = PassiveServerMediaSubsession::createNew(*state->sink);
+        
+		//H264VideoOnDemandServerMediaSubsession *subsession = H264VideoOnDemandServerMediaSubsession::createNew(*env, reuseFirstSource, face);
+		
+        sms->addSubsession(subsession);
+        
+        state->source =  H264VideoStreamDiscreteFramer::createNew(*env, CubemapFaceSource::createNew(*env, face));
+        state->sink->startPlaying(*state->source, afterPlaying, state);
+        
 		std::cout << "added face " << face->index << std::endl;
 	}
 }
@@ -117,6 +162,17 @@ void eventLoop(int port) {
   // Begin by setting up our usage environment:
   TaskScheduler* scheduler = BasicTaskScheduler::createNew();
   env = BasicUsageEnvironment::createNew(*scheduler);
+    
+    // Create 'groupsocks' for RTP and RTCP:
+    
+    destinationAddress.s_addr = chooseRandomIPv4SSMAddress(*env);
+    // Note: This is a multicast address.  If you wish instead to stream
+    // using unicast, then you should use the "testOnDemandRTSPServer"
+    // test program - not this test program - as a model.
+    
+    char str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(destinationAddress.s_addr), str, INET_ADDRSTRLEN);
+    printf("Multicast address: %s\n", str);
 
   UserAuthenticationDatabase* authDB = NULL;
 #ifdef ACCESS_CONTROL
@@ -151,7 +207,7 @@ void eventLoop(int port) {
     char const* streamName = "h264ESVideoTest";
     
     sms = ServerMediaSession::createNew(*env, streamName, streamName,
-				      descriptionString);
+				      descriptionString, True);
     
     
       
