@@ -26,7 +26,15 @@ include_directories(${CMAKE_SOURCE_DIR})
 # Enable C++11
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
 	CMAKE_COMPILER_IS_GNUCXX)
-   list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
+   # We are using C++11 features and
+   # we are linking static libs into shared libs
+   # (AlloShared linked into CubemapExtractionPlugin),
+   # thus the PIC.
+   # The decision was made against making AlloShared a shared lib
+   # since it needs to be loadable by the CubemapExtractionPlugin and, in turn, by Unity3D.
+   # However, Unity3D doesn't give us the possibility to set the search path
+   # for shared libs and makes it very cumbersome to load external shared libs.
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fPIC")
 endif()
 
 # make exes and libs profilable on windows

@@ -18,12 +18,9 @@
 #endif
 
 #if SUPPORT_OPENGL
-    #if UNITY_WIN
-        #include <gl/GL.h>
-    #elif UNITY_OSX
-        #include <OpenGL/OpenGL.h>
-        #include <OpenGL/gl.h>
-    #elif UNITY_LINUX
+    #if UNITY_WIN || UNITY_LINUX
         #include <GL/gl.h>
+    #else
+        #include <OpenGL/OpenGL.h>
     #endif
 #endif
