@@ -65,10 +65,9 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 	decodeFrameThread = boost::thread(boost::bind(&H264RawPixelsSink::decodeFrameLoop, this));
 }
 
-void H264RawPixelsSink::packageDate(AVPacket* pkt, unsigned int frameSize, timeval presentationTime)
+void H264RawPixelsSink::packageData(AVPacket* pkt, unsigned int frameSize, timeval presentationTime)
 {
     unsigned char const start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
-    unsigned char const end_code[2] = { 0x00, 0x00 };
     
     av_init_packet(pkt);
     
@@ -114,13 +113,13 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
             // We received a B/P frame
             // and have the capacities to decode it -> do it
             
-            packageDate(pkt, frameSize, presentationTime);
+            packageData(pkt, frameSize, presentationTime);
             pktBuffer.push(pkt);
             stats.addedNALU(nal_unit_type);
         }
         else if (nal_unit_type == 7)
         {
-            packageDate(pkt, frameSize, presentationTime);
+            packageData(pkt, frameSize, presentationTime);
             pktBuffer.push(pkt);
             gotFirstIFrame = true;
             stats.addedNALU(nal_unit_type);
@@ -143,7 +142,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
             if (!lastIFramePkt)
             {
                 lastIFramePkt = new AVPacket;
-                packageDate(lastIFramePkt, frameSize, presentationTime);
+                packageData(lastIFramePkt, frameSize, presentationTime);
             }
         }
         else if (nal_unit_type != 7 && !pkt)
@@ -221,7 +220,7 @@ void H264RawPixelsSink::decodeFrameLoop()
 
         if (got_frame == 1)
 		{
-            // We have a frame decode :) ->
+            // We have decoded a frame :) ->
             // Convert to RGB pixel format and make the pixels available to the application
             
 			if (!frame->data[0])

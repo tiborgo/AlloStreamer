@@ -62,6 +62,6 @@ private:
 	long sumRelativePresentationTimeMicroSec;
 	long maxRelativePresentationTimeMicroSec;
     
-    void packageDate(AVPacket* pkt, unsigned int frameSize, timeval presentationTime);
+    void packageData(AVPacket* pkt, unsigned int frameSize, timeval presentationTime);
 };
 
