@@ -79,7 +79,7 @@ concurrent_queue<CubemapFace*> faceBuffer;
 
 struct in_addr destinationAddress;
 
-static struct FaceStreamState
+struct FaceStreamState
 {
     RTPSink* sink;
     CubemapFace* face;

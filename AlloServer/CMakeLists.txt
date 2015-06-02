@@ -56,3 +56,10 @@ target_link_libraries(AlloServer
         ws2_32
 )
 endif()
+
+# link against posix extension library on linux
+if(CMAKE_SYSTEM MATCHES "Linux")
+target_link_libraries(AlloServer
+        rt
+)
+endif()
