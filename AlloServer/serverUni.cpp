@@ -33,7 +33,6 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 #include "H264VideoOnDemandServerMediaSubsession.h"
 #include "shared.h"
 #include "config.h"
-#include "RandomFramedSource.h"
 #include "AlloShared/CubemapFace.h"
 #include "AlloServer.h"
 #include "concurrent_queue.h"
@@ -68,7 +67,8 @@ void addFaceSubstream();
 void startRTSP(int port){
 //    pthread_t thread;
 //    return pthread_create(&thread,NULL,eventLoop, NULL);
-    boost::thread thread1(boost::bind(&eventLoop, port));
+   // boost::thread thread1(boost::bind(&eventLoop, port));
+    eventLoop(port);
 }
 
 ServerMediaSession* sms;

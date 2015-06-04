@@ -26,7 +26,6 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 
 #include "H264VideoOnDemandServerMediaSubsession.h"
 #include "H264VideoRTPSink.hh"
-#include "RandomFramedSource.h"
 #include "CubemapFaceSource.h"
 #include "H264VideoStreamDiscreteFramer.hh"
 UsageEnvironment* envi;
