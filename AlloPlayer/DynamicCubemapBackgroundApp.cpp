@@ -5,6 +5,7 @@
 #define STR(x) QUOTE(x)
 
 DynamicCubemapBackgroundApp::DynamicCubemapBackgroundApp()
+    : al::OmniApp("AlloPlayer", false, 2048)
 {
     nav().smooth(0.8);
     

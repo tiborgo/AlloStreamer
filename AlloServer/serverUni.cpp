@@ -116,7 +116,7 @@ void addFaceSubstream0(void*) {
         rtpGroupsock->multicastSendOnly(); // we're a SSM source
         
         // Create a 'H264 Video RTP' sink from the RTP 'groupsock':
-        OutPacketBuffer::maxSize = 100000;
+        //OutPacketBuffer::maxSize = 100000;
         state->sink = H264VideoRTPSink::createNew(*env, rtpGroupsock, 96);
         
         ServerMediaSubsession* subsession = PassiveServerMediaSubsession::createNew(*state->sink);

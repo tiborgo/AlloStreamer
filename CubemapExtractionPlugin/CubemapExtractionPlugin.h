@@ -20,7 +20,8 @@
 #if SUPPORT_OPENGL
     #if UNITY_WIN || UNITY_LINUX
         #include <GL/gl.h>
-    #else
+    #elif UNITY_OSX
         #include <OpenGL/OpenGL.h>
+        #include <OpenGL/gl.h>
     #endif
 #endif
