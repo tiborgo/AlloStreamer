@@ -25,3 +25,6 @@
         #include <OpenGL/gl.h>
     #endif
 #endif
+
+
+#define CUBEMAPEXTRACTIONPLUGIN_ID "HH21V0GKQ98fuU2AHoWidiIRJxIrgDy-CubemapExtractionPlugin"

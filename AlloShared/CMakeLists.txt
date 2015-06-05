@@ -1,12 +1,14 @@
 set(SOURCES
 	CubemapFace.cpp
 	CubemapFace.inl
+    Process.cpp
 )
 	
 set(HEADERS
 	CubemapFace.h
     config.h
     concurrent_queue.h
+    Process.h
 )
 
 find_package(Boost
@@ -16,6 +18,7 @@ find_package(Boost
   date_time
   chrono
   system
+  filesystem
 )
 find_package(FFmpeg REQUIRED)
 

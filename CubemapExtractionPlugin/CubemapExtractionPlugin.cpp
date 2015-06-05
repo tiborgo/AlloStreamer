@@ -11,11 +11,13 @@
 #include "CubemapFaceD3D11.h"
 #include "CubemapFaceOpenGL.h"
 #include "AlloShared/config.h"
+#include "AlloShared/Process.h"
 
 // --------------------------------------------------------------------------
 // Helper utilities
 
-Allocator<ShmSegmentManager>* shmAllocator = nullptr;
+static Allocator<ShmSegmentManager>* shmAllocator = nullptr;
+static Process* thisProcess = nullptr;
 
 // Prints a string
 static void DebugLog (const char* str)
@@ -50,6 +52,11 @@ void allocateCubemap()
 	}
 }
 
+void releaseCubemap()
+{
+
+}
+
 // --------------------------------------------------------------------------
 // Start stop management
 
@@ -57,10 +64,13 @@ extern "C" void EXPORT_API StartFromUnity()
 {
 	// Create and/or open shared memory
 	allocateCubemap();
+    
+    thisProcess = new Process(CUBEMAPEXTRACTIONPLUGIN_ID, true);
 }
 
 extern "C" void EXPORT_API StopFromUnity()
 {
+    delete thisProcess;
 }
 
 // --------------------------------------------------------------------------

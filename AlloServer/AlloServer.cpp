@@ -14,8 +14,11 @@ extern "C"
 #include "AlloShared/concurrent_queue.h"
 #include "AlloShared/CubemapFace.h"
 #include "AlloShared/config.h"
+#include "AlloShared/Process.h"
 #include "config.h"
 #include "CubemapFaceSource.h"
+#include "CubemapExtractionPlugin/CubemapExtractionPlugin.h"
+#include "AlloServer.h"
 
 struct FaceStreamState
 {
@@ -170,6 +173,17 @@ int main(int argc, char* argv[])
         boost::filesystem::path exePath(argv[0]);
         std::cout << "usage: " << exePath.filename().string() << " <RTSP port>" << std::endl;
         return -1;
+    }
+    
+    Process thisProcess(ALLOSERVER_ID, true);
+    Process unityProcess(CUBEMAPEXTRACTIONPLUGIN_ID, false);
+    if (unityProcess.isAlive())
+    {
+        std::cout << "unity started :)" << std::endl;
+    }
+    else
+    {
+        std::cout << "unity not started :(" << std::endl;
     }
 
     avcodec_register_all();
