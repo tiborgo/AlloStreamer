@@ -10,6 +10,7 @@
 #include "CubemapFaceD3D9.h"
 #include "CubemapFaceD3D11.h"
 #include "CubemapFaceOpenGL.h"
+#include "AlloShared/config.h"
 
 // --------------------------------------------------------------------------
 // Helper utilities
@@ -32,11 +33,11 @@ void allocateCubemap()
 {
 	if (!cubemap)
 	{
-		boost::interprocess::shared_memory_object::remove("MySharedMemory");
+		boost::interprocess::shared_memory_object::remove(SHM_NAME);
 
 		shm =
 			boost::interprocess::managed_shared_memory(boost::interprocess::open_or_create,
-			"MySharedMemory",
+			SHM_NAME,
 			2048 * 2048 * 4 * 12 +
 			sizeof(CubemapImpl) + 
 			12 * sizeof(CubemapFace) +

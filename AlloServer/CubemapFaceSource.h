@@ -17,7 +17,7 @@ extern "C"
     #include <x264.h>
 }
 
-#include "concurrent_queue.h"
+#include "AlloShared/concurrent_queue.h"
 #include "AlloShared/CubemapFace.h"
 
 class CubemapFaceSource : public FramedSource

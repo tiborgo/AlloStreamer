@@ -14,7 +14,7 @@ extern "C"
 #include <MediaSession.hh>
 #include <boost/thread.hpp>
 
-#include "AlloServer/concurrent_queue.h"
+#include "AlloShared/concurrent_queue.h"
 #include "AlloShared/CubemapFace.h"
 
 class H264RawPixelsSink: public MediaSink

@@ -5,6 +5,8 @@ set(SOURCES
 	
 set(HEADERS
 	CubemapFace.h
+    config.h
+    concurrent_queue.h
 )
 
 find_package(Boost

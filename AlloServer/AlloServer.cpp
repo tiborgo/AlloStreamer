@@ -1,5 +1,3 @@
-void startRTSP(int port);
-
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/filesystem/path.hpp>
 #include <liveMedia.hh>
@@ -7,15 +5,17 @@ void startRTSP(int port);
 #define EventTime server_EventTime
 #include <BasicUsageEnvironment.hh>
 #undef EventTime
-#include "concurrent_queue.h"
-#include "CubemapFaceSource.h"
-#include "AlloShared/CubemapFace.h"
-#include "config.h"
 
 extern "C"
 {
     #include <libavcodec/avcodec.h>
 }
+
+#include "AlloShared/concurrent_queue.h"
+#include "AlloShared/CubemapFace.h"
+#include "AlloShared/config.h"
+#include "config.h"
+#include "CubemapFaceSource.h"
 
 struct FaceStreamState
 {
@@ -179,7 +179,7 @@ int main(int argc, char* argv[])
     // and locking a mutex is a write operation
     boost::interprocess::managed_shared_memory shm =
         boost::interprocess::managed_shared_memory(boost::interprocess::open_only,
-                                                   "MySharedMemory");
+                                                   SHM_NAME);
 
     cubemap = shm.find<CubemapImpl>("Cubemap").first;
 

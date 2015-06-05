@@ -6,7 +6,6 @@ set(SOURCES
 set(HEADERS
 	config.h
 	FrameData.h
-	concurrent_queue.h
 	CubemapFaceSource.h
 	AlloServer.h
 )
