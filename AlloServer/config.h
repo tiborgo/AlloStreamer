@@ -1,9 +1,11 @@
 #pragma once
 
-extern const int bit_rate;
-extern const char* preset_val;
-extern const char* tune_val;
-extern const int FPS;
-extern const int randomStreamsCount;
-const unsigned short rtpPortNum = 18888;
-const unsigned char ttl = 255;
+// RTP/RTSP params
+#define RTP_PORT_NUM 18888
+#define TTL          255
+
+// Encoder params
+#define BIT_RATE     15000000
+#define PRESET_VAL   "ultrafast"
+#define TUNE_VAL     "zerolatency:fastdecode"
+#define FPS          30

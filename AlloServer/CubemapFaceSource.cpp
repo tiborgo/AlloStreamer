@@ -115,7 +115,7 @@ img_convert_ctx(NULL)
 	}
 
 	/* put sample parameters */
-	codecContext->bit_rate = bit_rate;
+	codecContext->bit_rate = BIT_RATE;
 	/* resolution must be a multiple of two */
 	codecContext->width = face->width;
 	codecContext->height = face->height;
@@ -126,8 +126,8 @@ img_convert_ctx(NULL)
 	codecContext->pix_fmt = AV_PIX_FMT_YUV420P;
 	//codecContext->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
-	av_opt_set(codecContext->priv_data, "preset", preset_val, 0);
-	av_opt_set(codecContext->priv_data, "tune", tune_val, 0);
+	av_opt_set(codecContext->priv_data, "preset", PRESET_VAL, 0);
+	av_opt_set(codecContext->priv_data, "tune", TUNE_VAL, 0);
 
 	/* open it */
 	if (avcodec_open2(codecContext, codec, NULL) < 0)

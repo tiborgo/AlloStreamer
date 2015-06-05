@@ -1,12 +1,24 @@
 #pragma once
 
-#include "FramedSource.hh"
-#include "shared.h"
+#include <FramedSource.hh>
 #include <boost/thread/barrier.hpp>
 #include <boost/thread/synchronized_value.hpp>
+#include <boost/thread/condition.hpp>
+#include <boost/thread.hpp>
+
+extern "C"
+{
+    #include <libavcodec/avcodec.h>
+    #include <libavutil/opt.h>
+    #include <libavutil/imgutils.h>
+    #include <libavutil/time.h>
+    #include <libswscale/swscale.h>
+    #include <libavformat/avformat.h>
+    #include <x264.h>
+}
+
 #include "concurrent_queue.h"
 #include "AlloShared/CubemapFace.h"
-#include <boost/thread/condition.hpp>
 
 class CubemapFaceSource : public FramedSource
 {
@@ -37,7 +49,6 @@ private:
 	concurrent_queue<AVFrame*> framePool;
 
 	// Stores encoded frames
-	//boost::synchronized_value<concurrent_queue<AVPacket>> pktBuffer;
 	concurrent_queue<AVPacket> pktBuffer;
 	concurrent_queue<AVPacket> pktPool;
 
@@ -45,8 +56,6 @@ private:
 
 	CubemapFace* face;
 	AVCodecContext* codecContext;
-
-	FILE * myfile;
 
 	boost::thread frameFaceThread;
 	boost::thread encodeFrameThread;

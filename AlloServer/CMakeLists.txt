@@ -1,11 +1,9 @@
 set(SOURCES
-	config.cpp
 	AlloServer.cpp
 	CubemapFaceSource.cpp
 )
 	
 set(HEADERS
-	shared.h
 	config.h
 	FrameData.h
 	concurrent_queue.h
