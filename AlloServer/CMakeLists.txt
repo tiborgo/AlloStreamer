@@ -1,8 +1,5 @@
 set(SOURCES
 	config.cpp
-	serverUni.cpp
-	#RandomFramedSource.cpp
-	H264VideoOnDemandServerMediaSubsession.cpp
 	AlloServer.cpp
 	CubemapFaceSource.cpp
 )
@@ -10,9 +7,7 @@ set(SOURCES
 set(HEADERS
 	shared.h
 	config.h
-	#RandomFramedSource.h
 	FrameData.h
-	H264VideoOnDemandServerMediaSubsession.h
 	concurrent_queue.h
 	CubemapFaceSource.h
 	AlloServer.h
