@@ -30,8 +30,26 @@ struct FaceStreamState
 static UsageEnvironment* env;
 static ServerMediaSession* sms;
 static EventTriggerId addFaceSubstreamTriggerId;
+static EventTriggerId removeFaceSubstreamsTriggerId;
 static concurrent_queue<CubemapFace*> faceBuffer;
 static struct in_addr destinationAddress;
+static RTSPServer* rtspServer;
+static char const* streamName = "h264ESVideoTest";
+static char const* descriptionString
+    = "Session streamed by \"testOnDemandRTSPServer\"";
+static boost::thread addFaceSubstreamThread;
+static boost::interprocess::managed_shared_memory* shm;
+static boost::barrier stopStreamingBarrier(2);
+static std::vector<FaceStreamState> faceStreams;
+
+static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms)
+{
+    char* url = rtspServer->rtspURL(sms);
+    UsageEnvironment& env = rtspServer->envir();
+
+    env << "Play this stream using the URL \"" << url << "\"\n";
+    delete[] url;
+}
 
 static void afterPlaying(void* clientData)
 {
@@ -46,14 +64,46 @@ static void afterPlaying(void* clientData)
     delete state;
 }
 
+/*class xyz : public H264VideoStreamDiscreteFramer
+{
+public:
+    static xyz*
+    createNew(UsageEnvironment& env, FramedSource* inputSource)
+    {
+        return new xyz(env, inputSource);
+    }
+    
+protected:
+    xyz(UsageEnvironment& env, FramedSource* inputSource)
+    : H264VideoStreamDiscreteFramer(env, inputSource)
+    {
+        
+    }
+    // called only by createNew()
+    virtual ~xyz()
+    {
+        int x = 0;
+    }
+};*/
+
 void addFaceSubstream0(void*)
 {
+    if (!sms)
+    {
+        sms = ServerMediaSession::createNew(*env, streamName, streamName,
+                                            descriptionString, True);
+        rtspServer->addServerMediaSession(sms);
+        announceStream(rtspServer, sms);
+    }
+
 
     CubemapFace* face;
 
     while (faceBuffer.try_pop(face))
     {
-        FaceStreamState* state = new FaceStreamState;
+        faceStreams.push_back(FaceStreamState());
+        FaceStreamState* state = &faceStreams.back();
+        
         state->face = face;
 
         Port rtpPort(RTP_PORT_NUM + face->index);
@@ -69,10 +119,28 @@ void addFaceSubstream0(void*)
         sms->addSubsession(subsession);
 
         state->source =  H264VideoStreamDiscreteFramer::createNew(*env, CubemapFaceSource::createNew(*env, face));
-        state->sink->startPlaying(*state->source, afterPlaying, state);
+        state->sink->startPlaying(*state->source, NULL, NULL);
 
         std::cout << "added face " << face->index << std::endl;
     }
+}
+
+void removeFaceSubstreams0(void*)
+{
+    rtspServer->closeAllClientSessionsForServerMediaSession(sms);
+    for (FaceStreamState faceStream : faceStreams)
+    {
+        faceStream.sink->stopPlaying();
+        Medium::close(faceStream.sink);
+        Medium::close(faceStream.source);
+    }
+    faceStreams.clear();
+    //rtspServer->removeServerMediaSession(sms);
+    //delete sms;
+    //sms = NULL;
+    //Medium::close(sms);
+    sms->deleteAllSubsessions();
+    stopStreamingBarrier.wait();
 }
 
 void addFaceSubstream()
@@ -95,21 +163,24 @@ void addFaceSubstream()
         {
             env->taskScheduler().triggerEvent(addFaceSubstreamTriggerId, NULL);
         }
-        cubemap->newFaceCondition.wait(lock);
+
+        try
+        {
+            cubemap->newFaceCondition.wait(lock);
+        }
+        catch (boost::thread_interrupted& exception)
+        {
+            return;
+        }
     }
 }
 
-static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms,
-                           char const* streamName)
+void networkLoop()
 {
-    char* url = rtspServer->rtspURL(sms);
-    UsageEnvironment& env = rtspServer->envir();
-
-    env << "Play this stream using the URL \"" << url << "\"\n";
-    delete[] url;
+    env->taskScheduler().doEventLoop(); // does not return
 }
 
-void serverLoop(int port)
+void setupRTSP(int rtspPort)
 {
     // Begin by setting up our usage environment:
     TaskScheduler* scheduler = BasicTaskScheduler::createNew();
@@ -128,16 +199,13 @@ void serverLoop(int port)
 
 
     // Create the RTSP server:
-    RTSPServer* rtspServer = RTSPServer::createNew(*env, port, NULL);
+    rtspServer = RTSPServer::createNew(*env, rtspPort, NULL);
 
     if (rtspServer == NULL)
     {
         *env << "Failed to create RTSP server: " << env->getResultMsg() << "\n";
         exit(1);
     }
-
-    char const* descriptionString
-        = "Session streamed by \"testOnDemandRTSPServer\"";
 
     // Set up each of the possible streams that can be served by the
     // RTSP server.  Each such stream is implemented using a
@@ -147,23 +215,29 @@ void serverLoop(int port)
 
     OutPacketBuffer::maxSize = 4000000;
 
-
-    char const* streamName = "h264ESVideoTest";
-
-    sms = ServerMediaSession::createNew(*env, streamName, streamName,
-                                        descriptionString, True);
-
-
-    rtspServer->addServerMediaSession(sms);
-
-    announceStream(rtspServer, sms, streamName);
-
-
     addFaceSubstreamTriggerId = env->taskScheduler().createEventTrigger(&addFaceSubstream0);
+    removeFaceSubstreamsTriggerId = env->taskScheduler().createEventTrigger(&removeFaceSubstreams0);
+}
 
-    boost::thread thread2(&addFaceSubstream);
+void startStreaming()
+{
+    // Open already created shared memory object.
+    // Must have read and write access since we are using mutexes
+    // and locking a mutex is a write operation
+    shm = new boost::interprocess::managed_shared_memory(boost::interprocess::open_only,
+                                                         SHM_NAME);
 
-    env->taskScheduler().doEventLoop(); // does not return
+    cubemap = shm->find<CubemapImpl>("Cubemap").first;
+
+    addFaceSubstreamThread = boost::thread(&addFaceSubstream);
+}
+
+void stopStreaming()
+{
+    addFaceSubstreamThread.interrupt();
+    env->taskScheduler().triggerEvent(removeFaceSubstreamsTriggerId, NULL);
+    stopStreamingBarrier.wait();
+    delete shm;
 }
 
 int main(int argc, char* argv[])
@@ -174,34 +248,26 @@ int main(int argc, char* argv[])
         std::cout << "usage: " << exePath.filename().string() << " <RTSP port>" << std::endl;
         return -1;
     }
-    
-    Process thisProcess(ALLOSERVER_ID, true);
-    Process unityProcess(CUBEMAPEXTRACTIONPLUGIN_ID, false);
-    if (unityProcess.isAlive())
-    {
-        std::cout << "Unity is already running :)" << std::endl;
-    }
-    else
-    {
-        std::cout << "Unity not started :(" << std::endl;
-        std::cout << "wait for Unity to be born..." << std::endl;
-        unityProcess.waitForBirth();
-        std::cout << "Unity born :)" << std::endl;
-    }
+
+    int rtspPort = atoi(argv[1]);
 
     avcodec_register_all();
+    setupRTSP(rtspPort);
+    boost::thread networkThread = boost::thread(&networkLoop);
 
-    // Open already created shared memory object.
-    // Must have read and write access since we are using mutexes
-    // and locking a mutex is a write operation
-    boost::interprocess::managed_shared_memory shm =
-        boost::interprocess::managed_shared_memory(boost::interprocess::open_only,
-                                                   SHM_NAME);
+    Process unityProcess(CUBEMAPEXTRACTIONPLUGIN_ID, false);
 
-    cubemap = shm.find<CubemapImpl>("Cubemap").first;
-
-    int port = atoi(argv[1]);
-    serverLoop(port); // does not return
+    while (true)
+    {
+        std::cout << "Waiting for Unity ..." << std::endl;
+        unityProcess.waitForBirth();
+        std::cout << "Connected to Unity :)" << std::endl;
+        startStreaming();
+        std::cout << "Streaming ..." << std::endl;
+        unityProcess.join();
+        std::cout << "Lost connection to Unity :(" << std::endl;
+        stopStreaming();
+    }
 
     return 0;
 }

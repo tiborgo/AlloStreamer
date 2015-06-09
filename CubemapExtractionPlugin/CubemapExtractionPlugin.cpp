@@ -54,7 +54,8 @@ void allocateCubemap()
 
 void releaseCubemap()
 {
-
+    boost::interprocess::shared_memory_object::remove(SHM_NAME);
+    cubemap = nullptr;
 }
 
 // --------------------------------------------------------------------------
@@ -71,6 +72,7 @@ extern "C" void EXPORT_API StartFromUnity()
 extern "C" void EXPORT_API StopFromUnity()
 {
     delete thisProcess;
+    releaseCubemap();
 }
 
 // --------------------------------------------------------------------------
