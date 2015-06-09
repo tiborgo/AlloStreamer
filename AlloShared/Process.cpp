@@ -1,17 +1,21 @@
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <fstream>
+#include <boost/thread.hpp>
 
 #include "Process.h"
 
 static boost::filesystem::path getLockfilePath(std::string& id)
 {
     boost::filesystem::path path = boost::filesystem::temp_directory_path();
+
     path += "." + id;
     return path;
 }
 
 Process::Process(std::string id, bool isSelf)
-    : isSelf(isSelf), lockfilePath(getLockfilePath(id))
+    : lockfilePath(getLockfilePath(id)),
+    fileLock(nullptr),
+    lockfile(nullptr)
 {
     if (isSelf)
     {
@@ -19,21 +23,24 @@ Process::Process(std::string id, bool isSelf)
         lockfile = new  std::ofstream(lockfilePath.c_str());
         *lockfile << id;
         lockfile->flush();
-        fileLock = boost::interprocess::file_lock(lockfilePath.c_str());
-        fileLock.lock();
+        fileLock = new boost::interprocess::file_lock(lockfilePath.c_str());
+        fileLock->lock();
     }
 }
 
 Process::~Process()
 {
-    fileLock.unlock();
-    delete lockfile;
-    boost::filesystem::remove(lockfilePath);
+    if (isSelf())
+    {
+        fileLock->unlock();
+        delete lockfile;
+        boost::filesystem::remove(lockfilePath);
+    }
 }
 
 bool Process::isAlive()
 {
-    if (!isSelf)
+    if (!isSelf())
     {
         if (!boost::filesystem::exists(lockfilePath))
         {
@@ -55,7 +62,7 @@ bool Process::isAlive()
 
 void Process::join()
 {
-    if (!isSelf)
+    if (!isSelf())
     {
         if (boost::filesystem::exists(lockfilePath))
         {
@@ -67,5 +74,13 @@ void Process::join()
 
 void Process::waitForBirth()
 {
+    while(!isAlive())
+    {
+        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+    }
+}
 
+bool Process::isSelf()
+{
+    return (fileLock != nullptr);
 }

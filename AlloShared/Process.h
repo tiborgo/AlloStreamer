@@ -12,10 +12,11 @@ public:
     bool isAlive();
     void join();
     void waitForBirth();
+    bool isSelf();
     
 private:
-    boost::interprocess::file_lock fileLock;
-    bool isSelf;
+    
     boost::filesystem::path lockfilePath;
+    boost::interprocess::file_lock* fileLock;
     std::ofstream* lockfile;
 };

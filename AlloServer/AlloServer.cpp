@@ -179,11 +179,14 @@ int main(int argc, char* argv[])
     Process unityProcess(CUBEMAPEXTRACTIONPLUGIN_ID, false);
     if (unityProcess.isAlive())
     {
-        std::cout << "unity started :)" << std::endl;
+        std::cout << "Unity is already running :)" << std::endl;
     }
     else
     {
-        std::cout << "unity not started :(" << std::endl;
+        std::cout << "Unity not started :(" << std::endl;
+        std::cout << "wait for Unity to be born..." << std::endl;
+        unityProcess.waitForBirth();
+        std::cout << "Unity born :)" << std::endl;
     }
 
     avcodec_register_all();
