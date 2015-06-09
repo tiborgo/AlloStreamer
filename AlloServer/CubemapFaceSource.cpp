@@ -147,7 +147,7 @@ img_convert_ctx(NULL)
 	// Create an 'event trigger' for this device (if it hasn't already been done):
 	eventTriggerId = envir().taskScheduler().createEventTrigger(&deliverFrame0);
 
-	std::cout << this << ": eventTriggerId: " << eventTriggerId  << std::endl;
+	//std::cout << this << ": eventTriggerId: " << eventTriggerId  << std::endl;
 
 	frameFaceThread = boost::thread(boost::bind(&CubemapFaceSource::frameFaceLoop, this));
 
@@ -159,7 +159,7 @@ img_convert_ctx(NULL)
 CubemapFaceSource::~CubemapFaceSource()
 {
 	// Any instance-specific 'destruction' (i.e., resetting) of the device would be done here:
-	std::cout << this << ": deconstructing..." << std::endl;
+	//std::cout << this << ": deconstructing..." << std::endl;
 
 	this->destructing = true;
 	frameBuffer.close();
@@ -183,7 +183,7 @@ CubemapFaceSource::~CubemapFaceSource()
 	eventTriggerId = 0;
 	//fclose(myfile);
 
-	std::cout << this << ": deconstructed" << std::endl;
+	//std::cout << this << ": deconstructed" << std::endl;
 }
 
 void CubemapFaceSource::frameFaceLoop()
@@ -221,7 +221,7 @@ void CubemapFaceSource::frameFaceLoop()
             strftime (timeStr, sizeof(timeStr), "%c",tm);
             
             //std::cout << this << " presentation time: " << timeStr << std::endl;
-            std::cout << this << " frame" << std::endl;
+            //std::cout << this << " frame" << std::endl;
 
 
 			frame->pts = av_rescale_q(presentationTimeSinceEpochMicroSec.count(), microSecBase, codecContext->time_base);
@@ -302,7 +302,7 @@ void CubemapFaceSource::encodeFrameLoop()
 			return;
 		}
 
-        std::cout << this << " encode" << std::endl;
+        //std::cout << this << " encode" << std::endl;
         
 		yuv420pFrame = av_frame_alloc();
 		if (!yuv420pFrame)
@@ -417,7 +417,7 @@ void CubemapFaceSource::deliverFrame()
 		return;
 	}
     
-    std::cout << this << " send" << std::endl;
+    //std::cout << this << " send" << std::endl;
 
 	// Set the presentation time of this frame
 	AVRational secBase = { 1, 1 };

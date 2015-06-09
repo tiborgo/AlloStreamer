@@ -51,41 +51,6 @@ static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms)
     delete[] url;
 }
 
-static void afterPlaying(void* clientData)
-{
-    FaceStreamState* state = (FaceStreamState*) clientData;
-
-    *env << "stopped streaming face " << state->face->index << "\n";
-
-    state->sink->stopPlaying();
-    Medium::close(state->source);
-    // Note that this also closes the input file that this source read from.
-
-    delete state;
-}
-
-/*class xyz : public H264VideoStreamDiscreteFramer
-{
-public:
-    static xyz*
-    createNew(UsageEnvironment& env, FramedSource* inputSource)
-    {
-        return new xyz(env, inputSource);
-    }
-    
-protected:
-    xyz(UsageEnvironment& env, FramedSource* inputSource)
-    : H264VideoStreamDiscreteFramer(env, inputSource)
-    {
-        
-    }
-    // called only by createNew()
-    virtual ~xyz()
-    {
-        int x = 0;
-    }
-};*/
-
 void addFaceSubstream0(void*)
 {
     if (!sms)
@@ -133,12 +98,9 @@ void removeFaceSubstreams0(void*)
         faceStream.sink->stopPlaying();
         Medium::close(faceStream.sink);
         Medium::close(faceStream.source);
+        std::cout << "removed face " << faceStream.face->index << std::endl;
     }
     faceStreams.clear();
-    //rtspServer->removeServerMediaSession(sms);
-    //delete sms;
-    //sms = NULL;
-    //Medium::close(sms);
     sms->deleteAllSubsessions();
     stopStreamingBarrier.wait();
 }
@@ -251,6 +213,7 @@ int main(int argc, char* argv[])
 
     int rtspPort = atoi(argv[1]);
 
+    av_log_set_level(AV_LOG_WARNING);
     avcodec_register_all();
     setupRTSP(rtspPort);
     boost::thread networkThread = boost::thread(&networkLoop);
