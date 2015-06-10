@@ -1,16 +1,12 @@
 set(SOURCES
-	AlloPlayer.cpp
-	H264RawPixelsSink.cpp
     DynamicCubemapBackgroundApp.cpp
     main.cpp
     Stats.cpp
 )
 	
 set(HEADERS
-	H264RawPixelsSink.h
     DynamicCubemapBackgroundApp.hpp
     Stats.h
-    AlloPlayer.h
 )
 
 set(RESOURCES
@@ -68,6 +64,7 @@ target_link_libraries(AlloPlayer
     ${Jsoncpp_LIBRARY}
     ${FREEIMAGE_LIBRARY}
 	${GLEW_LIBRARY}
+    AlloReceiver
 )
 target_compile_definitions(AlloPlayer
 	PRIVATE

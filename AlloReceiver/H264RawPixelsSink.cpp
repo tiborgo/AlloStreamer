@@ -6,7 +6,7 @@
 #include <boost/thread.hpp>
 #include <GroupsockHelper.hh>
 
-#include "AlloPlayer.h"
+#include "AlloReceiver.h"
 
 namespace bc = boost::chrono;
 

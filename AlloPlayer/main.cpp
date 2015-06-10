@@ -1,21 +1,22 @@
 
+#include "DynamicCubemapBackgroundApp.hpp"
 
-#include <boost/thread.hpp>
+#include <boost/filesystem.hpp>
 
-int mainCubemapsSkyboxOptimized();
-int mainStaticCubemapBackgroundApp(int argc, char* argv[]);
-int mainDynamicCubemapBackgroundApp(int argc, char* argv[]);
-int mainCubemap();
-int mainAlloPlayer(int argc, char** argv);
+#include "AlloReceiver/AlloReceiver.h"
 
 int main(int argc, char* argv[])
 {
-
-    //mainCubemapsSkyboxOptimized();
-    //boost::thread thread(boost::bind(&mainStaticCubemapBackgroundApp, argc, argv));
-    //thread.join();
-    //mainStaticCubemapBackgroundApp(argc, argv);
-    //mainDynamicCubemapBackgroundApp(argc, argv);
-    //mainCubemap();
-    mainAlloPlayer(argc, argv);
+    if (argc < 2)
+    {
+        boost::filesystem::path exePath(argv[0]);
+        std::cout << "usage: " << exePath.filename().string() << " <RTSP url of stream>" << std::endl;
+        std::cout << "\texample: " << exePath.filename().string() << " rtsp://192.168.1.185:8554/h264ESVideoTest" << std::endl;
+        return -1;
+    }
+    
+    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(argv[1]);
+    
+    DynamicCubemapBackgroundApp dynamicCubemapBackgroundApp(cubemapSource);
+    dynamicCubemapBackgroundApp.start();
 }

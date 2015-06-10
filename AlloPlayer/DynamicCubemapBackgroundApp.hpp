@@ -1,36 +1,34 @@
 #pragma once
 
 #include <alloutil/al_OmniApp.hpp>
-
-#include "H264RawPixelsSink.h"
+extern "C"
+{
+    #include <libavcodec/avcodec.h>
+    #include <libavutil/opt.h>
+    #include <libavutil/frame.h>
+    #include <libavutil/imgutils.h>
+    #include <libavutil/time.h>
+    #include <libswscale/swscale.h>
+    #include <x264.h>
+}
+#include "AlloReceiver/AlloReceiver.h"
 
 struct DynamicCubemapBackgroundApp : al::OmniApp
 {
     al::Mesh cube, sphere;
     al::Light light;
     al_sec now;
-    std::vector<H264RawPixelsSink*> sinks;
     std::vector<AVFrame*> currentFrames;
-    boost::mutex sinkMutex;
     SwsContext* resizeCtx;
+    CubemapSource* cubemapSource;
 
-    DynamicCubemapBackgroundApp();
+    DynamicCubemapBackgroundApp(CubemapSource* cubemapSource);
     
     virtual ~DynamicCubemapBackgroundApp();
-
     bool onCreate();
-    
     bool onFrame();
-
     void onDraw(al::Graphics& gl);
-
     virtual void onAnimate(al_sec dt);
-
     virtual void onMessage(al::osc::Message& m);
-
     virtual bool onKeyDown(const al::Keyboard& k);
-    
-    void addSink(H264RawPixelsSink* sink);
 };
-
-int mainDynamicCubemapBackgroundApp(int argc, char* argv[]);

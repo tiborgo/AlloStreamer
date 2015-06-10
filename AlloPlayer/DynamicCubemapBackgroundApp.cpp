@@ -1,11 +1,10 @@
 #include "DynamicCubemapBackgroundApp.hpp"
-#include "AlloPlayer.h"
 
 #define QUOTE(x) #x
 #define STR(x) QUOTE(x)
 
-DynamicCubemapBackgroundApp::DynamicCubemapBackgroundApp()
-    : al::OmniApp("AlloPlayer", false, 2048)
+DynamicCubemapBackgroundApp::DynamicCubemapBackgroundApp(CubemapSource* cubemapSource)
+    : al::OmniApp("AlloPlayer", false, 2048), cubemapSource(cubemapSource)
 {
     nav().smooth(0.8);
     
@@ -33,6 +32,11 @@ DynamicCubemapBackgroundApp::DynamicCubemapBackgroundApp()
     light.pos(5, 5, 5);
     
     resizeCtx = nullptr;
+    
+    for (int i = 0; i < cubemapSource->getFacesCount(); i++)
+    {
+        currentFrames.push_back(nullptr);
+    }
 }
 
 DynamicCubemapBackgroundApp::~DynamicCubemapBackgroundApp()
@@ -61,11 +65,10 @@ void DynamicCubemapBackgroundApp::onDraw(al::Graphics& gl)
     
     {
         // get next frame
-        boost::mutex::scoped_lock lock(sinkMutex);
         
-        if (sinks.size() > face)
+        if (cubemapSource->getFacesCount() > face)
         {
-            AVFrame* nextFrame = sinks[face]->getNextFrame();
+            AVFrame* nextFrame = cubemapSource->tryGetNextFace(face);
             AVFrame* currentFrame = currentFrames[face];
             
             if(nextFrame)
@@ -189,16 +192,4 @@ void DynamicCubemapBackgroundApp::onMessage(al::osc::Message& m)
 bool DynamicCubemapBackgroundApp::onKeyDown(const al::Keyboard& k)
 {
     return true;
-}
-
-void DynamicCubemapBackgroundApp::addSink(H264RawPixelsSink* sink)
-{
-    boost::mutex::scoped_lock lock(sinkMutex);
-    sinks.push_back(sink);
-    currentFrames.push_back(nullptr);
-}
-
-int mainDynamicCubemapBackgroundApp(int argc, char* argv[]) {
-    DynamicCubemapBackgroundApp().start();
-    return 0;
 }

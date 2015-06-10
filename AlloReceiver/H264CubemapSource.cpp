@@ -1,18 +1,7 @@
-#include "DynamicCubemapBackgroundApp.hpp"
 
-#include <BasicUsageEnvironment.hh>
-#include <GroupsockHelper.hh>
-#include <liveMedia.hh>
-#include <boost/filesystem/path.hpp>
-extern "C"
-{
-	#include <libavformat/avformat.h>
-}
 
-#include "H264RawPixelsSink.h"
+#include "H264CubemapSource.h"
 //#include "CubemapPreviewWindow.h"
-
-#include "AlloPlayer.h"
 
 Stats stats;
 
@@ -35,14 +24,14 @@ double initialSeekTime = 0.0f;
 char* initialAbsoluteSeekTime = NULL;
 double endTime;
 TaskToken arrivalCheckTimerTask = NULL;
-//CubemapPreviewWindow* cubemapPreviewWindow = NULL;
-DynamicCubemapBackgroundApp* dynamicCubemapBackgroundApp = nullptr;
 
-void shutdown(int exitCode = 1)
+std::vector<H264RawPixelsSink*> H264CubemapSource::sinks;
+
+void H264CubemapSource::shutdown(int exitCode)
 {
 }
 
-void subsessionAfterPlaying(void* clientData)
+void H264CubemapSource::subsessionAfterPlaying(void* clientData)
 {
 	// Begin by closing this media subsession's stream:
 	MediaSubsession* subsession = (MediaSubsession*)clientData;
@@ -61,7 +50,7 @@ void subsessionAfterPlaying(void* clientData)
 	//sessionAfterPlaying();
 }
 
-void checkForPacketArrival(void* /*clientData*/)
+void H264CubemapSource::checkForPacketArrival(void* self)
 {
 	// Check each subsession, to see whether it has received data packets:
 	unsigned numSubsessionsChecked = 0;
@@ -99,10 +88,10 @@ void checkForPacketArrival(void* /*clientData*/)
 	// No luck, so reschedule this check again, after a delay:
 	int uSecsToDelay = 100000; // 100 ms
 	arrivalCheckTimerTask = env->taskScheduler().scheduleDelayedTask(uSecsToDelay,
-		(TaskFunc*)checkForPacketArrival, NULL);
+		(TaskFunc*)checkForPacketArrival, self);
 }
 
-void continueAfterDESCRIBE2(RTSPClient*, int resultCode, char* resultString)
+void H264CubemapSource::continueAfterDESCRIBE2(RTSPClient*, int resultCode, char* resultString)
 {
 	static int count = 0;
 	char* sdpDescription = resultString;
@@ -114,7 +103,7 @@ void continueAfterDESCRIBE2(RTSPClient*, int resultCode, char* resultString)
 	count++;
 }
 
-void continueAfterPLAY(RTSPClient*, int resultCode, char* resultString)
+void H264CubemapSource::continueAfterPLAY(RTSPClient*, int resultCode, char* resultString)
 {
 	if (resultCode != 0)
 	{
@@ -143,7 +132,7 @@ void continueAfterPLAY(RTSPClient*, int resultCode, char* resultString)
 }
 
 
-void subsessionByeHandler(void* clientData)
+void H264CubemapSource::subsessionByeHandler(void* clientData)
 {
 	struct timeval timeNow;
 	gettimeofday(&timeNow, NULL);
@@ -159,7 +148,7 @@ void subsessionByeHandler(void* clientData)
 	subsessionAfterPlaying(subsession);
 }
 
-void createOutputFiles(char const* periodicFilenameSuffix)
+void H264CubemapSource::createOutputFiles(char const* periodicFilenameSuffix)
 {
 	char outFileName[1000];
 
@@ -184,7 +173,7 @@ void createOutputFiles(char const* periodicFilenameSuffix)
 			{
 				// Open window displaying the H.264 video
 				sink = H264RawPixelsSink::createNew(*env, fileSinkBufferSize);
-				dynamicCubemapBackgroundApp->addSink(sink);
+                sinks.push_back(sink);
 			}
 		}
 		subsession->sink = sink;
@@ -214,9 +203,7 @@ void createOutputFiles(char const* periodicFilenameSuffix)
 	}
 }
 
-void continueAfterSETUP(RTSPClient*, int resultCode, char* resultString);
-
-void setupStreams()
+void H264CubemapSource::setupStreams()
 {
 	static MediaSubsessionIterator* setupIter = NULL;
 	if (setupIter == NULL) setupIter = new MediaSubsessionIterator(*session);
@@ -256,7 +243,7 @@ void setupStreams()
 	}
 }
 
-void continueAfterSETUP(RTSPClient*, int resultCode, char* resultString)
+void H264CubemapSource::continueAfterSETUP(RTSPClient*, int resultCode, char* resultString)
 {
 	if (resultCode == 0)
 	{
@@ -286,7 +273,7 @@ void continueAfterSETUP(RTSPClient*, int resultCode, char* resultString)
 	setupStreams();
 }
 
-void continueAfterDESCRIBE(RTSPClient*, int resultCode, char* resultString)
+void H264CubemapSource::continueAfterDESCRIBE(RTSPClient*, int resultCode, char* resultString)
 {
 	if (resultCode != 0)
 	{
@@ -395,7 +382,7 @@ void continueAfterDESCRIBE(RTSPClient*, int resultCode, char* resultString)
 	setupStreams();
 }
 
-void continueAfterOPTIONS(RTSPClient*, int resultCode, char* resultString)
+void H264CubemapSource::continueAfterOPTIONS(RTSPClient*, int resultCode, char* resultString)
 {
 	delete[] resultString;
 
@@ -403,7 +390,7 @@ void continueAfterOPTIONS(RTSPClient*, int resultCode, char* resultString)
 	ourClient->sendDescribeCommand(continueAfterDESCRIBE);
 }
 
-int live555Loop(const char* progName, const char* url)
+void H264CubemapSource::live555Loop(const char* progName, const char* url)
 {
 	avcodec_register_all();
 	avformat_network_init();
@@ -433,24 +420,28 @@ int live555Loop(const char* progName, const char* url)
 
 	// All subsequent activity takes place within the event loop:
 	env->taskScheduler().doEventLoop(); // does not return
-
-	return 0; // only to prevent compiler warning
 }
 
-int mainAlloPlayer(int argc, char** argv)
+AVFrame* H264CubemapSource::tryGetNextFace(int face)
 {
-	if (argc < 2)
-	{
-        boost::filesystem::path exePath(argv[0]);
-		std::cout << "usage: " << exePath.filename().string() << " <RTSP url of stream>" << std::endl;
-        std::cout << "\texample: " << exePath.filename().string() << " rtsp://192.168.1.185:8554/h264ESVideoTest" << std::endl;
-		return -1;
-	}
+    if (sinks.size() >= face)
+    {
+        return sinks[face]->getNextFrame();
+    }
+    else
+    {
+        return nullptr;
+    }
+}
 
-    av_log_set_level(AV_LOG_QUIET);
-    stats.autoSummary(boost::chrono::seconds(10));
+int H264CubemapSource::getFacesCount()
+{
+    return sinks.size();
+}
+
+H264CubemapSource::H264CubemapSource(const char* url)
+{
+    av_log_set_level(AV_LOG_WARNING);
     
-    dynamicCubemapBackgroundApp = new DynamicCubemapBackgroundApp();
-    boost::thread live555Thread(boost::bind(&live555Loop, argv[0], argv[1]));
-    dynamicCubemapBackgroundApp->start();
+    boost::thread live555Thread(boost::bind(&H264CubemapSource::live555Loop, "H264CubemapSource", url));
 }
