@@ -191,15 +191,22 @@ void CubemapFaceSource::frameFaceLoop()
 
 	while (!destructing)
 	{
-		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->mutex);
+        while (!face->mutex.timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
+        {
+            if (destructing)
+            {
+                return;
+            }
+        }
+        
+		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->mutex,
+                                                                                       boost::interprocess::accept_ownership);
 
 		AVFrame* frame;
 		if (!framePool.wait_and_pop(frame))
 		{
             return;
         }
-        
-        boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
         
         // Fill frame
         avpicture_fill((AVPicture*)frame,

@@ -41,6 +41,7 @@ static boost::thread addFaceSubstreamThread;
 static boost::interprocess::managed_shared_memory* shm;
 static boost::barrier stopStreamingBarrier(2);
 static std::vector<FaceStreamState> faceStreams;
+static std::atomic_bool isStoppingStreaming(false);
 
 static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms)
 {
@@ -111,8 +112,17 @@ void addFaceSubstream()
 
     while (true)
     {
-        boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(cubemap->mutex);
-        //
+        while (!cubemap->mutex.timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
+        {
+            if (isStoppingStreaming)
+            {
+                return;
+            }
+        }
+        
+        boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(cubemap->mutex,
+                                                                                       boost::interprocess::accept_ownership);
+        
         for (int i = 0; i < cubemap->count(); i++)
         {
             if (std::find(addedFaces.begin(), addedFaces.end(), cubemap->getFace(i)->index) == addedFaces.end())
@@ -125,14 +135,14 @@ void addFaceSubstream()
         {
             env->taskScheduler().triggerEvent(addFaceSubstreamTriggerId, NULL);
         }
-
-        try
+        
+        while (!cubemap->newFaceCondition.timed_wait(lock,
+                                                     boost::get_system_time() + boost::posix_time::milliseconds(100)))
         {
-            cubemap->newFaceCondition.wait(lock);
-        }
-        catch (boost::thread_interrupted& exception)
-        {
-            return;
+            if (isStoppingStreaming)
+            {
+                return;
+            }
         }
     }
 }
@@ -191,12 +201,13 @@ void startStreaming()
 
     cubemap = shm->find<CubemapImpl>("Cubemap").first;
 
+    isStoppingStreaming = false;
     addFaceSubstreamThread = boost::thread(&addFaceSubstream);
 }
 
 void stopStreaming()
 {
-    addFaceSubstreamThread.interrupt();
+    isStoppingStreaming = true;
     env->taskScheduler().triggerEvent(removeFaceSubstreamsTriggerId, NULL);
     stopStreamingBarrier.wait();
     delete shm;

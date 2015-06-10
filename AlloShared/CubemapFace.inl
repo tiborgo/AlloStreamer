@@ -35,12 +35,11 @@ Cubemap<SegmentManager>::Cubemap(Allocator<SegmentManager>& allocator)
 template <typename SegmentManager>
 void Cubemap<SegmentManager>::setFace(CubemapFace::Ptr& face)
 {
-	boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(mutex);
-	if (faces.size() <= face->index) {
+	if (faces.size() <= face->index)
+    {
 		faces.resize(face->index + 1);
 	}
 	faces[face->index] = face;
-	newFaceCondition.notify_all();
 }
 
 template <typename SegmentManager>

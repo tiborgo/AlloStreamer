@@ -137,16 +137,17 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 	// A script calls this at initialization time; just remember the texture pointer here.
 	// Will update texture pixels each frame from the plugin rendering event (texture update
 	// needs to happen on the rendering thread).
+    
+    CubemapFace::Ptr face;
 
 #if SUPPORT_D3D9
 	// D3D9 case
 	if (g_DeviceType == kGfxRendererD3D9)
 	{
-	CubemapFaceD3D9::Ptr face = CubemapFaceD3D9::create(
+        face = CubemapFaceD3D9::create(
 			(IDirect3DTexture9*)texturePtr,
 			index,
 			*shmAllocator);
-		cubemap->setFace(CubemapFace::Ptr(face));
 	}
 #endif
 
@@ -155,11 +156,10 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 	// D3D11 case
 	if (g_DeviceType == kGfxRendererD3D11)
 	{
-		CubemapFaceD3D11::Ptr face = CubemapFaceD3D11::create(
+		face = CubemapFaceD3D11::create(
 			(ID3D11Texture2D*)texturePtr,
 			index,
 			*shmAllocator);
-		cubemap->setFace(CubemapFace::Ptr(face));
 	}
 #endif
 
@@ -168,13 +168,31 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 	// OpenGL case
 	if (g_DeviceType == kGfxRendererOpenGL)
 	{
-        CubemapFace::Ptr face = CubemapFaceOpenGL::create(
+        face = CubemapFaceOpenGL::create(
             (GLuint)(size_t)texturePtr,
             index,
             *shmAllocator);
-        cubemap->setFace(face);
 	}
 #endif
+    
+    while (!cubemap->mutex.timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
+    {
+        if (!alloServerProcess.isAlive())
+        {
+            // Reset the mutex otherwise it will block forever
+            // Hacky solution indeed
+            void* addr = &cubemap->mutex;
+            new (addr) boost::interprocess::interprocess_mutex;
+            return;
+        }
+    }
+    
+    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(cubemap->mutex,
+                                                                                   boost::interprocess::accept_ownership);
+    
+    cubemap->setFace(face);
+    
+    cubemap->newFaceCondition.notify_all();
 }
 
 void copyFromGPUToCPU(CubemapFace* face)
@@ -219,13 +237,9 @@ void copyFromGPUToCPU(CubemapFace* face)
             return;
         }
     }
-    //face->mutex.unlock();
 
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->mutex,
                                                                                    boost::interprocess::accept_ownership);
-
-    
-    //boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->mutex);
     
 #if SUPPORT_D3D9
     // D3D9 case
