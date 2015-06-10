@@ -59,19 +59,4 @@ CubemapFaceD3D9::Ptr CubemapFaceD3D9::create(
 		gpuSurfacePtr, cpuSurfacePtr, textureDescription.Format, lockedRect);
 }
 
-void CubemapFaceD3D9::copyFromGPUToCPU()
-{
-
-	// copy data from GPU to CPU
-	HRESULT hr = g_D3D9Device->GetRenderTargetData(this->gpuSurfacePtr, this->cpuSurfacePtr);
-
-	//ZeroMemory(&cubemapFaceD3D9->lockedRect, sizeof(D3DLOCKED_RECT));
-	//hr = cubemapFaceD3D9->cpuSurfacePtr->LockRect(&cubemapFaceD3D9->lockedRect, 0, D3DLOCK_READONLY);
-
-	memcpy(this->pixels.get(), this->lockedRect.pBits, this->width * this->height * 4);
-
-	//hr = cubemapFaceD3D9->cpuSurfacePtr->UnlockRect();
-
-}
-
 #endif

@@ -83,41 +83,4 @@ CubemapFaceD3D11* CubemapFaceD3D11::create(
 		textureDescription);
 }
 
-static boost::mutex d3D11DeviceContextMutex;
-
-void CubemapFaceD3D11::copyFromGPUToCPU()
-{
-	presentationTime = boost::chrono::system_clock::now();
-
-	{
-		// DirectX 11 is not thread-safe
-		boost::mutex::scoped_lock lock(d3D11DeviceContextMutex);
-
-		ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
-		g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
-
-		// copy data from GPU to CPU
-		g_D3D11DeviceContext->CopyResource(this->cpuTexturePtr, this->gpuTexturePtr);
-	}
-
-	/*ZeroMemory(&this->resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
-	unsigned int subresource = D3D11CalcSubresource(0, 0, 0);
-	HRESULT hr = g_D3D11DeviceContext->Map(this->cpuTexturePtr, subresource, D3D11_MAP_READ, 0, &this->resource);*/
-
-	// DirectX 11 is using wrong order of colors in a pixel -> correcting it
-	/*char* pixels = (char*)this->pixels.get();
-	for (unsigned int i = 0; i < this->width * this->height * 4; i += 4) {
-	for (int j = 0; j < 3; j++) {
-	pixels[i + j] = ((char*)this->resource.pData)[i + 2 - j];
-	}
-	}*/
-	boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(mutex);
-
-	memcpy(this->pixels.get(), this->resource.pData, this->width * this->height * 4);
-
-	//g_D3D11DeviceContext->Unmap(this->cpuTexturePtr, subresource);
-
-	newPixelsCondition.notify_all();
-}
-
 #endif

@@ -25,8 +25,6 @@ public:
 		int index,
 		Allocator<SegmentManager>& allocator);
 
-	void copyFromGPUToCPU();
-
 protected:
 	template <typename SegmentManager>
 	CubemapFaceD3D9(

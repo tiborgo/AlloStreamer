@@ -17,8 +17,6 @@ public:
 		int face,
 		Allocator<SegmentManager>& allocator);
 
-	void copyFromGPUToCPU();
-
 protected:
 
 	template <typename SegmentManager>

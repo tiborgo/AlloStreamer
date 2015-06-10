@@ -54,8 +54,6 @@ public:
 		AVPixelFormat format,
 		Allocator<SegmentManager>& allocator);
 
-	virtual void copyFromGPUToCPU() = 0;
-
 	boost::interprocess::interprocess_mutex mutex;
 	boost::interprocess::interprocess_condition newPixelsCondition;
 };

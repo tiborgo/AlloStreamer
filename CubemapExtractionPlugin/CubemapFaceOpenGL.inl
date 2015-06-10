@@ -43,16 +43,4 @@ CubemapFaceOpenGL* CubemapFaceOpenGL::create(
 		textureID);
 }
 
-void CubemapFaceOpenGL::copyFromGPUToCPU()
-{
-	presentationTime = boost::chrono::system_clock::now();
-
-    glBindTexture(GL_TEXTURE_2D, gpuTextureID);
-    
-	boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(mutex);
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, this->pixels.get());
-
-	newPixelsCondition.notify_all();
-}
-
 #endif

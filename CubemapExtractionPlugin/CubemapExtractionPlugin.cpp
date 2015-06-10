@@ -21,6 +21,7 @@ static Allocator<ShmSegmentManager>* shmAllocator = nullptr;
 static Process* thisProcess = nullptr;
 static Process alloServerProcess(ALLOSERVER_ID, false);
 static boost::chrono::system_clock::time_point presentationTime;
+static boost::mutex d3D11DeviceContextMutex;
 
 // Prints a string
 static void DebugLog (const char* str)
@@ -200,11 +201,15 @@ void copyFromGPUToCPU(CubemapFace* face)
 {
     face->presentationTime = presentationTime;
     
+    // PREPARE COPYING
+    
 #if SUPPORT_D3D9
     // D3D9 case
     if (g_DeviceType == kGfxRendererD3D9)
     {
-        
+        CubemapFaceD3D9* faceD3D9 = (CubemapFaceD3D9*)face;
+        // copy data from GPU to CPU
+        HRESULT hr = g_D3D9Device->GetRenderTargetData(faceD3D9->gpuSurfacePtr, faceD3D9->cpuSurfacePtr);
     }
 #endif
     
@@ -213,7 +218,16 @@ void copyFromGPUToCPU(CubemapFace* face)
     // D3D11 case
     if (g_DeviceType == kGfxRendererD3D11)
     {
+        CubemapFaceD3D11* faceD3D11 = (CubemapFaceD3D11*)face;
         
+        // DirectX 11 is not thread-safe
+        boost::mutex::scoped_lock lock(d3D11DeviceContextMutex);
+        
+        ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
+        g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
+        
+        // copy data from GPU to CPU
+        g_D3D11DeviceContext->CopyResource(faceD3D11->cpuTexturePtr, faceD3D11->gpuTexturePtr);
     }
 #endif
     
@@ -241,12 +255,14 @@ void copyFromGPUToCPU(CubemapFace* face)
 
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->mutex,
                                                                                    boost::interprocess::accept_ownership);
+    // COPY
     
 #if SUPPORT_D3D9
     // D3D9 case
     if (g_DeviceType == kGfxRendererD3D9)
     {
-        
+        CubemapFaceD3D9* faceD3D9 = (CubemapFaceD3D9*)face;
+        memcpy(faceD3D9->pixels.get(), faceD3D9->lockedRect.pBits, faceD3D9->width * faceD3D9->height * 4);
     }
 #endif
     
@@ -255,7 +271,8 @@ void copyFromGPUToCPU(CubemapFace* face)
     // D3D11 case
     if (g_DeviceType == kGfxRendererD3D11)
     {
-        
+        CubemapFaceD3D11* faceD3D11 = (CubemapFaceD3D11*)face;
+        memcpy(faceD3D11->pixels.get(), faceD3D11->resource.pData, faceD3D11->width * faceD3D11->height * 4);
     }
 #endif
     
@@ -287,7 +304,7 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 		boost::thread* threads = new boost::thread[cubemap->count()];
 
 		for (int i = 0; i < cubemap->count(); i++) {
-			threads[i] = boost::thread(boost::bind(&CubemapFace::copyFromGPUToCPU, cubemap->getFace(i).get()));
+			threads[i] = boost::thread(boost::bind(&copyFromGPUToCPU, cubemap->getFace(i).get()));
 		}
 
 		for (int i = 0; i < cubemap->count(); i++) {
