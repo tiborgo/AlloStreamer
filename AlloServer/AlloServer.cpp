@@ -29,15 +29,13 @@ struct FaceStreamState
 
 static UsageEnvironment* env;
 static ServerMediaSession* sms;
-static EventTriggerId addFaceSubstreamTriggerId;
+static EventTriggerId addFaceSubstreamsTriggerId;
 static EventTriggerId removeFaceSubstreamsTriggerId;
-static concurrent_queue<CubemapFace*> faceBuffer;
 static struct in_addr destinationAddress;
 static RTSPServer* rtspServer;
 static char const* streamName = "h264ESVideoTest";
 static char const* descriptionString
     = "Session streamed by \"testOnDemandRTSPServer\"";
-static boost::thread addFaceSubstreamThread;
 static boost::interprocess::managed_shared_memory* shm;
 static boost::barrier stopStreamingBarrier(2);
 static std::vector<FaceStreamState> faceStreams;
@@ -62,17 +60,14 @@ void addFaceSubstream0(void*)
         announceStream(rtspServer, sms);
     }
 
-
-    CubemapFace* face;
-
-    while (faceBuffer.try_pop(face))
+    for (int i = 0; i < cubemap->count(); i++)
     {
         faceStreams.push_back(FaceStreamState());
         FaceStreamState* state = &faceStreams.back();
         
-        state->face = face;
+        state->face = cubemap->getFace(i).get();
 
-        Port rtpPort(RTP_PORT_NUM + face->index);
+        Port rtpPort(RTP_PORT_NUM + state->face->index);
         Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, TTL);
         rtpGroupsock->multicastSendOnly(); // we're a SSM source
 
@@ -84,10 +79,10 @@ void addFaceSubstream0(void*)
 
         sms->addSubsession(subsession);
 
-        state->source =  H264VideoStreamDiscreteFramer::createNew(*env, CubemapFaceSource::createNew(*env, face));
+        state->source =  H264VideoStreamDiscreteFramer::createNew(*env, CubemapFaceSource::createNew(*env, state->face));
         state->sink->startPlaying(*state->source, NULL, NULL);
 
-        std::cout << "added face " << face->index << std::endl;
+        std::cout << "added face " << state->face->index << std::endl;
     }
 }
 
@@ -104,47 +99,6 @@ void removeFaceSubstreams0(void*)
     faceStreams.clear();
     sms->deleteAllSubsessions();
     stopStreamingBarrier.wait();
-}
-
-void addFaceSubstream()
-{
-    std::list<int> addedFaces;
-
-    while (true)
-    {
-        while (!cubemap->mutex.timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
-        {
-            if (isStoppingStreaming)
-            {
-                return;
-            }
-        }
-        
-        boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(cubemap->mutex,
-                                                                                       boost::interprocess::accept_ownership);
-        
-        for (int i = 0; i < cubemap->count(); i++)
-        {
-            if (std::find(addedFaces.begin(), addedFaces.end(), cubemap->getFace(i)->index) == addedFaces.end())
-            {
-                faceBuffer.push(cubemap->getFace(i).get());
-                addedFaces.push_back(cubemap->getFace(i)->index);
-            }
-        }
-        if (!faceBuffer.empty())
-        {
-            env->taskScheduler().triggerEvent(addFaceSubstreamTriggerId, NULL);
-        }
-        
-        while (!cubemap->newFaceCondition.timed_wait(lock,
-                                                     boost::get_system_time() + boost::posix_time::milliseconds(100)))
-        {
-            if (isStoppingStreaming)
-            {
-                return;
-            }
-        }
-    }
 }
 
 void networkLoop()
@@ -187,7 +141,7 @@ void setupRTSP(int rtspPort)
 
     OutPacketBuffer::maxSize = 4000000;
 
-    addFaceSubstreamTriggerId = env->taskScheduler().createEventTrigger(&addFaceSubstream0);
+    addFaceSubstreamsTriggerId = env->taskScheduler().createEventTrigger(&addFaceSubstream0);
     removeFaceSubstreamsTriggerId = env->taskScheduler().createEventTrigger(&removeFaceSubstreams0);
 }
 
@@ -202,7 +156,7 @@ void startStreaming()
     cubemap = shm->find<CubemapImpl>("Cubemap").first;
 
     isStoppingStreaming = false;
-    addFaceSubstreamThread = boost::thread(&addFaceSubstream);
+    env->taskScheduler().triggerEvent(addFaceSubstreamsTriggerId, NULL);
 }
 
 void stopStreaming()

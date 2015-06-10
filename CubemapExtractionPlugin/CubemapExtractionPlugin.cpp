@@ -35,7 +35,7 @@ static void DebugLog (const char* str)
 
 boost::interprocess::managed_shared_memory shm;
 
-void allocateCubemap()
+void allocateCubemap(int facesCount, int resolution)
 {
 	if (!cubemap)
 	{
@@ -44,9 +44,9 @@ void allocateCubemap()
 		shm =
 			boost::interprocess::managed_shared_memory(boost::interprocess::open_or_create,
 			SHM_NAME,
-			2048 * 2048 * 4 * 12 +
+			resolution * resolution * 4 * facesCount +
 			sizeof(CubemapImpl) + 
-			12 * sizeof(CubemapFace) +
+			facesCount * sizeof(CubemapFace) +
 			65536);
 
 		shmAllocator = new Allocator<ShmSegmentManager>(shm.get_segment_manager());
@@ -60,22 +60,6 @@ void releaseCubemap()
 {
     boost::interprocess::shared_memory_object::remove(SHM_NAME);
     cubemap = nullptr;
-}
-
-// --------------------------------------------------------------------------
-// Start stop management
-
-extern "C" void EXPORT_API StartFromUnity()
-{
-	// Create and/or open shared memory
-	allocateCubemap();
-    thisProcess = new Process(CUBEMAPEXTRACTIONPLUGIN_ID, true);
-}
-
-extern "C" void EXPORT_API StopFromUnity()
-{
-    delete thisProcess;
-    releaseCubemap();
 }
 
 // --------------------------------------------------------------------------
@@ -132,10 +116,8 @@ extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType,
 	#endif
 }
 
-extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int index)
+void setCubemapFaceTexture(void* texturePtr, int index)
 {
-	allocateCubemap();
-
 	// A script calls this at initialization time; just remember the texture pointer here.
 	// Will update texture pixels each frame from the plugin rendering event (texture update
 	// needs to happen on the rendering thread).
@@ -177,24 +159,7 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 	}
 #endif
     
-    while (!cubemap->mutex.timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
-    {
-        if (!alloServerProcess.isAlive())
-        {
-            // Reset the mutex otherwise it will block forever
-            // Hacky solution indeed
-            void* addr = &cubemap->mutex;
-            new (addr) boost::interprocess::interprocess_mutex;
-            return;
-        }
-    }
-    
-    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(cubemap->mutex,
-                                                                                   boost::interprocess::accept_ownership);
-    
     cubemap->setFace(face);
-    
-    cubemap->newFaceCondition.notify_all();
 }
 
 void copyFromGPUToCPU(CubemapFace* face)
@@ -317,4 +282,26 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
             copyFromGPUToCPU(cubemap->getFace(i).get());
 		}
 	}
+}
+
+// --------------------------------------------------------------------------
+// Start stop management
+
+extern "C" void EXPORT_API StartFromUnity(void** texturePtrs, int cubemapFacesCount, int resolution)
+{
+    // Create and/or open shared memory
+    allocateCubemap(cubemapFacesCount, resolution);
+    
+    for (int i = 0; i < cubemapFacesCount; i++)
+    {
+        setCubemapFaceTexture(texturePtrs[i], i);
+    }
+    
+    thisProcess = new Process(CUBEMAPEXTRACTIONPLUGIN_ID, true);
+}
+
+extern "C" void EXPORT_API StopFromUnity()
+{
+    delete thisProcess;
+    releaseCubemap();
 }

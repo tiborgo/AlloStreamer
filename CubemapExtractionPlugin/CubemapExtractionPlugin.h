@@ -28,3 +28,6 @@
 
 
 #define CUBEMAPEXTRACTIONPLUGIN_ID "HH21V0GKQ98fuU2AHoWidiIRJxIrgDy-CubemapExtractionPlugin"
+
+extern "C" void EXPORT_API StartFromUnity(void** texturePtrs, int cubemapFacesCount, int resolution);
+extern "C" void EXPORT_API StopFromUnity();

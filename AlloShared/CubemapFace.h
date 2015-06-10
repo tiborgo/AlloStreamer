@@ -36,7 +36,6 @@ public:
 		Allocator<SegmentManager>& allocator);
 
 	boost::chrono::system_clock::time_point getPresentationTime();
-	
 };
 
 class CubemapFace : public Frame
@@ -73,7 +72,6 @@ public:
 	int count();
 
 	boost::interprocess::interprocess_mutex mutex;
-	boost::interprocess::interprocess_condition newFaceCondition;
 
 private:
 	typedef boost::interprocess::allocator<CubemapFace::Ptr, SegmentManager>
