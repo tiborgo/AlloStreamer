@@ -194,45 +194,42 @@ void CubemapFaceSource::frameFaceLoop()
 		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->mutex);
 
 		AVFrame* frame;
-
-		// Only frame face if spare faces are available
-		// Otherwise skip this frame
-		if (framePool.wait_and_pop(frame))
+		if (!framePool.wait_and_pop(frame))
 		{
-			// Fill frame
-			avpicture_fill((AVPicture*)frame,
-				(uint8_t*)face->pixels.get(),
-				face->format,
-				face->width,
-				face->height);
+            return;
+        }
+        
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
+        
+        // Fill frame
+        avpicture_fill((AVPicture*)frame,
+            (uint8_t*)face->pixels.get(),
+            face->format,
+            face->width,
+            face->height);
 
-			// Set the actual presentation time
-			// It is in the past probably but we will try our best
-			AVRational microSecBase = { 1, 1000000 };
-			bc::microseconds presentationTimeSinceEpochMicroSec =
-				bc::duration_cast<bc::microseconds>(face->getPresentationTime().time_since_epoch());
-			
-			
-			const time_t time = bc::system_clock::to_time_t(face->getPresentationTime());
+        // Set the actual presentation time
+        // It is in the past probably but we will try our best
+        AVRational microSecBase = { 1, 1000000 };
+        bc::microseconds presentationTimeSinceEpochMicroSec =
+            bc::duration_cast<bc::microseconds>(face->getPresentationTime().time_since_epoch());
+        
+        
+//        const time_t time = bc::system_clock::to_time_t(face->getPresentationTime());
+//
+//        // Maybe the put_time will be implemented later?
+//        struct tm* tm = localtime(&time);
+//        char timeStr[128];
+//        strftime (timeStr, sizeof(timeStr), "%c",tm);
+        
+        //std::cout << this << " presentation time: " << timeStr << std::endl;
+        //std::cout << this << " frame" << std::endl;
 
-			// Maybe the put_time will be implemented later?
-            struct tm* tm = localtime(&time);
-            char timeStr[128];
-            strftime (timeStr, sizeof(timeStr), "%c",tm);
-            
-            //std::cout << this << " presentation time: " << timeStr << std::endl;
-            //std::cout << this << " frame" << std::endl;
 
+        frame->pts = av_rescale_q(presentationTimeSinceEpochMicroSec.count(), microSecBase, codecContext->time_base);
 
-			frame->pts = av_rescale_q(presentationTimeSinceEpochMicroSec.count(), microSecBase, codecContext->time_base);
-
-			// Make frame available to the encoder
-			frameBuffer.push(frame);
-		}
-		else
-		{
-			return;
-		}
+        // Make frame available to the encoder
+        frameBuffer.push(frame);
 
 		// Wait for new frame
 		while (!face->newPixelsCondition.timed_wait(lock,
