@@ -20,6 +20,7 @@
 static Allocator<ShmSegmentManager>* shmAllocator = nullptr;
 static Process* thisProcess = nullptr;
 static Process alloServerProcess(ALLOSERVER_ID, false);
+static boost::chrono::system_clock::time_point presentationTime;
 
 // Prints a string
 static void DebugLog (const char* str)
@@ -197,7 +198,7 @@ extern "C" void EXPORT_API SetCubemapFaceTextureFromUnity(void* texturePtr, int 
 
 void copyFromGPUToCPU(CubemapFace* face)
 {
-    //presentationTime = boost::chrono::system_clock::now();
+    face->presentationTime = presentationTime;
     
 #if SUPPORT_D3D9
     // D3D9 case
@@ -279,6 +280,8 @@ void copyFromGPUToCPU(CubemapFace* face)
 
 extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 {
+    presentationTime = boost::chrono::system_clock::now();
+    
 	if (g_DeviceType == kGfxRendererD3D9 || g_DeviceType == kGfxRendererD3D11)
 	{
 		boost::thread* threads = new boost::thread[cubemap->count()];

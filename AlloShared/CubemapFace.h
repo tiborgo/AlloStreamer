@@ -27,6 +27,7 @@ public:
 	const boost::uint32_t height;
 	boost::interprocess::offset_ptr<void> pixels;
 	const AVPixelFormat format;
+    boost::chrono::system_clock::time_point presentationTime;
 
 	template<typename SegmentManager>
 	Frame(boost::uint32_t width,
@@ -35,9 +36,7 @@ public:
 		Allocator<SegmentManager>& allocator);
 
 	boost::chrono::system_clock::time_point getPresentationTime();
-
-protected:
-	boost::chrono::system_clock::time_point presentationTime;
+	
 };
 
 class CubemapFace : public Frame
