@@ -18,7 +18,6 @@ CubemapFace::CubemapFace(boost::uint32_t width,
 
 CubemapFace::~CubemapFace()
 {
-    allocator.deallocate(pixels.get(), width * height * 4);
 }
 
 boost::uint32_t CubemapFace::getWidth()
@@ -81,6 +80,7 @@ CubemapFace* CubemapFace::create(boost::uint32_t width,
 void CubemapFace::destroy(CubemapFace* cubemapFace)
 {
     cubemapFace->~CubemapFace();
+    cubemapFace->allocator.deallocate(cubemapFace->pixels.get(), cubemapFace->width * cubemapFace->height * 4);
     cubemapFace->allocator.deallocate(cubemapFace, sizeof(CubemapFace));
 }
 
