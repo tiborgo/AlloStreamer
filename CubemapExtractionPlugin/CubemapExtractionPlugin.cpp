@@ -17,7 +17,7 @@
 // --------------------------------------------------------------------------
 // Helper utilities
 
-static Allocator<ShmSegmentManager>* shmAllocator = nullptr;
+static ShmAllocator* shmAllocator = nullptr;
 static Process* thisProcess = nullptr;
 static Process alloServerProcess(ALLOSERVER_ID, false);
 static boost::chrono::system_clock::time_point presentationTime;
@@ -47,7 +47,7 @@ void allocateSHM(int facesCount, int resolution)
                                                facesCount * sizeof(CubemapFace) +
                                                65536);
     
-    shmAllocator = new Allocator<ShmSegmentManager>(shm.get_segment_manager());
+    shmAllocator = new ShmAllocator(shm.get_segment_manager());
     
     shm.destroy<Cubemap>("Cubemap");
     cubemap = nullptr;

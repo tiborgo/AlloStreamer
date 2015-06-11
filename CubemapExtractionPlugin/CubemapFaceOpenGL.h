@@ -12,10 +12,10 @@ public:
 
 	const GLuint gpuTextureID;
 
-	template <typename SegmentManager>
+	template <typename Allocator>
 	static CubemapFaceOpenGL* create(GLuint textureID,
 		int face,
-		Allocator<SegmentManager>& allocator);
+		Allocator& allocator);
 
 protected:
 

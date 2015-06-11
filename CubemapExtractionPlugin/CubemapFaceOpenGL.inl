@@ -24,11 +24,11 @@ CubemapFaceOpenGL::CubemapFaceOpenGL(
     std::cout << gpuTextureID << std::endl;
 }
 
-template <typename SegmentManager>
+template <typename Allocator>
 CubemapFaceOpenGL* CubemapFaceOpenGL::create(
      GLuint textureID,
      int index,
-     Allocator<SegmentManager>& allocator)
+     Allocator& allocator)
 {
     glBindTexture(GL_TEXTURE_2D, textureID);
     int width, height;

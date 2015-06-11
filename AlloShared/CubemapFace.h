@@ -13,9 +13,6 @@
 #include <boost/chrono/system_clocks.hpp>
 #include <array>
 
-template<typename SegmentManager>
-using Allocator = boost::interprocess::allocator<boost::uint8_t, SegmentManager>;
-
 class CubemapFace
 {
 
@@ -33,13 +30,13 @@ public:
     
     void setPresentationTime(boost::chrono::system_clock::time_point presentationTime);
     
-    template<typename SegmentManager>
+    template<typename Allocator>
     static CubemapFace* create(boost::uint32_t width,
                                boost::uint32_t height,
                                int index,
                                AVPixelFormat format,
                                boost::chrono::system_clock::time_point presentationTime,
-                               Allocator<SegmentManager>& allocator);
+                               Allocator& allocator);
     
 protected:
     CubemapFace(boost::uint32_t width,
@@ -69,9 +66,9 @@ public:
     CubemapFace* getFace(int index);
     int getFacesCount();
     
-    template<typename SegmentManager>
+    template<typename Allocator>
     static Cubemap* create(std::vector<CubemapFace*> faces,
-                           Allocator<SegmentManager>& allocator);
+                           Allocator& allocator);
     
 protected:
     Cubemap(std::vector<CubemapFace*>& faces);
@@ -83,7 +80,9 @@ private:
 
 typedef boost::interprocess::managed_heap_memory::segment_manager HeapSegmentManager;
 // Create the cubemap in shared memory
-typedef boost::interprocess::managed_shared_memory::segment_manager ShmSegmentManager;
+
+typedef boost::interprocess::allocator<boost::uint8_t,
+boost::interprocess::managed_shared_memory::segment_manager> ShmAllocator;
 
 extern boost::interprocess::offset_ptr<Cubemap> cubemap;
 
