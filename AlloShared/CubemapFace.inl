@@ -20,3 +20,11 @@ Cubemap* Cubemap::create(std::vector<CubemapFace*> faces,
     void* addr = allocator.allocate(sizeof(Cubemap)).get();
     return new (addr) Cubemap(faces);
 }
+
+template<typename Allocator>
+StereoCubemap* StereoCubemap::create(std::vector<Cubemap*>& eyes,
+    Allocator& allocator)
+{
+    void* addr = allocator.allocate(sizeof(StereoCubemap)).get();
+    return new (addr) StereoCubemap(eyes);
+}
