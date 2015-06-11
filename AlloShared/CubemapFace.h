@@ -91,6 +91,8 @@ public:
     static StereoCubemap* create(std::vector<Cubemap*>& eyes,
                                  Allocator& allocator);
     
+    static void destroy(StereoCubemap* stereoCubemap);
+    
 protected:
     StereoCubemap(std::vector<Cubemap*>& eyes);
     

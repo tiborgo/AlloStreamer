@@ -13,9 +13,8 @@ extern Stats stats;
 class CubemapSource
 {
 public:
-    //Cubemap* tryGetNextCubemap();
-    virtual AVFrame* tryGetNextFace(int face) = 0;
-    virtual int getFacesCount() = 0;
+    virtual StereoCubemap* tryGetNextCubemap(int desiredResolution, AVPixelFormat desiredFormat) = 0;
+    virtual StereoCubemap* tryGetNextCubemap() = 0;
     
     static CubemapSource* createFromRTSP(const char* url);
     //static destroy(CubemapSource* cubemapSource);

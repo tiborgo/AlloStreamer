@@ -26,6 +26,7 @@ double endTime;
 TaskToken arrivalCheckTimerTask = NULL;
 
 std::vector<H264RawPixelsSink*> H264CubemapSource::sinks;
+std::vector<AVFrame*> H264CubemapSource::lastFrames;
 
 void H264CubemapSource::shutdown(int exitCode)
 {
@@ -174,6 +175,7 @@ void H264CubemapSource::createOutputFiles(char const* periodicFilenameSuffix)
 				// Open window displaying the H.264 video
 				sink = H264RawPixelsSink::createNew(*env, fileSinkBufferSize);
                 sinks.push_back(sink);
+                lastFrames.push_back(NULL);
 			}
 		}
 		subsession->sink = sink;
@@ -422,24 +424,119 @@ void H264CubemapSource::live555Loop(const char* progName, const char* url)
 	env->taskScheduler().doEventLoop(); // does not return
 }
 
-AVFrame* H264CubemapSource::tryGetNextFace(int face)
+StereoCubemap* H264CubemapSource::tryGetNextCubemap(int desiredResolution, AVPixelFormat desiredFormat)
 {
-    if (sinks.size() >= face)
-    {
-        return sinks[face]->getNextFrame();
-    }
-    else
-    {
-        return nullptr;
-    }
+    return tryGetNextCubemapInternal(desiredResolution, desiredFormat, true);
 }
 
-int H264CubemapSource::getFacesCount()
+StereoCubemap* H264CubemapSource::tryGetNextCubemap()
 {
-    return sinks.size();
+    return tryGetNextCubemapInternal(0, AV_PIX_FMT_NONE, false);
+}
+
+StereoCubemap* H264CubemapSource::tryGetNextCubemapInternal(int desiredResolution,
+                                                            AVPixelFormat desiredFormat,
+                                                            bool resize)
+{
+    HeapAllocator heapAllocator;
+    
+    std::vector<CubemapFace*> faces;
+    for (int i = 0; i < sinks.size(); i++)
+    {
+        CubemapFace* face = CubemapFace::create(desiredResolution,
+                                                desiredResolution,
+                                                i,
+                                                desiredFormat,
+                                                boost::chrono::system_clock::time_point(),
+                                                heapAllocator);
+        
+        AVFrame* nextFrame = sinks[i]->getNextFrame();
+        if (nextFrame || lastFrames[i])
+        {
+            if (nextFrame)
+            {
+                AVFrame* resizedFrame;
+                if (resize)
+                {
+                    if (!resizeCtx)
+                    {
+                        // setup resizer for received frames
+                        resizeCtx = sws_getContext(nextFrame->width, nextFrame->height, (AVPixelFormat)nextFrame->format,
+                                                   desiredResolution, desiredResolution, desiredFormat,
+                                                   SWS_BICUBIC, NULL, NULL, NULL);
+                    }
+                    
+                    resizedFrame = av_frame_alloc();
+
+                    if (!resizedFrame)
+                    {
+                        fprintf(stderr, "Could not allocate video frame\n");
+                        return nullptr;
+                    }
+                    resizedFrame->format = desiredFormat;
+                    resizedFrame->width = desiredResolution;
+                    resizedFrame->height = desiredResolution;
+
+                    if (av_image_alloc(resizedFrame->data, resizedFrame->linesize, resizedFrame->width, resizedFrame->height,
+                                       (AVPixelFormat)resizedFrame->format, 32) < 0)
+                    {
+                        fprintf(stderr, "Could not allocate raw picture buffer\n");
+                        return nullptr;
+                    }
+
+                    // resize frame
+                    sws_scale(resizeCtx, nextFrame->data, nextFrame->linesize, 0, nextFrame->height,
+                              resizedFrame->data, resizedFrame->linesize);
+                }
+                else
+                {
+                    resizedFrame = nextFrame;
+                }
+                
+                lastFrames[i] = resizedFrame;
+            }
+        
+            // read pixels from frame
+            if (avpicture_layout((AVPicture*)lastFrames[i], (AVPixelFormat)lastFrames[i]->format,
+                                 lastFrames[i]->width, lastFrames[i]->height,
+                                 (unsigned char*)face->getPixels(), lastFrames[i]->width * lastFrames[i]->height * 4) < 0)
+            {
+                fprintf(stderr, "Could not read pixels from frame\n");
+                return nullptr;
+            }
+        }
+        else
+        {
+            // just use the default pixel buffer of the face
+        }
+//
+//        /*AVRational microSecBase = { 1, 1000000 };
+//        boost::chrono::microseconds presentationTimeSinceEpoch =
+//        boost::chrono::microseconds(av_rescale_q(nextFrame->pts, codecContext->time_base, microSecBase));*/
+//
+        /*boost::interprocess::offset_ptr<void> addr(heapAllocator.allocate(sizeof(Cubemap)));
+        boost::interprocess::offset_ptr<void> pixels(heapAllocator.allocate(nextFrame->width * nextFrame->height * 4));
+        CubemapFace* face = new () CubemapFace(nextFrame->width,
+                                            nextFrame->height,
+                                            i,
+                                            (AVPixelFormat)nextFrame->format,
+                                            boost::chrono::system_clock::time_point(),
+                                            pixels.get());*/
+        
+        
+        
+        
+        faces.push_back(face);
+    }
+
+    std::vector<Cubemap*> eyes;
+    eyes.push_back(Cubemap::create(faces, heapAllocator));
+    return StereoCubemap::create(eyes, heapAllocator);
+    return nullptr;
 }
 
 H264CubemapSource::H264CubemapSource(const char* url)
+: resizeCtx(NULL)
 {
     av_log_set_level(AV_LOG_WARNING);
     

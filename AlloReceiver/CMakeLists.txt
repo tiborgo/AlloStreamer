@@ -40,6 +40,7 @@ target_link_libraries(AlloReceiver
 	${FFMPEG_LIBRARIES}
 	${Live555_LIBRARIES}
 	${X264_LIBRARIES}
+    AlloShared
 )
 target_compile_definitions(AlloReceiver
 	PRIVATE

@@ -107,3 +107,8 @@ int StereoCubemap::getEyesCount()
     }
     return count;
 }
+
+void StereoCubemap::destroy(StereoCubemap* stereoCubemap)
+{
+    
+}

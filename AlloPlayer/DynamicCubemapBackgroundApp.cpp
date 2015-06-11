@@ -4,7 +4,7 @@
 #define STR(x) QUOTE(x)
 
 DynamicCubemapBackgroundApp::DynamicCubemapBackgroundApp(CubemapSource* cubemapSource)
-    : al::OmniApp("AlloPlayer", false, 2048), cubemapSource(cubemapSource)
+    : al::OmniApp("AlloPlayer", false, 2048), cubemapSource(cubemapSource), cubemap(nullptr)
 {
     nav().smooth(0.8);
     
@@ -32,11 +32,6 @@ DynamicCubemapBackgroundApp::DynamicCubemapBackgroundApp(CubemapSource* cubemapS
     light.pos(5, 5, 5);
     
     resizeCtx = nullptr;
-    
-    for (int i = 0; i < cubemapSource->getFacesCount(); i++)
-    {
-        currentFrames.push_back(nullptr);
-    }
 }
 
 DynamicCubemapBackgroundApp::~DynamicCubemapBackgroundApp()
@@ -52,6 +47,22 @@ bool DynamicCubemapBackgroundApp::onCreate()
 bool DynamicCubemapBackgroundApp::onFrame()
 {
     now = al::MainLoop::now();
+    
+    StereoCubemap* nextCubemap = cubemapSource->tryGetNextCubemap(mOmni.resolution(), AV_PIX_FMT_RGB24);
+    if (nextCubemap)
+    {
+        if (cubemap)
+        {
+            StereoCubemap::destroy(cubemap);
+        }
+        cubemap = nextCubemap;
+        newCubemap = true;
+    }
+    else
+    {
+        newCubemap = false;
+    }
+    
     //std::cout << "FPS: " << FPS::fps() << std::endl;
     bool result = OmniApp::onFrame();
     stats.displayedFrame();
@@ -60,103 +71,36 @@ bool DynamicCubemapBackgroundApp::onFrame()
 
 void DynamicCubemapBackgroundApp::onDraw(al::Graphics& gl)
 {
-    int face = mOmni.face();
-    int resolution = mOmni.resolution();
+    int faceIndex = mOmni.face();
     
+    // render cubemap
+    if (cubemap && cubemap->getEyesCount() > 0)
     {
-        // get next frame
-        
-        if (cubemapSource->getFacesCount() > face)
+        Cubemap* eye = cubemap->getEye(0);
+        if (eye->getFacesCount() > faceIndex)
         {
-            AVFrame* nextFrame = cubemapSource->tryGetNextFace(face);
-            AVFrame* currentFrame = currentFrames[face];
+            CubemapFace* face = eye->getFace(faceIndex);
             
-            if(nextFrame)
-            {
-                if (currentFrame)
-                {
-                    av_freep(&currentFrame->data[0]);
-                    //av_frame_free(&currentFrame); // crashes for some reason
-                    
-                }
-                currentFrames[face] = currentFrame = nextFrame;
-            }
+            glUseProgram(0);
+            glDepthMask(GL_FALSE);
             
-            if (currentFrame)
+            // draw the background
+            glDrawPixels(face->getWidth(),
+                         face->getHeight(),
+                         GL_RGB,
+                         GL_UNSIGNED_BYTE,
+                         (GLvoid*)face->getPixels());
+            
+            glDepthMask(GL_TRUE);
+            
+            
+            
+            if(newCubemap)
             {
-                if (!resizeCtx)
-                {
-                    // setup resizer for received frames
-                    resizeCtx = sws_getContext(
-                                               currentFrame->width, currentFrame->height, (AVPixelFormat)currentFrame->format,
-                                               resolution, resolution, AV_PIX_FMT_RGB24,
-                                               SWS_BICUBIC, NULL, NULL, NULL);
-                }
-
-                AVFrame* resizedFrame = av_frame_alloc();
-                if (!resizedFrame)
-                {
-                    fprintf(stderr, "Could not allocate video frame\n");
-                    exit(1);
-                }
-                resizedFrame->format = AV_PIX_FMT_RGB24;
-                resizedFrame->width = resolution;
-                resizedFrame->height = resolution;
-
-                if (av_image_alloc(resizedFrame->data, resizedFrame->linesize, resizedFrame->width, resizedFrame->height,
-                                   (AVPixelFormat)resizedFrame->format, 32) < 0)
-                {
-                    fprintf(stderr, "Could not allocate raw picture buffer\n");
-                    exit(1);
-                }
-
-                // resize frame
-                sws_scale(resizeCtx, currentFrame->data, currentFrame->linesize, 0, currentFrame->height,
-                          resizedFrame->data, resizedFrame->linesize);
-
-                unsigned char* pixels = new unsigned char[resizedFrame->width * resizedFrame->height * 3];
-                //unsigned char* pixels = new unsigned char[resolution * resolution * 3];
-                
-                // read pixels from frame
-                if (avpicture_layout((AVPicture*)resizedFrame, (AVPixelFormat)resizedFrame->format,
-                                     resizedFrame->width, resizedFrame->height,
-                                     pixels, resizedFrame->width * resizedFrame->height * 3) < 0)
-                {
-                    fprintf(stderr, "Could not resize frame\n");
-                    exit(1);
-                }
-                
-                glUseProgram(0);
-                glDepthMask(GL_FALSE);
-                
-                // draw the background
-                glDrawPixels(resizedFrame->width,
-                             resizedFrame->height,
-                             GL_RGB,
-                             GL_UNSIGNED_BYTE,
-                             (GLvoid*)pixels);
-//                glDrawPixels(resolution,
-//                             resolution,
-//                             GL_RGB,
-//                             GL_UNSIGNED_BYTE,
-//                             (GLvoid*)pixels);
-                
-                glDepthMask(GL_TRUE);
-                
-                delete[] pixels;
-                
-                av_freep(&resizedFrame->data[0]);
-                av_frame_free(&resizedFrame);
-                
-                if(nextFrame)
-                {
-                    stats.displayedCubemapFace(face);
-                }
+                stats.displayedCubemapFace(faceIndex);
             }
         }
     }
-    
-    
     
     light();
     mShader.begin();

@@ -11,14 +11,14 @@
 class H264CubemapSource : public CubemapSource
 {
 public:
-    //Cubemap* tryGetNextCubemap();
-    AVFrame* tryGetNextFace(int face);
-    int getFacesCount();
+    virtual StereoCubemap* tryGetNextCubemap(int desiredResolution, AVPixelFormat desiredFormat);
+    virtual StereoCubemap* tryGetNextCubemap();
     
     H264CubemapSource(const char* url);
     
 private:
     static std::vector<H264RawPixelsSink*> sinks;
+    static std::vector<AVFrame*> lastFrames;
     
     static void shutdown(int exitCode = 1);
     static void subsessionAfterPlaying(void* clientData);
@@ -32,4 +32,8 @@ private:
     static void continueAfterDESCRIBE(RTSPClient*, int resultCode, char* resultString);
     static void continueAfterOPTIONS(RTSPClient*, int resultCode, char* resultString);
     static void live555Loop(const char* progName, const char* url);
+    
+    virtual StereoCubemap* tryGetNextCubemapInternal(int desiredResolution, AVPixelFormat desiredFormat, bool resize);
+    
+    SwsContext* resizeCtx;
 };

@@ -8,23 +8,24 @@ CubemapFace* CubemapFace::create(boost::uint32_t width,
     boost::chrono::system_clock::time_point presentationTime,
     Allocator& allocator)
 {
-    void* addr = allocator.allocate(sizeof(Cubemap)).get();
-    void* pixels = allocator.allocate(width * height * 4).get();
-    return new (addr) CubemapFace(width, height, index, format, presentationTime, pixels);
+    boost::interprocess::offset_ptr<void> addr(allocator.allocate(sizeof(CubemapFace)));
+    boost::interprocess::offset_ptr<void> pixels(allocator.allocate(width * height * 4));
+    return new (addr.get()) CubemapFace(width, height, index, format, presentationTime, pixels.get());
 }
 
 template<typename Allocator>
 Cubemap* Cubemap::create(std::vector<CubemapFace*> faces,
     Allocator& allocator)
 {
-    void* addr = allocator.allocate(sizeof(Cubemap)).get();
-    return new (addr) Cubemap(faces);
+    boost::interprocess::offset_ptr<void> addr(allocator.allocate(sizeof(Cubemap)));
+    return new (addr.get()) Cubemap(faces);
 }
 
 template<typename Allocator>
 StereoCubemap* StereoCubemap::create(std::vector<Cubemap*>& eyes,
     Allocator& allocator)
 {
-    void* addr = allocator.allocate(sizeof(StereoCubemap)).get();
-    return new (addr) StereoCubemap(eyes);
+    boost::interprocess::offset_ptr<void> addr(allocator.allocate(sizeof(StereoCubemap)));
+    return new (addr.get()) StereoCubemap(eyes);
 }
+

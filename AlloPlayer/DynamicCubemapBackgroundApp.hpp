@@ -21,6 +21,8 @@ struct DynamicCubemapBackgroundApp : al::OmniApp
     std::vector<AVFrame*> currentFrames;
     SwsContext* resizeCtx;
     CubemapSource* cubemapSource;
+    StereoCubemap* cubemap;
+    bool newCubemap;
 
     DynamicCubemapBackgroundApp(CubemapSource* cubemapSource);
     
