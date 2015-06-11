@@ -19,12 +19,12 @@ public:
 
 protected:
 
-	template <typename SegmentManager>
 	CubemapFaceOpenGL(
 		boost::uint32_t width,
 		boost::uint32_t height,
 		int index,
-		Allocator<SegmentManager>& allocator,
+        boost::chrono::system_clock::time_point presentationTime,
+		void* pixels,
 		GLuint gpuTextureID
 		);
 };

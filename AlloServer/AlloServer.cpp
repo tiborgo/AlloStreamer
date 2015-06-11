@@ -67,7 +67,7 @@ void addFaceSubstream0(void*)
         
         state->face = cubemap->getFace(i);
 
-        Port rtpPort(RTP_PORT_NUM + state->face->index);
+        Port rtpPort(RTP_PORT_NUM + state->face->getIndex());
         Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, TTL);
         rtpGroupsock->multicastSendOnly(); // we're a SSM source
 
@@ -82,7 +82,7 @@ void addFaceSubstream0(void*)
         state->source =  H264VideoStreamDiscreteFramer::createNew(*env, CubemapFaceSource::createNew(*env, state->face));
         state->sink->startPlaying(*state->source, NULL, NULL);
 
-        std::cout << "added face " << state->face->index << std::endl;
+        std::cout << "added face " << state->face->getIndex() << std::endl;
     }
 }
 
@@ -94,7 +94,7 @@ void removeFaceSubstreams0(void*)
         faceStream.sink->stopPlaying();
         Medium::close(faceStream.sink);
         Medium::close(faceStream.source);
-        std::cout << "removed face " << faceStream.face->index << std::endl;
+        std::cout << "removed face " << faceStream.face->getIndex() << std::endl;
     }
     faceStreams.clear();
     sms->deleteAllSubsessions();

@@ -5,19 +5,20 @@
 
 #if SUPPORT_OPENGL
 
-template <typename SegmentManager>
 CubemapFaceOpenGL::CubemapFaceOpenGL(
     boost::uint32_t width,
     boost::uint32_t height,
     int index,
-    Allocator<SegmentManager>& allocator,
+    boost::chrono::system_clock::time_point presentationTime,
+    void* pixels,
     GLuint gpuTextureID)
 	:
 	CubemapFace(width,
 	height,
 	index,
 	AV_PIX_FMT_RGB24,
-	allocator),
+    presentationTime,
+	pixels),
 	gpuTextureID(gpuTextureID)
 {
     std::cout << gpuTextureID << std::endl;
@@ -34,12 +35,14 @@ CubemapFaceOpenGL* CubemapFaceOpenGL::create(
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
 
+    void* pixels = allocator.allocate(width * height * 4).get();
 	CubemapFaceOpenGL* addr = (CubemapFaceOpenGL*)allocator.allocate(sizeof(CubemapFaceOpenGL)).get();
 
 	return new (addr)CubemapFaceOpenGL(width,
 		height,
 		index,
-		allocator,
+        boost::chrono::system_clock::now(),
+		pixels,
 		textureID);
 }
 

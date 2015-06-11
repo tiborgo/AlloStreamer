@@ -167,7 +167,7 @@ CubemapFace* getCubemapFaceFromTexture(void* texturePtr, int index)
 
 void copyFromGPUToCPU(CubemapFace* face)
 {
-    face->presentationTime = presentationTime;
+    face->setPresentationTime(presentationTime);
     
     // PREPARE COPYING
     
@@ -209,19 +209,19 @@ void copyFromGPUToCPU(CubemapFace* face)
     }
 #endif
     
-    while (!face->mutex.timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
+    while (!face->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
     {
         if (!alloServerProcess.isAlive())
         {
             // Reset the mutex otherwise it will block forever
             // Hacky solution indeed
-            void* addr = &face->mutex;
+            void* addr = &face->getMutex();
             new (addr) boost::interprocess::interprocess_mutex;
             return;
         }
     }
 
-    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->mutex,
+    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->getMutex(),
                                                                                    boost::interprocess::accept_ownership);
     // COPY
     
@@ -250,11 +250,11 @@ void copyFromGPUToCPU(CubemapFace* face)
     if (g_DeviceType == kGfxRendererOpenGL)
     {
         CubemapFaceOpenGL* faceOpenGL = (CubemapFaceOpenGL*)face;
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, faceOpenGL->pixels.get());
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, faceOpenGL->getPixels());
     }
 #endif
     
-    face->newPixelsCondition.notify_all();
+    face->getNewPixelsCondition().notify_all();
 }
 
 // --------------------------------------------------------------------------

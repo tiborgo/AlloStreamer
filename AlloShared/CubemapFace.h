@@ -16,46 +16,48 @@
 template<typename SegmentManager>
 using Allocator = boost::interprocess::allocator<boost::uint8_t, SegmentManager>;
 
-class Frame
-{
-public:
-	//template<typename MemoryAlgorithm>
-	//using SegmentManager = boost::interprocess::segment_manager_base<MemoryAlgorithm>;
-	
-	typedef boost::interprocess::offset_ptr<Frame> Ptr;
-
-	const boost::uint32_t width;
-	const boost::uint32_t height;
-	boost::interprocess::offset_ptr<void> pixels;
-	const AVPixelFormat format;
-    boost::chrono::system_clock::time_point presentationTime;
-
-	template<typename SegmentManager>
-	Frame(boost::uint32_t width,
-		boost::uint32_t height,
-		AVPixelFormat format,
-		Allocator<SegmentManager>& allocator);
-
-	boost::chrono::system_clock::time_point getPresentationTime();
-};
-
-class CubemapFace : public Frame
+class CubemapFace
 {
 
 public:
 	typedef boost::interprocess::offset_ptr<CubemapFace> Ptr;
-
-	const int index;
-
-	template<typename SegmentManager>
-	CubemapFace(boost::uint32_t width,
-		boost::uint32_t height,
-		int index,
-		AVPixelFormat format,
-		Allocator<SegmentManager>& allocator);
-
-	boost::interprocess::interprocess_mutex mutex;
-	boost::interprocess::interprocess_condition newPixelsCondition;
+    
+    boost::uint32_t getWidth();
+    boost::uint32_t getHeight();
+    int getIndex();
+    AVPixelFormat getFormat();
+    boost::chrono::system_clock::time_point getPresentationTime();
+    void* getPixels();
+    boost::interprocess::interprocess_mutex& getMutex();
+    boost::interprocess::interprocess_condition& getNewPixelsCondition();
+    
+    void setPresentationTime(boost::chrono::system_clock::time_point presentationTime);
+    
+    template<typename SegmentManager>
+    static CubemapFace* create(boost::uint32_t width,
+                               boost::uint32_t height,
+                               int index,
+                               AVPixelFormat format,
+                               boost::chrono::system_clock::time_point presentationTime,
+                               Allocator<SegmentManager>& allocator);
+    
+protected:
+    CubemapFace(boost::uint32_t width,
+                boost::uint32_t height,
+                int index,
+                AVPixelFormat format,
+                boost::chrono::system_clock::time_point presentationTime,
+                void* pixels);
+    
+private:
+    boost::uint32_t width;
+    boost::uint32_t height;
+    int index;
+    AVPixelFormat format;
+    boost::chrono::system_clock::time_point presentationTime;
+    boost::interprocess::offset_ptr<void> pixels;
+    boost::interprocess::interprocess_mutex mutex;
+    boost::interprocess::interprocess_condition newPixelsCondition;
 };
 
 class Cubemap

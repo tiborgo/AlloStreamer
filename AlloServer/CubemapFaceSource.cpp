@@ -75,14 +75,14 @@ img_convert_ctx(NULL)
 			fprintf(stderr, "Could not allocate video frame\n");
 			exit(1);
 		}
-		frame->format = face->format;
-		frame->width = face->width;
-		frame->height = face->height;
+		frame->format = face->getFormat();
+		frame->width = face->getWidth();
+		frame->height = face->getHeight();
 
 		/* the image can be allocated by any means and av_image_alloc() is
 		* just the most convenient way if av_malloc() is to be used */
 		if (av_image_alloc(frame->data, frame->linesize, frame->width, frame->height,
-			face->format, 32) < 0)
+			face->getFormat(), 32) < 0)
 		{
 			fprintf(stderr, "Could not allocate raw picture buffer\n");
 			exit(1);
@@ -117,8 +117,8 @@ img_convert_ctx(NULL)
 	/* put sample parameters */
 	codecContext->bit_rate = BIT_RATE;
 	/* resolution must be a multiple of two */
-	codecContext->width = face->width;
-	codecContext->height = face->height;
+	codecContext->width = face->getWidth();
+	codecContext->height = face->getHeight();
 	/* frames per second */
 	codecContext->time_base = av_make_q(1, FPS);
 	codecContext->gop_size = 20; /* emit one intra frame every ten frames */
@@ -191,7 +191,7 @@ void CubemapFaceSource::frameFaceLoop()
 
 	while (!destructing)
 	{
-        while (!face->mutex.timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
+        while (!face->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
         {
             if (destructing)
             {
@@ -199,7 +199,7 @@ void CubemapFaceSource::frameFaceLoop()
             }
         }
         
-		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->mutex,
+		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->getMutex(),
                                                                                        boost::interprocess::accept_ownership);
 
 		AVFrame* frame;
@@ -210,10 +210,10 @@ void CubemapFaceSource::frameFaceLoop()
         
         // Fill frame
         avpicture_fill((AVPicture*)frame,
-            (uint8_t*)face->pixels.get(),
-            face->format,
-            face->width,
-            face->height);
+            (uint8_t*)face->getPixels(),
+            face->getFormat(),
+            face->getWidth(),
+            face->getHeight());
 
         // Set the actual presentation time
         // It is in the past probably but we will try our best
@@ -239,7 +239,7 @@ void CubemapFaceSource::frameFaceLoop()
         frameBuffer.push(frame);
 
 		// Wait for new frame
-		while (!face->newPixelsCondition.timed_wait(lock,
+		while (!face->getNewPixelsCondition().timed_wait(lock,
 			boost::get_system_time() + boost::posix_time::milliseconds(100)))
 		{
 			if (destructing)
