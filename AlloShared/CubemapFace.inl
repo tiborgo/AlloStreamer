@@ -25,31 +25,11 @@ CubemapFace::CubemapFace(boost::uint32_t width,
 
 }
 
-template <typename SegmentManager>
-Cubemap<SegmentManager>::Cubemap(Allocator<SegmentManager>& allocator)
-: faces(FacePtrAllocator(allocator.get_segment_manager()))
+template<typename SegmentManager>
+Cubemap* Cubemap::create(std::vector<CubemapFace*> faces,
+    Allocator<SegmentManager>& allocator)
 {
-
-}
-
-template <typename SegmentManager>
-void Cubemap<SegmentManager>::setFace(CubemapFace::Ptr& face)
-{
-	if (faces.size() <= face->index)
-    {
-		faces.resize(face->index + 1);
-	}
-	faces[face->index] = face;
-}
-
-template <typename SegmentManager>
-CubemapFace::Ptr Cubemap<SegmentManager>::getFace(int index)
-{
-	return faces[index];
-}
-
-template <typename SegmentManager>
-int Cubemap<SegmentManager>::count()
-{
-	return faces.size();
+    void* addr = allocator.allocate(sizeof(Cubemap)).get();
+    
+    return new (addr) Cubemap(faces);
 }

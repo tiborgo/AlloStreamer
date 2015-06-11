@@ -35,28 +35,31 @@ static void DebugLog (const char* str)
 
 boost::interprocess::managed_shared_memory shm;
 
-void allocateCubemap(int facesCount, int resolution)
+void allocateSHM(int facesCount, int resolution)
 {
-	if (!cubemap)
-	{
-		boost::interprocess::shared_memory_object::remove(SHM_NAME);
-
-		shm =
-			boost::interprocess::managed_shared_memory(boost::interprocess::open_or_create,
-			SHM_NAME,
-			resolution * resolution * 4 * facesCount +
-			sizeof(CubemapImpl) + 
-			facesCount * sizeof(CubemapFace) +
-			65536);
-
-		shmAllocator = new Allocator<ShmSegmentManager>(shm.get_segment_manager());
-
-		shm.destroy<CubemapImpl>("Cubemap");
-        cubemap = shm.construct<CubemapImpl>("Cubemap")(boost::ref(*shmAllocator));
-	}
+    boost::interprocess::shared_memory_object::remove(SHM_NAME);
+    
+    shm =
+    boost::interprocess::managed_shared_memory(boost::interprocess::open_or_create,
+                                               SHM_NAME,
+                                               resolution * resolution * 4 * facesCount +
+                                               sizeof(Cubemap) +
+                                               facesCount * sizeof(CubemapFace) +
+                                               65536);
+    
+    shmAllocator = new Allocator<ShmSegmentManager>(shm.get_segment_manager());
+    
+    shm.destroy<Cubemap>("Cubemap");
+    cubemap = nullptr;
 }
 
-void releaseCubemap()
+void allocateCubemap(std::vector<CubemapFace*>& faces)
+{
+    cubemap = Cubemap::create(faces, *shmAllocator);
+    Cubemap::Ptr cubemapPtr = *shm.construct<Cubemap::Ptr>("Cubemap")(cubemap.get());
+}
+
+void releaseSHM()
 {
     boost::interprocess::shared_memory_object::remove(SHM_NAME);
     cubemap = nullptr;
@@ -116,13 +119,13 @@ extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType,
 	#endif
 }
 
-void setCubemapFaceTexture(void* texturePtr, int index)
+CubemapFace* getCubemapFaceFromTexture(void* texturePtr, int index)
 {
 	// A script calls this at initialization time; just remember the texture pointer here.
 	// Will update texture pixels each frame from the plugin rendering event (texture update
 	// needs to happen on the rendering thread).
     
-    CubemapFace::Ptr face;
+    CubemapFace* face = nullptr;
 
 #if SUPPORT_D3D9
 	// D3D9 case
@@ -159,7 +162,7 @@ void setCubemapFaceTexture(void* texturePtr, int index)
 	}
 #endif
     
-    cubemap->setFace(face);
+    return face;
 }
 
 void copyFromGPUToCPU(CubemapFace* face)
@@ -266,20 +269,20 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
     
 	if (g_DeviceType == kGfxRendererD3D9 || g_DeviceType == kGfxRendererD3D11)
 	{
-		boost::thread* threads = new boost::thread[cubemap->count()];
+		boost::thread* threads = new boost::thread[cubemap->getFacesCount()];
 
-		for (int i = 0; i < cubemap->count(); i++) {
-			threads[i] = boost::thread(boost::bind(&copyFromGPUToCPU, cubemap->getFace(i).get()));
+		for (int i = 0; i < cubemap->getFacesCount(); i++) {
+			threads[i] = boost::thread(boost::bind(&copyFromGPUToCPU, cubemap->getFace(i)));
 		}
 
-		for (int i = 0; i < cubemap->count(); i++) {
+		for (int i = 0; i < cubemap->getFacesCount(); i++) {
 			threads[i].join();
 		}
 
 	}
 	else {
-		for (int i = 0; i < cubemap->count(); i++) {
-            copyFromGPUToCPU(cubemap->getFace(i).get());
+		for (int i = 0; i < cubemap->getFacesCount(); i++) {
+            copyFromGPUToCPU(cubemap->getFace(i));
 		}
 	}
 }
@@ -290,12 +293,13 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 extern "C" void EXPORT_API StartFromUnity(void** texturePtrs, int cubemapFacesCount, int resolution)
 {
     // Create and/or open shared memory
-    allocateCubemap(cubemapFacesCount, resolution);
-    
+    allocateSHM(cubemapFacesCount, resolution);
+    std::vector<CubemapFace*> faces;
     for (int i = 0; i < cubemapFacesCount; i++)
     {
-        setCubemapFaceTexture(texturePtrs[i], i);
+        faces.push_back(getCubemapFaceFromTexture(texturePtrs[i], i));
     }
+    allocateCubemap(faces);
     
     thisProcess = new Process(CUBEMAPEXTRACTIONPLUGIN_ID, true);
 }
@@ -303,5 +307,5 @@ extern "C" void EXPORT_API StartFromUnity(void** texturePtrs, int cubemapFacesCo
 extern "C" void EXPORT_API StopFromUnity()
 {
     delete thisProcess;
-    releaseCubemap();
+    releaseSHM();
 }

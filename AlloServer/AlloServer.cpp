@@ -60,12 +60,12 @@ void addFaceSubstream0(void*)
         announceStream(rtspServer, sms);
     }
 
-    for (int i = 0; i < cubemap->count(); i++)
+    for (int i = 0; i < cubemap->getFacesCount(); i++)
     {
         faceStreams.push_back(FaceStreamState());
         FaceStreamState* state = &faceStreams.back();
         
-        state->face = cubemap->getFace(i).get();
+        state->face = cubemap->getFace(i);
 
         Port rtpPort(RTP_PORT_NUM + state->face->index);
         Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, TTL);
@@ -153,7 +153,7 @@ void startStreaming()
     shm = new boost::interprocess::managed_shared_memory(boost::interprocess::open_only,
                                                          SHM_NAME);
 
-    cubemap = shm->find<CubemapImpl>("Cubemap").first;
+    cubemap = shm->find<Cubemap::Ptr>("Cubemap").first->get();
 
     isStoppingStreaming = false;
     env->taskScheduler().triggerEvent(addFaceSubstreamsTriggerId, NULL);

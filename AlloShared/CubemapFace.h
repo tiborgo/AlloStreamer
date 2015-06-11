@@ -11,6 +11,7 @@
 #include <boost/interprocess/sync/interprocess_condition.hpp>
 #include <libavutil/pixfmt.h>
 #include <boost/chrono/system_clocks.hpp>
+#include <array>
 
 template<typename SegmentManager>
 using Allocator = boost::interprocess::allocator<boost::uint8_t, SegmentManager>;
@@ -57,33 +58,31 @@ public:
 	boost::interprocess::interprocess_condition newPixelsCondition;
 };
 
-template<typename SegmentManager>
 class Cubemap
 {
 public:
-	/*typedef boost::interprocess::allocator<typename Face, typename Face::SegmentManager>
-		FaceAllocator;*/
-	typedef boost::interprocess::offset_ptr<Cubemap> Ptr;
-
-	Cubemap(Allocator<SegmentManager>& allocator);
-
-	void setFace(CubemapFace::Ptr& face);
-	typename CubemapFace::Ptr getFace(int index);
-	int count();
-
-	boost::interprocess::interprocess_mutex mutex;
-
+    typedef boost::interprocess::offset_ptr<Cubemap> Ptr;
+    static const int MAX_FACES_COUNT = 6;
+    
+    CubemapFace* getFace(int index);
+    int getFacesCount();
+    
+    template<typename SegmentManager>
+    static Cubemap* create(std::vector<CubemapFace*> faces,
+                           Allocator<SegmentManager>& allocator);
+    
+protected:
+    Cubemap(std::vector<CubemapFace*>& faces);
+    
 private:
-	typedef boost::interprocess::allocator<CubemapFace::Ptr, SegmentManager>
-		FacePtrAllocator;
-
-	boost::interprocess::vector<CubemapFace::Ptr, FacePtrAllocator> faces;
+    std::array<CubemapFace::Ptr, MAX_FACES_COUNT> faces;
+    boost::interprocess::interprocess_mutex mutex;
 };
 
 typedef boost::interprocess::managed_heap_memory::segment_manager HeapSegmentManager;
 // Create the cubemap in shared memory
 typedef boost::interprocess::managed_shared_memory::segment_manager ShmSegmentManager;
-typedef Cubemap<ShmSegmentManager> CubemapImpl;
-extern boost::interprocess::offset_ptr<CubemapImpl> cubemap;
+
+extern boost::interprocess::offset_ptr<Cubemap> cubemap;
 
 #include "CubemapFace.inl"
