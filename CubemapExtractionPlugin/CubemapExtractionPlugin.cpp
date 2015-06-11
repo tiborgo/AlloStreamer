@@ -47,7 +47,7 @@ void allocateSHM(int facesCount, int resolution)
                                                facesCount * sizeof(CubemapFace) +
                                                65536);
     
-    shmAllocator = new ShmAllocator(shm.get_segment_manager());
+    shmAllocator = new ShmAllocator(*(new ShmAllocator::BoostShmAllocator(shm.get_segment_manager())));
     
     shm.destroy<Cubemap>("Cubemap");
     cubemap = nullptr;

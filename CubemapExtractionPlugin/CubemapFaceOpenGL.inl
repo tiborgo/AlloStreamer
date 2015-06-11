@@ -35,10 +35,10 @@ CubemapFaceOpenGL* CubemapFaceOpenGL::create(
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
 
-    void* pixels = allocator.allocate(width * height * 4).get();
-	CubemapFaceOpenGL* addr = (CubemapFaceOpenGL*)allocator.allocate(sizeof(CubemapFaceOpenGL)).get();
+    void* pixels = allocator.allocate(width * height * 4);
+	CubemapFaceOpenGL* addr = (CubemapFaceOpenGL*)allocator.allocate(sizeof(CubemapFaceOpenGL));
 
-	return new (addr)CubemapFaceOpenGL(width,
+	return new (addr) CubemapFaceOpenGL(width,
 		height,
 		index,
         boost::chrono::system_clock::now(),

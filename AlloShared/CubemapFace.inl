@@ -20,12 +20,3 @@ Cubemap* Cubemap::create(std::vector<CubemapFace*> faces,
     boost::interprocess::offset_ptr<void> addr(allocator.allocate(sizeof(Cubemap)));
     return new (addr.get()) Cubemap(faces);
 }
-
-template<typename Allocator>
-StereoCubemap* StereoCubemap::create(std::vector<Cubemap*>& eyes,
-    Allocator& allocator)
-{
-    boost::interprocess::offset_ptr<void> addr(allocator.allocate(sizeof(StereoCubemap)));
-    return new (addr.get()) StereoCubemap(eyes);
-}
-

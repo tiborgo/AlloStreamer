@@ -13,6 +13,13 @@
 #include <boost/chrono/system_clocks.hpp>
 #include <array>
 
+class Allocator
+{
+public:
+    virtual void* allocate(size_t bytes) = 0;
+    virtual void deallocate(void* object, size_t size) = 0;
+};
+
 class CubemapFace
 {
 
@@ -87,23 +94,61 @@ public:
     Cubemap* getEye(int index);
     int getEyesCount();
     
-    template<typename Allocator>
     static StereoCubemap* create(std::vector<Cubemap*>& eyes,
                                  Allocator& allocator);
     
     static void destroy(StereoCubemap* stereoCubemap);
     
 protected:
-    StereoCubemap(std::vector<Cubemap*>& eyes);
+    StereoCubemap(std::vector<Cubemap*>& eyes, Allocator& allocator);
+    ~StereoCubemap();
     
 private:
     std::array<Cubemap::Ptr, MAX_EYES_COUNT> eyes;
+    Allocator& allocator;
 };
 
-typedef std::allocator<boost::uint8_t> HeapAllocator;
+class HeapAllocator : public Allocator
+{
+public:
+    void* allocate(size_t bytes)
+    {
+        std::allocator<boost::uint8_t> allocator;
+        return allocator.allocate(bytes);
+    }
+    
+    void deallocate(void* object, size_t size)
+    {
+        std::allocator<boost::uint8_t> allocator;
+        return allocator.deallocate((boost::uint8_t*)object, size);
+    }
+};
 
-typedef boost::interprocess::allocator<boost::uint8_t,
-    boost::interprocess::managed_shared_memory::segment_manager> ShmAllocator;
+class ShmAllocator : public Allocator
+{
+public:
+    typedef boost::interprocess::allocator<boost::uint8_t,
+        boost::interprocess::managed_shared_memory::segment_manager> BoostShmAllocator;
+    
+    void* allocate(size_t bytes)
+    {
+        return allocator.allocate(bytes).get();
+    }
+    
+    void deallocate(void* object, size_t size)
+    {
+        return allocator.deallocate((boost::uint8_t*)object, size);
+    }
+    
+    ShmAllocator(BoostShmAllocator& allocator)
+    : allocator(allocator)
+    {
+    }
+private:
+    BoostShmAllocator& allocator;
+};
+
+
 
 extern boost::interprocess::offset_ptr<Cubemap> cubemap;
 

@@ -35,4 +35,5 @@ private:
     SwsContext* resizeCtx;
     int resolution;
     AVPixelFormat format;
+    HeapAllocator heapAllocator;
 };

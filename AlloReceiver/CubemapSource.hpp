@@ -14,5 +14,5 @@ public:
     virtual StereoCubemap* getCurrentCubemap() = 0;
     
     static CubemapSource* createFromRTSP(const char* url, int resolution, AVPixelFormat format);
-    static destroy(CubemapSource* cubemapSource);
+    static void destroy(CubemapSource* cubemapSource);
 };

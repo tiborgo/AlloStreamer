@@ -84,12 +84,18 @@ int Cubemap::getFacesCount()
     return count;
 }
 
-StereoCubemap::StereoCubemap(std::vector<Cubemap*>& eyes)
+StereoCubemap::StereoCubemap(std::vector<Cubemap*>& eyes,
+                             Allocator& allocator)
+    : allocator(allocator)
 {
     for (int i = 0; i < eyes.size(); i++)
     {
         this->eyes[i] = eyes[i];
     }
+}
+
+StereoCubemap::~StereoCubemap()
+{
 }
 
 Cubemap* StereoCubemap::getEye(int index)
@@ -108,7 +114,17 @@ int StereoCubemap::getEyesCount()
     return count;
 }
 
+
+StereoCubemap* StereoCubemap::create(std::vector<Cubemap*>& eyes,
+                                     Allocator& allocator)
+{
+    void* addr = allocator.allocate(sizeof(StereoCubemap));
+    return new (addr) StereoCubemap(eyes, allocator);
+}
+
+
 void StereoCubemap::destroy(StereoCubemap* stereoCubemap)
 {
-    
+    stereoCubemap->~StereoCubemap();
+    stereoCubemap->allocator.deallocate(stereoCubemap, sizeof(StereoCubemap));
 }

@@ -426,8 +426,6 @@ void H264CubemapSource::live555Loop(const char* progName, const char* url)
 
 StereoCubemap* H264CubemapSource::getCurrentCubemap()
 {
-    HeapAllocator heapAllocator;
-    
     std::vector<CubemapFace*> faces;
     for (int i = 0; i < sinks.size(); i++)
     {
