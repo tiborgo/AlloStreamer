@@ -470,6 +470,17 @@ StereoCubemap* H264CubemapSource::getCurrentCubemap()
                 // resize frame
                 sws_scale(resizeCtx, nextFrame->data, nextFrame->linesize, 0, nextFrame->height,
                           resizedFrame->data, resizedFrame->linesize);
+
+                // delete nextFrame
+                av_freep(&nextFrame->data[0]);
+                //av_frame_free(&nextFrame);
+
+                // delete lastFrames[i]
+                if (lastFrames[i])
+                {
+                    av_freep(&lastFrames[i]->data[0]);
+                    av_frame_free(&lastFrames[i]);
+                }
                 
                 lastFrames[i] = resizedFrame;
             }
@@ -491,15 +502,6 @@ StereoCubemap* H264CubemapSource::getCurrentCubemap()
 //        /*AVRational microSecBase = { 1, 1000000 };
 //        boost::chrono::microseconds presentationTimeSinceEpoch =
 //        boost::chrono::microseconds(av_rescale_q(nextFrame->pts, codecContext->time_base, microSecBase));*/
-//
-        /*boost::interprocess::offset_ptr<void> addr(heapAllocator.allocate(sizeof(Cubemap)));
-        boost::interprocess::offset_ptr<void> pixels(heapAllocator.allocate(nextFrame->width * nextFrame->height * 4));
-        CubemapFace* face = new () CubemapFace(nextFrame->width,
-                                            nextFrame->height,
-                                            i,
-                                            (AVPixelFormat)nextFrame->format,
-                                            boost::chrono::system_clock::time_point(),
-                                            pixels.get());*/
         
         
         
