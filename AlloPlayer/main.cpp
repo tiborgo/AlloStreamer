@@ -19,4 +19,6 @@ int main(int argc, char* argv[])
     
     DynamicCubemapBackgroundApp dynamicCubemapBackgroundApp(cubemapSource);
     dynamicCubemapBackgroundApp.start();
+    
+    CubemapSource::destroy(cubemapSource);
 }

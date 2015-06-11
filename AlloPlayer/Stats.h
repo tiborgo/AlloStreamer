@@ -6,6 +6,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/function.hpp>
 #include <initializer_list>
+#include <boost/thread.hpp>
 
 class Stats
 {
