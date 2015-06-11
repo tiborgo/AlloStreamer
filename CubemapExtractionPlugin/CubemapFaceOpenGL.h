@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CubemapExtractionPlugin.h"
-#include "AlloShared/CubemapFace.h"
+#include "AlloShared/Cubemap.hpp"
 
 #if SUPPORT_OPENGL
 

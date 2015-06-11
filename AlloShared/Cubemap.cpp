@@ -1,4 +1,4 @@
-#include "CubemapFace.h"
+#include "Cubemap.hpp"
 
 boost::interprocess::offset_ptr<Cubemap> cubemap;
 

@@ -109,5 +109,3 @@ private:
 };
 
 extern boost::interprocess::offset_ptr<Cubemap> cubemap;
-
-#include "CubemapFace.inl"

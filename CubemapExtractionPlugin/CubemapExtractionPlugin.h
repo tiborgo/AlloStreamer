@@ -2,7 +2,7 @@
 
 #include <boost/cstdint.hpp>
 #include "UnityPluginInterface.h"
-#include "AlloShared/CubemapFace.h"
+#include "AlloShared/Cubemap.hpp"
 
 // --------------------------------------------------------------------------
 // Include headers for the graphics APIs we support

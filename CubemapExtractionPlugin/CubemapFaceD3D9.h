@@ -2,7 +2,7 @@
 
 #include <boost/cstdint.hpp>
 #include "UnityPluginInterface.h"
-#include "AlloShared/CubemapFace.h"
+#include "AlloShared/Cubemap.hpp"
 
 #if SUPPORT_D3D9
 

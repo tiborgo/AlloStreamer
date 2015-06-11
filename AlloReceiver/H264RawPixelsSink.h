@@ -15,7 +15,7 @@ extern "C"
 #include <boost/thread.hpp>
 
 #include "AlloShared/concurrent_queue.h"
-#include "AlloShared/CubemapFace.h"
+#include "AlloShared/Cubemap.hpp"
 
 class H264RawPixelsSink: public MediaSink
 {

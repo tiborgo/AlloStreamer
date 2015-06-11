@@ -1,12 +1,11 @@
 set(SOURCES
-	CubemapFace.cpp
-	CubemapFace.inl
+	Cubemap.cpp
     Process.cpp
     Allocator.cpp
 )
 	
 set(HEADERS
-	CubemapFace.h
+	Cubemap.hpp
     config.h
     concurrent_queue.h
     Process.h

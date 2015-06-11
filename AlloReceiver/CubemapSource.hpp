@@ -6,7 +6,7 @@ extern "C"
 }
 
 #include "AlloReceiver.h"
-#include "AlloShared/CubemapFace.h"
+#include "AlloShared/Cubemap.hpp"
 
 class CubemapSource
 {
