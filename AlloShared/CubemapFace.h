@@ -78,6 +78,26 @@ private:
     boost::interprocess::interprocess_mutex mutex;
 };
 
+class StereoCubemap
+{
+public:
+    typedef boost::interprocess::offset_ptr<StereoCubemap> Ptr;
+    static const int MAX_EYES_COUNT = 2;
+    
+    Cubemap* getEye(int index);
+    int getEyesCount();
+    
+    template<typename Allocator>
+    static StereoCubemap* create(std::vector<Cubemap*>& eyes,
+                                 Allocator& allocator);
+    
+protected:
+    StereoCubemap(std::vector<Cubemap*>& eyes);
+    
+private:
+    std::array<Cubemap::Ptr, MAX_EYES_COUNT> eyes;
+};
+
 typedef std::allocator<boost::uint8_t> HeapAllocator;
 
 typedef boost::interprocess::allocator<boost::uint8_t,

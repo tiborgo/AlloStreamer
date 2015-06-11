@@ -83,3 +83,27 @@ int Cubemap::getFacesCount()
     }
     return count;
 }
+
+StereoCubemap::StereoCubemap(std::vector<Cubemap*>& eyes)
+{
+    for (int i = 0; i < eyes.size(); i++)
+    {
+        this->eyes[i] = eyes[i];
+    }
+}
+
+Cubemap* StereoCubemap::getEye(int index)
+{
+    return eyes[index].get();
+}
+
+int StereoCubemap::getEyesCount()
+{
+    int count = 0;
+    
+    while (count < MAX_EYES_COUNT && eyes[count].get() != nullptr)
+    {
+        count++;
+    }
+    return count;
+}
