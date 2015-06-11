@@ -11,14 +11,16 @@ CubemapFaceOpenGL::CubemapFaceOpenGL(
     int index,
     boost::chrono::system_clock::time_point presentationTime,
     void* pixels,
-    GLuint gpuTextureID)
+    GLuint gpuTextureID,
+    Allocator& allocator)
 	:
 	CubemapFace(width,
-	height,
-	index,
-	AV_PIX_FMT_RGB24,
-    presentationTime,
-	pixels),
+                height,
+                index,
+                AV_PIX_FMT_RGB24,
+                presentationTime,
+                pixels,
+                allocator),
 	gpuTextureID(gpuTextureID)
 {
     std::cout << gpuTextureID << std::endl;
@@ -43,7 +45,8 @@ CubemapFaceOpenGL* CubemapFaceOpenGL::create(
 		index,
         boost::chrono::system_clock::now(),
 		pixels,
-		textureID);
+		textureID,
+        allocator);
 }
 
 #endif

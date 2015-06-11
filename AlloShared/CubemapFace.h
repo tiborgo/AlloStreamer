@@ -37,13 +37,13 @@ public:
     
     void setPresentationTime(boost::chrono::system_clock::time_point presentationTime);
     
-    template<typename Allocator>
     static CubemapFace* create(boost::uint32_t width,
                                boost::uint32_t height,
                                int index,
                                AVPixelFormat format,
                                boost::chrono::system_clock::time_point presentationTime,
                                Allocator& allocator);
+    static void destroy(CubemapFace* cubemapFace);
     
 protected:
     CubemapFace(boost::uint32_t width,
@@ -51,7 +51,10 @@ protected:
                 int index,
                 AVPixelFormat format,
                 boost::chrono::system_clock::time_point presentationTime,
-                void* pixels);
+                void* pixels,
+                Allocator& allocator);
+    ~CubemapFace();
+    Allocator& allocator;
     
 private:
     boost::uint32_t width;
@@ -73,12 +76,15 @@ public:
     CubemapFace* getFace(int index);
     int getFacesCount();
     
-    template<typename Allocator>
     static Cubemap* create(std::vector<CubemapFace*> faces,
                            Allocator& allocator);
+    static void destroy(Cubemap* cubemap);
     
 protected:
-    Cubemap(std::vector<CubemapFace*>& faces);
+    Cubemap(std::vector<CubemapFace*>& faces,
+            Allocator& allocator);
+    ~Cubemap();
+    Allocator& allocator;
     
 private:
     std::array<CubemapFace::Ptr, MAX_FACES_COUNT> faces;
@@ -96,16 +102,15 @@ public:
     
     static StereoCubemap* create(std::vector<Cubemap*>& eyes,
                                  Allocator& allocator);
-    
     static void destroy(StereoCubemap* stereoCubemap);
     
 protected:
     StereoCubemap(std::vector<Cubemap*>& eyes, Allocator& allocator);
     ~StereoCubemap();
+    Allocator& allocator;
     
 private:
     std::array<Cubemap::Ptr, MAX_EYES_COUNT> eyes;
-    Allocator& allocator;
 };
 
 class HeapAllocator : public Allocator

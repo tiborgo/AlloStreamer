@@ -7,12 +7,18 @@ CubemapFace::CubemapFace(boost::uint32_t width,
                          int index,
                          AVPixelFormat format,
                          boost::chrono::system_clock::time_point presentationTime,
-                         void* pixels)
+                         void* pixels,
+                         Allocator& allocator)
     :
-    width(width), height(height), index(index), format(format),
+    allocator(allocator), width(width), height(height), index(index), format(format),
     presentationTime(presentationTime), pixels(pixels)
 {
 
+}
+
+CubemapFace::~CubemapFace()
+{
+    allocator.deallocate(pixels.get(), width * height * 4);
 }
 
 boost::uint32_t CubemapFace::getWidth()
@@ -60,11 +66,40 @@ void CubemapFace::setPresentationTime(boost::chrono::system_clock::time_point pr
     this->presentationTime = presentationTime;
 }
 
-Cubemap::Cubemap(std::vector<CubemapFace*>& faces)
+CubemapFace* CubemapFace::create(boost::uint32_t width,
+                                 boost::uint32_t height,
+                                 int index,
+                                 AVPixelFormat format,
+                                 boost::chrono::system_clock::time_point presentationTime,
+                                 Allocator& allocator)
+{
+    void* addr = allocator.allocate(sizeof(CubemapFace));
+    void* pixels = allocator.allocate(width * height * 4);
+    return new (addr) CubemapFace(width, height, index, format, presentationTime, pixels, allocator);
+}
+
+void CubemapFace::destroy(CubemapFace* cubemapFace)
+{
+    cubemapFace->~CubemapFace();
+    cubemapFace->allocator.deallocate(cubemapFace, sizeof(CubemapFace));
+}
+
+Cubemap::Cubemap(std::vector<CubemapFace*>& faces,
+                 Allocator& allocator)
+    :
+    allocator(allocator)
 {
     for (int i = 0; i < faces.size(); i++)
     {
         this->faces[i] = faces[i];
+    }
+}
+
+Cubemap::~Cubemap()
+{
+    for (int i = 0; i < getFacesCount(); i++)
+    {
+        CubemapFace::destroy(faces[i].get());
     }
 }
 
@@ -84,9 +119,23 @@ int Cubemap::getFacesCount()
     return count;
 }
 
+Cubemap* Cubemap::create(std::vector<CubemapFace*> faces,
+                         Allocator& allocator)
+{
+    void* addr = allocator.allocate(sizeof(Cubemap));
+    return new (addr) Cubemap(faces, allocator);
+}
+
+void Cubemap::destroy(Cubemap* cubemap)
+{
+    cubemap->~Cubemap();
+    cubemap->allocator.deallocate(cubemap, sizeof(Cubemap));
+}
+
 StereoCubemap::StereoCubemap(std::vector<Cubemap*>& eyes,
                              Allocator& allocator)
-    : allocator(allocator)
+    :
+    allocator(allocator)
 {
     for (int i = 0; i < eyes.size(); i++)
     {
@@ -96,6 +145,10 @@ StereoCubemap::StereoCubemap(std::vector<Cubemap*>& eyes,
 
 StereoCubemap::~StereoCubemap()
 {
+    for (int i = 0; i < getEyesCount(); i++)
+    {
+        Cubemap::destroy(eyes[i].get());
+    }
 }
 
 Cubemap* StereoCubemap::getEye(int index)
@@ -106,7 +159,7 @@ Cubemap* StereoCubemap::getEye(int index)
 int StereoCubemap::getEyesCount()
 {
     int count = 0;
-    
+
     while (count < MAX_EYES_COUNT && eyes[count].get() != nullptr)
     {
         count++;
