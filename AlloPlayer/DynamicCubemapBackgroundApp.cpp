@@ -48,20 +48,11 @@ bool DynamicCubemapBackgroundApp::onFrame()
 {
     now = al::MainLoop::now();
     
-    StereoCubemap* nextCubemap = cubemapSource->tryGetNextCubemap(mOmni.resolution(), AV_PIX_FMT_RGB24);
-    if (nextCubemap)
+    if (cubemap)
     {
-        if (cubemap)
-        {
-            StereoCubemap::destroy(cubemap);
-        }
-        cubemap = nextCubemap;
-        newCubemap = true;
+        StereoCubemap::destroy(cubemap);
     }
-    else
-    {
-        newCubemap = false;
-    }
+    cubemap = cubemapSource->getCurrentCubemap();
     
     //std::cout << "FPS: " << FPS::fps() << std::endl;
     bool result = OmniApp::onFrame();
@@ -74,7 +65,7 @@ void DynamicCubemapBackgroundApp::onDraw(al::Graphics& gl)
     int faceIndex = mOmni.face();
     
     // render cubemap
-    if (cubemap && cubemap->getEyesCount() > 0)
+    if (cubemap->getEyesCount() > 0)
     {
         Cubemap* eye = cubemap->getEye(0);
         if (eye->getFacesCount() > faceIndex)

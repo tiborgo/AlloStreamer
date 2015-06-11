@@ -424,29 +424,17 @@ void H264CubemapSource::live555Loop(const char* progName, const char* url)
 	env->taskScheduler().doEventLoop(); // does not return
 }
 
-StereoCubemap* H264CubemapSource::tryGetNextCubemap(int desiredResolution, AVPixelFormat desiredFormat)
-{
-    return tryGetNextCubemapInternal(desiredResolution, desiredFormat, true);
-}
-
-StereoCubemap* H264CubemapSource::tryGetNextCubemap()
-{
-    return tryGetNextCubemapInternal(0, AV_PIX_FMT_NONE, false);
-}
-
-StereoCubemap* H264CubemapSource::tryGetNextCubemapInternal(int desiredResolution,
-                                                            AVPixelFormat desiredFormat,
-                                                            bool resize)
+StereoCubemap* H264CubemapSource::getCurrentCubemap()
 {
     HeapAllocator heapAllocator;
     
     std::vector<CubemapFace*> faces;
     for (int i = 0; i < sinks.size(); i++)
     {
-        CubemapFace* face = CubemapFace::create(desiredResolution,
-                                                desiredResolution,
+        CubemapFace* face = CubemapFace::create(resolution,
+                                                resolution,
                                                 i,
-                                                desiredFormat,
+                                                format,
                                                 boost::chrono::system_clock::time_point(),
                                                 heapAllocator);
         
@@ -455,43 +443,35 @@ StereoCubemap* H264CubemapSource::tryGetNextCubemapInternal(int desiredResolutio
         {
             if (nextFrame)
             {
-                AVFrame* resizedFrame;
-                if (resize)
+                if (!resizeCtx)
                 {
-                    if (!resizeCtx)
-                    {
-                        // setup resizer for received frames
-                        resizeCtx = sws_getContext(nextFrame->width, nextFrame->height, (AVPixelFormat)nextFrame->format,
-                                                   desiredResolution, desiredResolution, desiredFormat,
-                                                   SWS_BICUBIC, NULL, NULL, NULL);
-                    }
-                    
-                    resizedFrame = av_frame_alloc();
-
-                    if (!resizedFrame)
-                    {
-                        fprintf(stderr, "Could not allocate video frame\n");
-                        return nullptr;
-                    }
-                    resizedFrame->format = desiredFormat;
-                    resizedFrame->width = desiredResolution;
-                    resizedFrame->height = desiredResolution;
-
-                    if (av_image_alloc(resizedFrame->data, resizedFrame->linesize, resizedFrame->width, resizedFrame->height,
-                                       (AVPixelFormat)resizedFrame->format, 32) < 0)
-                    {
-                        fprintf(stderr, "Could not allocate raw picture buffer\n");
-                        return nullptr;
-                    }
-
-                    // resize frame
-                    sws_scale(resizeCtx, nextFrame->data, nextFrame->linesize, 0, nextFrame->height,
-                              resizedFrame->data, resizedFrame->linesize);
+                    // setup resizer for received frames
+                    resizeCtx = sws_getContext(nextFrame->width, nextFrame->height, (AVPixelFormat)nextFrame->format,
+                                               resolution, resolution, format,
+                                               SWS_BICUBIC, NULL, NULL, NULL);
                 }
-                else
+                
+                AVFrame* resizedFrame = av_frame_alloc();
+
+                if (!resizedFrame)
                 {
-                    resizedFrame = nextFrame;
+                    fprintf(stderr, "Could not allocate video frame\n");
+                    return nullptr;
                 }
+                resizedFrame->format = format;
+                resizedFrame->width = resolution;
+                resizedFrame->height = resolution;
+
+                if (av_image_alloc(resizedFrame->data, resizedFrame->linesize, resizedFrame->width, resizedFrame->height,
+                                   (AVPixelFormat)resizedFrame->format, 32) < 0)
+                {
+                    fprintf(stderr, "Could not allocate raw picture buffer\n");
+                    return nullptr;
+                }
+
+                // resize frame
+                sws_scale(resizeCtx, nextFrame->data, nextFrame->linesize, 0, nextFrame->height,
+                          resizedFrame->data, resizedFrame->linesize);
                 
                 lastFrames[i] = resizedFrame;
             }
@@ -535,8 +515,8 @@ StereoCubemap* H264CubemapSource::tryGetNextCubemapInternal(int desiredResolutio
     return nullptr;
 }
 
-H264CubemapSource::H264CubemapSource(const char* url)
-: resizeCtx(NULL)
+H264CubemapSource::H264CubemapSource(const char* url, int resolution, AVPixelFormat format)
+: resizeCtx(NULL), resolution(resolution), format(format)
 {
     av_log_set_level(AV_LOG_WARNING);
     

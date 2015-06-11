@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
         return -1;
     }
     
-    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(argv[1]);
+    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(argv[1], 2048, AV_PIX_FMT_RGB24);
     
     DynamicCubemapBackgroundApp dynamicCubemapBackgroundApp(cubemapSource);
     dynamicCubemapBackgroundApp.start();
