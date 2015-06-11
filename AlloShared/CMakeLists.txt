@@ -2,6 +2,7 @@ set(SOURCES
 	CubemapFace.cpp
 	CubemapFace.inl
     Process.cpp
+    Allocator.cpp
 )
 	
 set(HEADERS
@@ -9,6 +10,7 @@ set(HEADERS
     config.h
     concurrent_queue.h
     Process.h
+    Allocator.h
 )
 
 find_package(Boost

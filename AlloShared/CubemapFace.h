@@ -13,12 +13,7 @@
 #include <boost/chrono/system_clocks.hpp>
 #include <array>
 
-class Allocator
-{
-public:
-    virtual void* allocate(size_t bytes) = 0;
-    virtual void deallocate(void* object, size_t size) = 0;
-};
+#include "Allocator.h"
 
 class CubemapFace
 {
@@ -112,48 +107,6 @@ protected:
 private:
     std::array<Cubemap::Ptr, MAX_EYES_COUNT> eyes;
 };
-
-class HeapAllocator : public Allocator
-{
-public:
-    void* allocate(size_t bytes)
-    {
-        std::allocator<boost::uint8_t> allocator;
-        return allocator.allocate(bytes);
-    }
-    
-    void deallocate(void* object, size_t size)
-    {
-        std::allocator<boost::uint8_t> allocator;
-        return allocator.deallocate((boost::uint8_t*)object, size);
-    }
-};
-
-class ShmAllocator : public Allocator
-{
-public:
-    typedef boost::interprocess::allocator<boost::uint8_t,
-        boost::interprocess::managed_shared_memory::segment_manager> BoostShmAllocator;
-    
-    void* allocate(size_t bytes)
-    {
-        return allocator.allocate(bytes).get();
-    }
-    
-    void deallocate(void* object, size_t size)
-    {
-        return allocator.deallocate((boost::uint8_t*)object, size);
-    }
-    
-    ShmAllocator(BoostShmAllocator& allocator)
-    : allocator(allocator)
-    {
-    }
-private:
-    BoostShmAllocator& allocator;
-};
-
-
 
 extern boost::interprocess::offset_ptr<Cubemap> cubemap;
 
