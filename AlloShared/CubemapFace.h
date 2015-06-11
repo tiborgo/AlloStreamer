@@ -78,11 +78,10 @@ private:
     boost::interprocess::interprocess_mutex mutex;
 };
 
-typedef boost::interprocess::managed_heap_memory::segment_manager HeapSegmentManager;
-// Create the cubemap in shared memory
+typedef std::allocator<boost::uint8_t> HeapAllocator;
 
 typedef boost::interprocess::allocator<boost::uint8_t,
-boost::interprocess::managed_shared_memory::segment_manager> ShmAllocator;
+    boost::interprocess::managed_shared_memory::segment_manager> ShmAllocator;
 
 extern boost::interprocess::offset_ptr<Cubemap> cubemap;
 
