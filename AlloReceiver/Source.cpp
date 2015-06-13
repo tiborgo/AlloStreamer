@@ -1,5 +1,6 @@
 #include "CubemapSource.hpp"
 #include "Source.hpp"
+#include <boost/thread/mutex.hpp>
 
 class CubemapVideoSource : public VideoSource {
 public:
@@ -96,9 +97,20 @@ public:
     virtual Frame* getCurrentFrame() {
         return cached_frame_;
     }
+    virtual void lockFrame() {
+        mutex.lock();
+    }
+    virtual void unlockFrame() {
+        mutex.unlock();
+    }
     virtual bool nextFrame() {
+        CubemapStereoFrame* new_frame_ = new CubemapStereoFrame(source_->getCurrentCubemap());
+
+        lockFrame();
         if(cached_frame_) delete cached_frame_;
-        cached_frame_ = new CubemapStereoFrame(source_->getCurrentCubemap());
+        cached_frame_ = new_frame_;
+        unlockFrame();
+
         return true;
     }
 
@@ -108,6 +120,8 @@ public:
 
     CubemapStereoFrame* cached_frame_;
     CubemapSource* source_;
+
+    boost::mutex mutex;
 };
 
 VideoSource::~VideoSource() { }

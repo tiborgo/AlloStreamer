@@ -37,6 +37,8 @@ public:
     virtual Frame* getCurrentFrame() = 0;
     // Move to the next frame, return true if frame updated.
     virtual bool nextFrame() = 0;
+    virtual void lockFrame() = 0;
+    virtual void unlockFrame() = 0;
 
     struct CreateFlags {
         int resolution;

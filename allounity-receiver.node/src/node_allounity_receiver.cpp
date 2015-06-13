@@ -3,6 +3,9 @@
 #include <nan.h>
 #include <node_buffer.h>
 
+#include <uv.h>
+#include <pthread.h>
+
 using namespace v8;
 
 class NODE_VideoSource : public node::ObjectWrap {
@@ -16,8 +19,9 @@ public:
         tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
         // Prototype.
-        NODE_SET_PROTOTYPE_METHOD(tpl, "nextFrame", NODE_nextFrame);
         NODE_SET_PROTOTYPE_METHOD(tpl, "getCurrentFrame", NODE_getCurrentFrame);
+        NODE_SET_PROTOTYPE_METHOD(tpl, "onFrame", NODE_onFrame);
+        NODE_SET_PROTOTYPE_METHOD(tpl, "stop", NODE_stop);
 
         NanAssignPersistent(constructor, tpl->GetFunction());
 
@@ -26,19 +30,78 @@ public:
     }
 
 private:
-    explicit NODE_VideoSource(VideoSource* source) : source_(source) {
+    explicit NODE_VideoSource(const char* url, const VideoSource::CreateFlags& flags)
+    : url_(url), flags_(flags), should_exit_(false) {
 
+        source_ = nullptr;
+
+        loop_ = uv_default_loop();
+        uv_async_init(loop_, &async_, PostMessage);
+        async_.data = this;
+        uv_mutex_init(&mutex_);
+
+        pthread_create(&thread_, 0, WorkerThread, this);
     }
     ~NODE_VideoSource() {
-        VideoSource::Destroy(source_);
+        stop();
+        uv_unref((uv_handle_t*)&async_);
+        uv_mutex_destroy(&mutex_);
+        NanDisposePersistent(on_frame_callback_);
     }
 
+    std::string url_;
+    VideoSource::CreateFlags flags_;
     VideoSource* source_;
+    Persistent<Function> on_frame_callback_;
+    bool should_exit_;
+    pthread_t thread_;
+
+    uv_loop_t *loop_;
+    uv_async_t async_;
+    uv_mutex_t mutex_;
+
+    static void* WorkerThread(void* userdata) {
+        NODE_VideoSource* self = (NODE_VideoSource*)userdata;
+        self->workerThread();
+        return 0;
+    }
+
+    void stop() {
+        if(!should_exit_) {
+            should_exit_ = true;
+            pthread_join(thread_, 0);
+        }
+    }
+
+    void workerThread() {
+        try {
+            source_ = VideoSource::CreateFromRTSP(url_.c_str(), flags_);
+            while(!should_exit_) {
+                bool result = source_->nextFrame();
+                if(result) {
+                    uv_async_send(&async_);
+                }
+            }
+            VideoSource::Destroy(source_);
+        } catch(...) {
+        }
+    }
+
+    static void PostMessage(uv_async_t *handle) {
+        NODE_VideoSource* self = (NODE_VideoSource*)handle->data;
+
+        const int argc = 0;
+        Handle<Value> argv[argc] = { };
+        self->source_->lockFrame();
+        NanNew(self->on_frame_callback_)->Call(NanObjectWrapHandle(self), argc, argv);
+        self->source_->unlockFrame();
+    }
 
     static NAN_METHOD(New);
 
-    static NAN_METHOD(NODE_nextFrame);
+    static NAN_METHOD(NODE_onFrame);
     static NAN_METHOD(NODE_getCurrentFrame);
+    static NAN_METHOD(NODE_stop);
 
     static v8::Persistent<v8::Function> constructor;
 };
@@ -48,7 +111,7 @@ v8::Persistent<v8::Function> NODE_VideoSource::constructor;
 NAN_METHOD(NODE_VideoSource::New) {
     NanScope();
     if (args.IsConstructCall()) {
-        NanUtf8String *url = new NanUtf8String(args[0]);
+        NanUtf8String url(args[0]);
         VideoSource::CreateFlags flags;
 
         if(args[1]->IsObject()) {
@@ -64,9 +127,7 @@ NAN_METHOD(NODE_VideoSource::New) {
             }
         }
 
-        VideoSource* source = VideoSource::CreateFromRTSP(**url, flags);
-
-        NODE_VideoSource* obj = new NODE_VideoSource(source);
+        NODE_VideoSource* obj = new NODE_VideoSource(*url, flags);
         obj->Wrap(args.This());
         NanReturnValue(args.This());
     }
@@ -76,10 +137,14 @@ NAN_METHOD(NODE_VideoSource::New) {
     }
 }
 
-NAN_METHOD(NODE_VideoSource::NODE_nextFrame) {
+NAN_METHOD(NODE_VideoSource::NODE_onFrame) {
     NanScope();
     NODE_VideoSource* obj = node::ObjectWrap::Unwrap<NODE_VideoSource>(args.This());
-    NanReturnValue(NanNew<Boolean>(obj->source_->nextFrame()));
+    if(!args[0]->IsFunction()) {
+        NanThrowError("VideoSource::onFrame: callback should be function.");
+    }
+    NanAssignPersistent(obj->on_frame_callback_, args[0].As<Function>());
+    NanReturnUndefined();
 }
 
 namespace {
@@ -89,6 +154,7 @@ namespace {
 NAN_METHOD(NODE_VideoSource::NODE_getCurrentFrame) {
     NanScope();
     NODE_VideoSource* obj = node::ObjectWrap::Unwrap<NODE_VideoSource>(args.This());
+    if(!obj->source_) NanReturnUndefined();
 
     VideoSource::Frame* frame = obj->source_->getCurrentFrame();
 
@@ -108,6 +174,13 @@ NAN_METHOD(NODE_VideoSource::NODE_getCurrentFrame) {
     ret->Set(NanNew<String>("stride"), NanNew<Integer>(pixels->stride()));
 
     NanReturnValue(ret);
+}
+
+NAN_METHOD(NODE_VideoSource::NODE_stop) {
+    NanScope();
+    NODE_VideoSource* obj = node::ObjectWrap::Unwrap<NODE_VideoSource>(args.This());
+    obj->stop();
+    NanReturnUndefined();
 }
 
 void NODE_init(v8::Handle<v8::Object> exports) {

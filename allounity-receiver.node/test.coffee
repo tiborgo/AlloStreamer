@@ -167,39 +167,40 @@ omni.onCaptureViewport () ->
 
 allounity = require("allounity_receiver");
 
-video_source = new allounity.VideoSource("rtsp://127.0.0.1:60000/h264ESVideoTest");
+video_source = new allounity.VideoSource("rtsp://127.0.0.1:60000/h264ESVideoTest", {
+    resolution: 256
+});
 
 cubemap_left = new GL.Texture()
 cubemap_right = new GL.Texture()
 
+video_source.onFrame () ->
+    GL.bindTexture(GL.TEXTURE_CUBE_MAP, cubemap_left)
+    GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_MAG_FILTER, GL.LINEAR);
+    GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_MIN_FILTER, GL.LINEAR);
+    GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
+    GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
+    GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_R, GL.CLAMP_TO_EDGE);
+    for i in [0..5]
+        f = video_source.getCurrentFrame(i, 0)
+        if f?
+            GL.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL.RGB, f.width, f.height, 0, GL.RGB, GL.UNSIGNED_BYTE, f.pixels);
+    GL.bindTexture(GL.TEXTURE_CUBE_MAP, cubemap_right)
+    GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_MAG_FILTER, GL.LINEAR);
+    GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_MIN_FILTER, GL.LINEAR);
+    GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
+    GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
+    GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_R, GL.CLAMP_TO_EDGE);
+    for i in [0..5]
+        f = video_source.getCurrentFrame(i, 1)
+        if f?
+            GL.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL.RGB, f.width, f.height, 0, GL.RGB, GL.UNSIGNED_BYTE, f.pixels);
+    GL.bindTexture(GL.TEXTURE_CUBE_MAP, 0)
+    console.log("Frame!")
 
 render = () ->
     omni.capture()
     sz = w.getFramebufferSize()
-
-    if video_source.nextFrame()
-        GL.bindTexture(GL.TEXTURE_CUBE_MAP, cubemap_left)
-        GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_MAG_FILTER, GL.LINEAR);
-        GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_MIN_FILTER, GL.LINEAR);
-        GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
-        GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
-        GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_R, GL.CLAMP_TO_EDGE);
-        for i in [0..5]
-            f = video_source.getCurrentFrame(i, 0)
-            if f?
-                GL.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL.RGB, f.width, f.height, 0, GL.RGB, GL.UNSIGNED_BYTE, f.pixels);
-        GL.bindTexture(GL.TEXTURE_CUBE_MAP, cubemap_right)
-        GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_MAG_FILTER, GL.LINEAR);
-        GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_MIN_FILTER, GL.LINEAR);
-        GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
-        GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
-        GL.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_R, GL.CLAMP_TO_EDGE);
-        for i in [0..5]
-            f = video_source.getCurrentFrame(i, 1)
-            if f?
-                GL.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL.RGB, f.width, f.height, 0, GL.RGB, GL.UNSIGNED_BYTE, f.pixels);
-        GL.bindTexture(GL.TEXTURE_CUBE_MAP, 0)
-        console.log("Frame!")
 
     omni.composite(0, 0, sz[0], sz[1], {
         panorama: [ cubemap_left.id(), cubemap_right.id(), "cubemap" ]
