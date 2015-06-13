@@ -20,6 +20,7 @@ public:
     static RTSPCubemapSourceClient* create();
     
     static RTSPCubemapSourceClient* createNew(char const* rtspURL,
+                                              unsigned int sinkBufferSize,
                                               int verbosityLevel = 0,
                                               char const* applicationName = NULL,
                                               portNumBits tunnelOverHTTPPortNum = 0,
@@ -30,6 +31,7 @@ public:
 protected:
     RTSPCubemapSourceClient(UsageEnvironment& env,
                             char const* rtspURL,
+                            unsigned int sinkBufferSize,
                             int verbosityLevel,
                             char const* applicationName,
                             portNumBits tunnelOverHTTPPortNum,
@@ -63,4 +65,7 @@ protected:
     
 private:
     boost::thread networkThread;
+    MediaSession* session;
+    MediaSubsession* subsession;
+    unsigned int sinkBufferSize;
 };

@@ -1,24 +1,5 @@
 #include "RTSPCubemapSourceClient.hpp"
 
-
-char const* progName;
-UsageEnvironment* env;
-struct timeval startTime;
-char const* streamURL = NULL;
-portNumBits tunnelOverHTTPPortNum = 0;
-int verbosityLevel = 1; // by default, print verbose output
-char const* clientProtocolName = "RTSP";
-char* userAgent = NULL;
-MediaSession* session = NULL;
-int simpleRTPoffsetArg = -1;
-MediaSubsession *subsession;
-unsigned fileSinkBufferSize = 1000000;
-unsigned socketInputBufferSize = 0;
-double initialSeekTime = 0.0f;
-char* initialAbsoluteSeekTime = NULL;
-double endTime;
-TaskToken arrivalCheckTimerTask = NULL;
-
 void RTSPCubemapSourceClient::shutdown(int exitCode)
 {
 }
@@ -42,14 +23,16 @@ void RTSPCubemapSourceClient::subsessionAfterPlaying(void* clientData)
 	//sessionAfterPlaying();
 }
 
-void RTSPCubemapSourceClient::checkForPacketArrival(void* self)
+void RTSPCubemapSourceClient::checkForPacketArrival(void* self_)
 {
+    RTSPCubemapSourceClient* self = (RTSPCubemapSourceClient*)self_;
+    
 	// Check each subsession, to see whether it has received data packets:
 	unsigned numSubsessionsChecked = 0;
 	unsigned numSubsessionsWithReceivedData = 0;
 	unsigned numSubsessionsThatHaveBeenSynced = 0;
 
-	MediaSubsessionIterator iter(*session);
+	MediaSubsessionIterator iter(*self->session);
 	MediaSubsession* subsession;
 	while ((subsession = iter.next()) != NULL)
 	{
@@ -74,12 +57,12 @@ void RTSPCubemapSourceClient::checkForPacketArrival(void* self)
 		gettimeofday(&timeNow, NULL);
 		char timestampStr[100];
 		sprintf(timestampStr, "%ld%03ld", timeNow.tv_sec, (long)(timeNow.tv_usec / 1000));
-		*env << "Data packets have begun arriving [" << timestampStr << "]\007\n";
+		self->envir() << "Data packets have begun arriving [" << timestampStr << "]\007\n";
 		return;
 
 	// No luck, so reschedule this check again, after a delay:
 	int uSecsToDelay = 100000; // 100 ms
-	arrivalCheckTimerTask = env->taskScheduler().scheduleDelayedTask(uSecsToDelay,
+	TaskToken arrivalCheckTimerTask = self->envir().taskScheduler().scheduleDelayedTask(uSecsToDelay,
 		(TaskFunc*)checkForPacketArrival, self);
 }
 
@@ -89,7 +72,7 @@ void RTSPCubemapSourceClient::continueAfterDESCRIBE2(RTSPClient* self_, int resu
     
 	static int count = 0;
 	char* sdpDescription = resultString;
-	*env << "Opened URL \"" << streamURL << "\", returning a SDP description:\n" << sdpDescription << "\n";
+	self->envir() << "Opened URL \"" << self->url() << "\", returning a SDP description:\n" << sdpDescription << "\n";
 	if (count == 0)
 	{
 		self->sendDescribeCommand(continueAfterDESCRIBE2);
@@ -103,14 +86,14 @@ void RTSPCubemapSourceClient::continueAfterPLAY(RTSPClient* self_, int resultCod
     
 	if (resultCode != 0)
 	{
-		*env << "Failed to start playing session: " << resultString << "\n";
+		self->envir() << "Failed to start playing session: " << resultString << "\n";
 		delete[] resultString;
 		self->shutdown();
 		return;
 	}
 	else
 	{
-		*env << "Started playing session\n";
+		self->envir() << "Started playing session\n";
 	}
 	delete[] resultString;
 
@@ -118,10 +101,10 @@ void RTSPCubemapSourceClient::continueAfterPLAY(RTSPClient* self_, int resultCod
 	// repeating the playing
 
 	char const* actionString = "Data is being streamed";
-	*env << actionString << "...\n";
+	self->envir() << actionString << "...\n";
 
 	// Watch for incoming packets (if desired):
-	checkForPacketArrival(NULL);
+	checkForPacketArrival(self);
 	//checkInterPacketGaps(NULL);
 
 	//ourClient->sendDescribeCommand(continueAfterDESCRIBE2);
@@ -132,13 +115,11 @@ void RTSPCubemapSourceClient::subsessionByeHandler(void* clientData)
 {
 	struct timeval timeNow;
 	gettimeofday(&timeNow, NULL);
-	unsigned secsDiff = timeNow.tv_sec - startTime.tv_sec;
 
 	MediaSubsession* subsession = (MediaSubsession*)clientData;
-	*env << "Received RTCP \"BYE\" on \"" << subsession->mediumName()
+	subsession->sink->envir() << "Received RTCP \"BYE\" on \"" << subsession->mediumName()
 		<< "/" << subsession->codecName()
-		<< "\" subsession (after " << secsDiff
-		<< " seconds)\n";
+		<< "\" subsession\n";
 
 	// Act now as if the subsession had closed:
 	subsessionAfterPlaying(subsession);
@@ -151,6 +132,7 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
 	// Create and start "FileSink"s for each subsession:
 
 	MediaSubsessionIterator iter(*session);
+    MediaSubsession* subsession;
 	while ((subsession = iter.next()) != NULL)
 	{
 		if (subsession->readSource() == NULL) continue; // was not initiated
@@ -186,12 +168,12 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
 
 		if (subsession->sink == NULL)
 		{
-			*env << "Failed to create FileSink for \"" << outFileName
-				<< "\": " << env->getResultMsg() << "\n";
+			envir() << "Failed to create FileSink for \"" << outFileName
+				<< "\": " << envir().getResultMsg() << "\n";
 		}
 		else
 		{
-			*env << "Outputting data from the \"" << subsession->mediumName()
+			envir() << "Outputting data from the \"" << subsession->mediumName()
 				<< "/" << subsession->codecName()
 				<< "\" subsession to \"" << outFileName << "\"\n";
 
@@ -230,12 +212,14 @@ void RTSPCubemapSourceClient::setupStreams()
 	createOutputFiles("");
 
 	// Finally, start playing each subsession, to start the data flow:
+    double initialSeekTime = 0.0f;
 	double duration = session->playEndTime() - initialSeekTime; // use SDP end time
 
+    double endTime;
 	endTime = initialSeekTime;
 	endTime = -1.0f;
 
-
+    char* initialAbsoluteSeekTime = NULL;
 	char const* absStartTime = initialAbsoluteSeekTime != NULL ? initialAbsoluteSeekTime : session->absStartTime();
 	if (absStartTime != NULL)
 	{
@@ -255,24 +239,24 @@ void RTSPCubemapSourceClient::continueAfterSETUP(RTSPClient* self_, int resultCo
     
 	if (resultCode == 0)
 	{
-		*env << "Setup \"" << subsession->mediumName()
-			<< "/" << subsession->codecName()
+		self->envir() << "Setup \"" << self->subsession->mediumName()
+			<< "/" << self->subsession->codecName()
 			<< "\" subsession (";
-		if (subsession->rtcpIsMuxed())
+		if (self->subsession->rtcpIsMuxed())
 		{
-			*env << "client port " << subsession->clientPortNum();
+			self->envir() << "client port " << self->subsession->clientPortNum();
 		}
 		else
 		{
-			*env << "client ports " << subsession->clientPortNum()
-				<< "-" << subsession->clientPortNum() + 1;
+			self->envir() << "client ports " << self->subsession->clientPortNum()
+				<< "-" << self->subsession->clientPortNum() + 1;
 		}
-		*env << ")\n";
+		self->envir() << ")\n";
 	}
 	else
 	{
-		*env << "Failed to setup \"" << subsession->mediumName()
-			<< "/" << subsession->codecName()
+        self->envir() << "Failed to setup \"" << self->subsession->mediumName()
+			<< "/" << self->subsession->codecName()
 			<< "\" subsession: " << resultString << "\n";
 	}
 	delete[] resultString;
@@ -287,55 +271,56 @@ void RTSPCubemapSourceClient::continueAfterDESCRIBE(RTSPClient* self_, int resul
     
 	if (resultCode != 0)
 	{
-		*env << "Failed to get a SDP description for the URL \"" << streamURL << "\": " << resultString << "\n";
+		self->envir() << "Failed to get a SDP description for the URL \"" << self->url() << "\": " << resultString << "\n";
 		delete[] resultString;
 		self->shutdown();
 	}
 
 	char* sdpDescription = resultString;
-	*env << "Opened URL \"" << streamURL << "\", returning a SDP description:\n" << sdpDescription << "\n";
+	self->envir() << "Opened URL \"" << self->url() << "\", returning a SDP description:\n" << sdpDescription << "\n";
 
 	// Create a media session object from this SDP description:
-	session = MediaSession::createNew(*env, sdpDescription);
+	self->session = MediaSession::createNew(self->envir(), sdpDescription);
 	delete[] sdpDescription;
-	if (session == NULL)
+	if (self->session == NULL)
 	{
-		*env << "Failed to create a MediaSession object from the SDP description: " << env->getResultMsg() << "\n";
+		self->envir() << "Failed to create a MediaSession object from the SDP description: "
+            << self->envir().getResultMsg() << "\n";
 		self->shutdown();
 	}
-	else if (!session->hasSubsessions())
+	else if (!self->session->hasSubsessions())
 	{
-		*env << "This session has no media subsessions (i.e., no \"m=\" lines)\n";
+		self->envir() << "This session has no media subsessions (i.e., no \"m=\" lines)\n";
 		self->shutdown();
 	}
 
 	// Then, setup the "RTPSource"s for the session:
-	MediaSubsessionIterator iter(*session);
+	MediaSubsessionIterator iter(*self->session);
 	MediaSubsession *subsession;
 	Boolean madeProgress = False;
 	while ((subsession = iter.next()) != NULL)
 	{
 
-		if (!subsession->initiate(simpleRTPoffsetArg))
+		if (!subsession->initiate())
 		{
-			*env << "Unable to create receiver for \"" << subsession->mediumName()
+			self->envir() << "Unable to create receiver for \"" << subsession->mediumName()
 				<< "/" << subsession->codecName()
-				<< "\" subsession: " << env->getResultMsg() << "\n";
+				<< "\" subsession: " << self->envir().getResultMsg() << "\n";
 		}
 		else
 		{
-			*env << "Created receiver for \"" << subsession->mediumName()
+			self->envir() << "Created receiver for \"" << subsession->mediumName()
 				<< "/" << subsession->codecName() << "\" subsession (";
 			if (subsession->rtcpIsMuxed())
 			{
-				*env << "client port " << subsession->clientPortNum();
+				self->envir() << "client port " << subsession->clientPortNum();
 			}
 			else
 			{
-				*env << "client ports " << subsession->clientPortNum()
+				self->envir() << "client ports " << subsession->clientPortNum()
 					<< "-" << subsession->clientPortNum() + 1;
 			}
-			*env << ")\n";
+			self->envir() << ")\n";
 			madeProgress = True;
 
 			
@@ -353,20 +338,11 @@ void RTSPCubemapSourceClient::continueAfterDESCRIBE(RTSPClient* self_, int resul
 				// (The latter case is a heuristic, on the assumption that if the user asked for a large FileSink buffer size,
 				// then the input data rate may be large enough to justify increasing the OS socket buffer size also.)
 				int socketNum = subsession->rtpSource()->RTPgs()->socketNum();
-				unsigned curBufferSize = getReceiveBufferSize(*env, socketNum);
-				if (socketInputBufferSize > 0 || fileSinkBufferSize > curBufferSize)
+				unsigned curBufferSize = getReceiveBufferSize(self->envir(), socketNum);
+				if (self->sinkBufferSize > curBufferSize)
 				{
-					unsigned newBufferSize = socketInputBufferSize > 0 ? socketInputBufferSize : fileSinkBufferSize;
-					newBufferSize = setReceiveBufferTo(*env, socketNum, newBufferSize);
-					if (socketInputBufferSize > 0)
-					{ // The user explicitly asked for the new socket buffer size; announce it:
-						*env << "Changed socket receive buffer size for the \""
-							<< subsession->mediumName()
-							<< "/" << subsession->codecName()
-							<< "\" subsession from "
-							<< curBufferSize << " to "
-							<< newBufferSize << " bytes\n";
-					}
+					unsigned newBufferSize = self->sinkBufferSize;
+					newBufferSize = setReceiveBufferTo(self->envir(), socketNum, newBufferSize);
 				}
 			}
 			//		}
@@ -407,7 +383,7 @@ void RTSPCubemapSourceClient::networkLoop()
     sendOptionsCommand(continueAfterOPTIONS);
     
 	// All subsequent activity takes place within the event loop:
-	env->taskScheduler().doEventLoop(); // does not return
+	envir().taskScheduler().doEventLoop(); // does not return
 }
 
 void RTSPCubemapSourceClient::connect()
@@ -416,6 +392,7 @@ void RTSPCubemapSourceClient::connect()
 }
 
 RTSPCubemapSourceClient* RTSPCubemapSourceClient::createNew(char const* rtspURL,
+                                                            unsigned int sinkBufferSize,
                                                             int verbosityLevel,
                                                             char const* applicationName,
                                                             portNumBits tunnelOverHTTPPortNum,
@@ -423,10 +400,11 @@ RTSPCubemapSourceClient* RTSPCubemapSourceClient::createNew(char const* rtspURL,
 {
     // Begin by setting up our usage environment:
     TaskScheduler* scheduler = BasicTaskScheduler::createNew();
-    ::env = BasicUsageEnvironment::createNew(*scheduler);
+    BasicUsageEnvironment* env = BasicUsageEnvironment::createNew(*scheduler);
     
     return new RTSPCubemapSourceClient(*env,
                                        rtspURL,
+                                       sinkBufferSize,
                                        verbosityLevel,
                                        applicationName,
                                        tunnelOverHTTPPortNum,
@@ -435,16 +413,14 @@ RTSPCubemapSourceClient* RTSPCubemapSourceClient::createNew(char const* rtspURL,
 
 RTSPCubemapSourceClient::RTSPCubemapSourceClient(UsageEnvironment& env,
                                                  char const* rtspURL,
+                                                 unsigned int sinkBufferSize,
                                                  int verbosityLevel,
                                                  char const* applicationName,
                                                  portNumBits tunnelOverHTTPPortNum,
                                                  int socketNumToServer)
     :
-    RTSPClient(env, rtspURL, verbosityLevel, applicationName, tunnelOverHTTPPortNum, socketNumToServer)
+    RTSPClient(env, rtspURL, verbosityLevel, applicationName, tunnelOverHTTPPortNum, socketNumToServer),
+    sinkBufferSize(sinkBufferSize)
 {
-    gettimeofday(&startTime, NULL);
-    
-    streamURL = rtspURL;
-    
-    setUserAgentString(userAgent);
+    //setUserAgentString(userAgent);
 }
