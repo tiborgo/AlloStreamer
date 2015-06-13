@@ -3,14 +3,16 @@ set(SOURCES
 	H264RawPixelsSink.cpp
     Stats.cpp
     CubemapSource.cpp
+    Source.cpp
     H264CubemapSource.cpp
 )
-	
+
 set(HEADERS
 	H264RawPixelsSink.h
     Stats.h
     AlloReceiver.h
     CubemapSource.hpp
+    Source.hpp
     H264CubemapSource.h
 )
 
