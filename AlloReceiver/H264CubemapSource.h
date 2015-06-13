@@ -18,6 +18,7 @@ public:
     
 private:
     virtual MediaSink* getSinkForSubsession(RTSPCubemapSourceClient* client, MediaSubsession* subsession);
+    virtual void didIdentifyStreams(RTSPCubemapSourceClient *client);
     
     std::vector<H264RawPixelsSink*> sinks;
     std::vector<AVFrame*>           lastFrames;
@@ -26,4 +27,5 @@ private:
     AVPixelFormat                   format;
     HeapAllocator                   heapAllocator;
     RTSPCubemapSourceClient*        client;
+    boost::barrier                  didIdentifyStreamsBarrier;
 };

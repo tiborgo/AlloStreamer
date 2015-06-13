@@ -97,13 +97,15 @@ StereoCubemap* H264CubemapSource::getCurrentCubemap()
 
 H264CubemapSource::H264CubemapSource(const char* url, int resolution, AVPixelFormat format)
     :
-    resizeCtx(NULL), resolution(resolution), format(format)
+    resizeCtx(NULL), resolution(resolution), format(format), didIdentifyStreamsBarrier(2)
 {
     av_log_set_level(AV_LOG_WARNING);
     
     client = RTSPCubemapSourceClient::createNew(url, SINK_BUFFER_SIZE);
     client->delegate = this;
     client->connect();
+    // wait until streams are identified
+    didIdentifyStreamsBarrier.wait();
 }
 
 MediaSink* H264CubemapSource::getSinkForSubsession(RTSPCubemapSourceClient* client, MediaSubsession* subsession)
@@ -124,4 +126,9 @@ MediaSink* H264CubemapSource::getSinkForSubsession(RTSPCubemapSourceClient* clie
     {
         return NULL;
     }
+}
+
+void H264CubemapSource::didIdentifyStreams(RTSPCubemapSourceClient *client)
+{
+    didIdentifyStreamsBarrier.wait();
 }

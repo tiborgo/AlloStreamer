@@ -165,7 +165,16 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
 			}
 		}*/
 		//subsession->sink = sink;
-
+    }
+    
+    if (delegate)
+    {
+        delegate->didIdentifyStreams(this);
+    }
+    
+    iter.reset();
+    while ((subsession = iter.next()) != NULL)
+    {
 		if (subsession->sink == NULL)
 		{
 			envir() << "Failed to create FileSink for \"" << outFileName
@@ -422,5 +431,4 @@ RTSPCubemapSourceClient::RTSPCubemapSourceClient(UsageEnvironment& env,
     RTSPClient(env, rtspURL, verbosityLevel, applicationName, tunnelOverHTTPPortNum, socketNumToServer),
     sinkBufferSize(sinkBufferSize)
 {
-    //setUserAgentString(userAgent);
 }

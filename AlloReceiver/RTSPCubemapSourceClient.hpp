@@ -11,6 +11,7 @@ class RTSPCubemapSourceClientDelegate
 {
 public:
     virtual MediaSink* getSinkForSubsession(RTSPCubemapSourceClient* client, MediaSubsession* subsession) = 0;
+    virtual void didIdentifyStreams(RTSPCubemapSourceClient* client) = 0;
 };
 
 class RTSPCubemapSourceClient : public RTSPClient
