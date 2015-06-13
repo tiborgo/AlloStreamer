@@ -8,7 +8,6 @@ Stats stats;
 
 char const* progName;
 UsageEnvironment* env;
-RTSPClient* ourClient = NULL;
 struct timeval startTime;
 char const* streamURL = NULL;
 portNumBits tunnelOverHTTPPortNum = 0;
@@ -25,14 +24,11 @@ char* initialAbsoluteSeekTime = NULL;
 double endTime;
 TaskToken arrivalCheckTimerTask = NULL;
 
-std::vector<H264RawPixelsSink*> H264CubemapSource::sinks;
-std::vector<AVFrame*> H264CubemapSource::lastFrames;
-
-void H264CubemapSource::shutdown(int exitCode)
+void RTSPCubemapSourceClient::shutdown(int exitCode)
 {
 }
 
-void H264CubemapSource::subsessionAfterPlaying(void* clientData)
+void RTSPCubemapSourceClient::subsessionAfterPlaying(void* clientData)
 {
 	// Begin by closing this media subsession's stream:
 	MediaSubsession* subsession = (MediaSubsession*)clientData;
@@ -51,7 +47,7 @@ void H264CubemapSource::subsessionAfterPlaying(void* clientData)
 	//sessionAfterPlaying();
 }
 
-void H264CubemapSource::checkForPacketArrival(void* self)
+void RTSPCubemapSourceClient::checkForPacketArrival(void* self)
 {
 	// Check each subsession, to see whether it has received data packets:
 	unsigned numSubsessionsChecked = 0;
@@ -92,25 +88,29 @@ void H264CubemapSource::checkForPacketArrival(void* self)
 		(TaskFunc*)checkForPacketArrival, self);
 }
 
-void H264CubemapSource::continueAfterDESCRIBE2(RTSPClient*, int resultCode, char* resultString)
+void RTSPCubemapSourceClient::continueAfterDESCRIBE2(RTSPClient* self_, int resultCode, char* resultString)
 {
+    RTSPCubemapSourceClient* self = (RTSPCubemapSourceClient*)self_;
+    
 	static int count = 0;
 	char* sdpDescription = resultString;
 	*env << "Opened URL \"" << streamURL << "\", returning a SDP description:\n" << sdpDescription << "\n";
 	if (count == 0)
 	{
-		ourClient->sendDescribeCommand(continueAfterDESCRIBE2);
+		self->sendDescribeCommand(continueAfterDESCRIBE2);
 	}
 	count++;
 }
 
-void H264CubemapSource::continueAfterPLAY(RTSPClient*, int resultCode, char* resultString)
+void RTSPCubemapSourceClient::continueAfterPLAY(RTSPClient* self_, int resultCode, char* resultString)
 {
+    RTSPCubemapSourceClient* self = (RTSPCubemapSourceClient*)self_;
+    
 	if (resultCode != 0)
 	{
 		*env << "Failed to start playing session: " << resultString << "\n";
 		delete[] resultString;
-		shutdown();
+		self->shutdown();
 		return;
 	}
 	else
@@ -133,7 +133,7 @@ void H264CubemapSource::continueAfterPLAY(RTSPClient*, int resultCode, char* res
 }
 
 
-void H264CubemapSource::subsessionByeHandler(void* clientData)
+void RTSPCubemapSourceClient::subsessionByeHandler(void* clientData)
 {
 	struct timeval timeNow;
 	gettimeofday(&timeNow, NULL);
@@ -149,7 +149,7 @@ void H264CubemapSource::subsessionByeHandler(void* clientData)
 	subsessionAfterPlaying(subsession);
 }
 
-void H264CubemapSource::createOutputFiles(char const* periodicFilenameSuffix)
+void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuffix)
 {
 	char outFileName[1000];
 
@@ -166,8 +166,17 @@ void H264CubemapSource::createOutputFiles(char const* periodicFilenameSuffix)
 		static unsigned streamCounter = 0;
 		sprintf(outFileName, "%s-%s-%d%s", subsession->mediumName(),
 			subsession->codecName(), ++streamCounter, periodicFilenameSuffix);
+        
+        if (delegate)
+        {
+            subsession->sink = delegate->getSinkForSubsession(this, subsession);
+        }
+        else
+        {
+            subsession->sink = NULL;
+        }
 
-		H264RawPixelsSink* sink = NULL;
+		/*H264RawPixelsSink* sink = NULL;
 		if (strcmp(subsession->mediumName(), "video") == 0)
 		{
 			if (strcmp(subsession->codecName(), "H264") == 0)
@@ -177,8 +186,8 @@ void H264CubemapSource::createOutputFiles(char const* periodicFilenameSuffix)
                 sinks.push_back(sink);
                 lastFrames.push_back(NULL);
 			}
-		}
-		subsession->sink = sink;
+		}*/
+		//subsession->sink = sink;
 
 		if (subsession->sink == NULL)
 		{
@@ -205,7 +214,7 @@ void H264CubemapSource::createOutputFiles(char const* periodicFilenameSuffix)
 	}
 }
 
-void H264CubemapSource::setupStreams()
+void RTSPCubemapSourceClient::setupStreams()
 {
 	static MediaSubsessionIterator* setupIter = NULL;
 	if (setupIter == NULL) setupIter = new MediaSubsessionIterator(*session);
@@ -214,7 +223,7 @@ void H264CubemapSource::setupStreams()
 		// We have another subsession left to set up:
 		if (subsession->clientPortNum() == 0) continue; // port # was not set
 
-		ourClient->sendSetupCommand(*subsession, continueAfterSETUP);
+		sendSetupCommand(*subsession, continueAfterSETUP);
 
 		return;
 	}
@@ -236,17 +245,19 @@ void H264CubemapSource::setupStreams()
 	if (absStartTime != NULL)
 	{
 		// Either we or the server have specified that seeking should be done by 'absolute' time:
-		ourClient->sendPlayCommand(*session, continueAfterPLAY, absStartTime, session->absEndTime(), 1.0);
+		sendPlayCommand(*session, continueAfterPLAY, absStartTime, session->absEndTime(), 1.0);
 	}
 	else
 	{
 		// Normal case: Seek by relative time (NPT):
-		ourClient->sendPlayCommand(*session, continueAfterPLAY, initialSeekTime, endTime, 1.0);
+		sendPlayCommand(*session, continueAfterPLAY, initialSeekTime, endTime, 1.0);
 	}
 }
 
-void H264CubemapSource::continueAfterSETUP(RTSPClient*, int resultCode, char* resultString)
+void RTSPCubemapSourceClient::continueAfterSETUP(RTSPClient* self_, int resultCode, char* resultString)
 {
+    RTSPCubemapSourceClient* self = (RTSPCubemapSourceClient*)self_;
+    
 	if (resultCode == 0)
 	{
 		*env << "Setup \"" << subsession->mediumName()
@@ -272,16 +283,18 @@ void H264CubemapSource::continueAfterSETUP(RTSPClient*, int resultCode, char* re
 	delete[] resultString;
 
 	// Set up the next subsession, if any:
-	setupStreams();
+	self->setupStreams();
 }
 
-void H264CubemapSource::continueAfterDESCRIBE(RTSPClient*, int resultCode, char* resultString)
+void RTSPCubemapSourceClient::continueAfterDESCRIBE(RTSPClient* self_, int resultCode, char* resultString)
 {
+    RTSPCubemapSourceClient* self = (RTSPCubemapSourceClient*)self_;
+    
 	if (resultCode != 0)
 	{
 		*env << "Failed to get a SDP description for the URL \"" << streamURL << "\": " << resultString << "\n";
 		delete[] resultString;
-		shutdown();
+		self->shutdown();
 	}
 
 	char* sdpDescription = resultString;
@@ -293,12 +306,12 @@ void H264CubemapSource::continueAfterDESCRIBE(RTSPClient*, int resultCode, char*
 	if (session == NULL)
 	{
 		*env << "Failed to create a MediaSession object from the SDP description: " << env->getResultMsg() << "\n";
-		shutdown();
+		self->shutdown();
 	}
 	else if (!session->hasSubsessions())
 	{
 		*env << "This session has no media subsessions (i.e., no \"m=\" lines)\n";
-		shutdown();
+		self->shutdown();
 	}
 
 	// Then, setup the "RTPSource"s for the session:
@@ -381,47 +394,64 @@ void H264CubemapSource::continueAfterDESCRIBE(RTSPClient*, int resultCode, char*
 	//if (!madeProgress) shutdown();
 
 	// Perform additional 'setup' on each subsession, before playing them:
-	setupStreams();
+	self->setupStreams();
 }
 
-void H264CubemapSource::continueAfterOPTIONS(RTSPClient*, int resultCode, char* resultString)
+void RTSPCubemapSourceClient::continueAfterOPTIONS(RTSPClient* self_, int resultCode, char* resultString)
 {
+    RTSPCubemapSourceClient* self = (RTSPCubemapSourceClient*)self_;
 	delete[] resultString;
 
 	// Next, get a SDP description for the stream:
-	ourClient->sendDescribeCommand(continueAfterDESCRIBE);
+	self->sendDescribeCommand(continueAfterDESCRIBE);
 }
 
-void H264CubemapSource::live555Loop(const char* progName, const char* url)
+void RTSPCubemapSourceClient::networkLoop()
 {
-	avcodec_register_all();
-	avformat_network_init();
-
-	//cubemapPreviewWindow = new CubemapPreviewWindow();
-
-	// Begin by setting up our usage environment:
-	TaskScheduler* scheduler = BasicTaskScheduler::createNew();
-	env = BasicUsageEnvironment::createNew(*scheduler);
-
-	gettimeofday(&startTime, NULL);
-
-	streamURL = url;
-
-	ourClient = RTSPClient::createNew(*env, streamURL, verbosityLevel, progName, tunnelOverHTTPPortNum);
-	
-	if (ourClient == NULL)
-	{
-		*env << "Failed to create " << clientProtocolName << " client: " << env->getResultMsg() << "\n";
-		shutdown();
-	}
-
-	ourClient->setUserAgentString(userAgent);
-
-	// Begin by sending an "OPTIONS" command:
-	ourClient->sendOptionsCommand(continueAfterOPTIONS);
-
+    // Begin by sending an "OPTIONS" command:
+    sendOptionsCommand(continueAfterOPTIONS);
+    
 	// All subsequent activity takes place within the event loop:
 	env->taskScheduler().doEventLoop(); // does not return
+}
+
+void RTSPCubemapSourceClient::connect()
+{
+    networkThread = boost::thread(boost::bind(&RTSPCubemapSourceClient::networkLoop, this));
+}
+
+RTSPCubemapSourceClient* RTSPCubemapSourceClient::createNew(char const* rtspURL,
+                                                            int verbosityLevel,
+                                                            char const* applicationName,
+                                                            portNumBits tunnelOverHTTPPortNum,
+                                                            int socketNumToServer)
+{
+    // Begin by setting up our usage environment:
+    TaskScheduler* scheduler = BasicTaskScheduler::createNew();
+    ::env = BasicUsageEnvironment::createNew(*scheduler);
+    
+    return new RTSPCubemapSourceClient(*env,
+                                       rtspURL,
+                                       verbosityLevel,
+                                       applicationName,
+                                       tunnelOverHTTPPortNum,
+                                       socketNumToServer);
+}
+
+RTSPCubemapSourceClient::RTSPCubemapSourceClient(UsageEnvironment& env,
+                                                 char const* rtspURL,
+                                                 int verbosityLevel,
+                                                 char const* applicationName,
+                                                 portNumBits tunnelOverHTTPPortNum,
+                                                 int socketNumToServer)
+    :
+    RTSPClient(env, rtspURL, verbosityLevel, applicationName, tunnelOverHTTPPortNum, socketNumToServer)
+{
+    gettimeofday(&startTime, NULL);
+    
+    streamURL = rtspURL;
+    
+    setUserAgentString(userAgent);
 }
 
 StereoCubemap* H264CubemapSource::getCurrentCubemap()
@@ -516,9 +546,28 @@ StereoCubemap* H264CubemapSource::getCurrentCubemap()
 }
 
 H264CubemapSource::H264CubemapSource(const char* url, int resolution, AVPixelFormat format)
-: resizeCtx(NULL), resolution(resolution), format(format)
+    :
+    resizeCtx(NULL), resolution(resolution), format(format)
 {
     av_log_set_level(AV_LOG_WARNING);
     
-    boost::thread live555Thread(boost::bind(&H264CubemapSource::live555Loop, "H264CubemapSource", url));
+    client = RTSPCubemapSourceClient::createNew(url);
+    client->delegate = this;
+    client->connect();
+}
+
+MediaSink* H264CubemapSource::getSinkForSubsession(RTSPCubemapSourceClient* client, MediaSubsession* subsession)
+{
+    if (strcmp(subsession->mediumName(), "video") == 0 &&
+        strcmp(subsession->codecName(), "H264") == 0)
+    {
+        H264RawPixelsSink* sink = H264RawPixelsSink::createNew(*env, fileSinkBufferSize);
+        sinks.push_back(sink);
+        lastFrames.push_back(NULL);
+        return sink;
+    }
+    else
+    {
+        return NULL;
+    }
 }
