@@ -2,23 +2,26 @@
 
 Stats stats;
 
-const unsigned int SINK_BUFFER_SIZE = 2000000;
-
-StereoCubemap* H264CubemapSource::getCurrentCubemap()
+void H264CubemapSource::setOnNextCubemap(std::function<void (CubemapSource*, StereoCubemap*)>& onNextCubemap)
 {
-    std::vector<CubemapFace*> faces;
-    for (int i = 0; i < sinks.size(); i++)
+    this->onNextCubemap = onNextCubemap;
+}
+
+void H264CubemapSource::getNextCubemapLoop()
+{
+    while (true)
     {
-        CubemapFace* face = CubemapFace::create(resolution,
-                                                resolution,
-                                                i,
-                                                format,
-                                                boost::chrono::system_clock::time_point(),
-                                                heapAllocator);
-        
-        AVFrame* nextFrame = sinks[i]->getNextFrame();
-        if (nextFrame || lastFrames[i])
+        std::vector<CubemapFace*> faces;
+        for (int i = 0; i < sinks.size(); i++)
         {
+            CubemapFace* face = CubemapFace::create(resolution,
+                                                    resolution,
+                                                    i,
+                                                    format,
+                                                    boost::chrono::system_clock::time_point(),
+                                                    heapAllocator);
+            
+            AVFrame* nextFrame = sinks[i]->getNextFrame();
             if (nextFrame)
             {
                 if (!resizeCtx)
@@ -34,7 +37,7 @@ StereoCubemap* H264CubemapSource::getCurrentCubemap()
                 if (!resizedFrame)
                 {
                     fprintf(stderr, "Could not allocate video frame\n");
-                    return nullptr;
+                    exit(-1);
                 }
                 resizedFrame->format = format;
                 resizedFrame->width = resolution;
@@ -44,7 +47,7 @@ StereoCubemap* H264CubemapSource::getCurrentCubemap()
                                    (AVPixelFormat)resizedFrame->format, 32) < 0)
                 {
                     fprintf(stderr, "Could not allocate raw picture buffer\n");
-                    return nullptr;
+                    exit(-1);
                 }
 
                 // resize frame
@@ -54,45 +57,45 @@ StereoCubemap* H264CubemapSource::getCurrentCubemap()
                 // delete nextFrame
                 av_freep(&nextFrame->data[0]);
                 //av_frame_free(&nextFrame);
-
-                // delete lastFrames[i]
-                if (lastFrames[i])
+            
+                // read pixels from frame
+                if (avpicture_layout((AVPicture*)resizedFrame, (AVPixelFormat)resizedFrame->format,
+                                     resizedFrame->width, resizedFrame->height,
+                                     (unsigned char*)face->getPixels(), resizedFrame->width * resizedFrame->height * 4) < 0)
                 {
-                    av_freep(&lastFrames[i]->data[0]);
-                    av_frame_free(&lastFrames[i]);
+                    fprintf(stderr, "Could not read pixels from frame\n");
+                    exit(0);
                 }
                 
-                lastFrames[i] = resizedFrame;
+                av_freep(&resizedFrame->data[0]);
+                av_frame_free(&resizedFrame);
             }
-        
-            // read pixels from frame
-            if (avpicture_layout((AVPicture*)lastFrames[i], (AVPixelFormat)lastFrames[i]->format,
-                                 lastFrames[i]->width, lastFrames[i]->height,
-                                 (unsigned char*)face->getPixels(), lastFrames[i]->width * lastFrames[i]->height * 4) < 0)
+            else
             {
-                fprintf(stderr, "Could not read pixels from frame\n");
-                return nullptr;
+                // error
+                std::cerr << "Cannot get next cubemap" << std::endl;
+                exit(-1);
             }
+    //
+    //        /*AVRational microSecBase = { 1, 1000000 };
+    //        boost::chrono::microseconds presentationTimeSinceEpoch =
+    //        boost::chrono::microseconds(av_rescale_q(nextFrame->pts, codecContext->time_base, microSecBase));*/
+            
+            
+            
+            
+            faces.push_back(face);
         }
-        else
-        {
-            // just use the default pixel buffer of the face
-        }
-//
-//        /*AVRational microSecBase = { 1, 1000000 };
-//        boost::chrono::microseconds presentationTimeSinceEpoch =
-//        boost::chrono::microseconds(av_rescale_q(nextFrame->pts, codecContext->time_base, microSecBase));*/
-        
-        
-        
-        
-        faces.push_back(face);
-    }
 
-    std::vector<Cubemap*> eyes;
-    eyes.push_back(Cubemap::create(faces, heapAllocator));
-    return StereoCubemap::create(eyes, heapAllocator);
-    return nullptr;
+        std::vector<Cubemap*> eyes;
+        eyes.push_back(Cubemap::create(faces, heapAllocator));
+        StereoCubemap* cubemap = StereoCubemap::create(eyes, heapAllocator);
+        
+        if (onNextCubemap)
+        {
+            onNextCubemap(this, cubemap);
+        }
+    }
 }
 
 H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks, int resolution, AVPixelFormat format)
@@ -100,8 +103,5 @@ H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks, int
     sinks(sinks), resizeCtx(NULL), resolution(resolution), format(format)
 {
     av_log_set_level(AV_LOG_WARNING);
-    for (int i = 0; i < sinks.size(); i++)
-    {
-        lastFrames.push_back(NULL);
-    }
+    getNextCubemapThread = boost::thread(boost::bind(&H264CubemapSource::getNextCubemapLoop, this));
 }

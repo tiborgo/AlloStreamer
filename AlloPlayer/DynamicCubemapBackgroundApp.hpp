@@ -22,6 +22,7 @@ struct DynamicCubemapBackgroundApp : al::OmniApp
     SwsContext* resizeCtx;
     CubemapSource* cubemapSource;
     StereoCubemap* cubemap;
+    boost::mutex nextCubemapMutex;
     bool newCubemap;
 
     DynamicCubemapBackgroundApp(CubemapSource* cubemapSource);
@@ -33,4 +34,5 @@ struct DynamicCubemapBackgroundApp : al::OmniApp
     virtual void onAnimate(al_sec dt);
     virtual void onMessage(al::osc::Message& m);
     virtual bool onKeyDown(const al::Keyboard& k);
+    void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
 };

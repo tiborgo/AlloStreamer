@@ -329,7 +329,7 @@ AVFrame* H264RawPixelsSink::getNextFrame()
 {
     AVFrame* frame;
     
-    if (frameBuffer.try_pop(frame))
+    if (frameBuffer.wait_and_pop(frame))
     {
         framePool.push(frame);
         AVFrame* clone = av_frame_clone(frame);

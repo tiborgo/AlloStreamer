@@ -6,6 +6,17 @@
 
 #include "AlloReceiver/AlloReceiver.h"
 
+int counter = 0;
+void nextCubemap(CubemapSource* source, StereoCubemap* cubemap)
+{
+    if (counter % 10 == 0)
+    {
+        std::cout << "cubemap " << counter << std::endl;
+    }
+    counter++;
+    StereoCubemap::destroy(cubemap);
+}
+
 int main(int argc, char* argv[])
 {
     if (argc < 2)
@@ -34,10 +45,9 @@ int main(int argc, char* argv[])
     if (vm.count("no-display"))
     {
         std::cout << "network only" << std::endl;
-        while (true)
-        {
-            cubemapSource->getCurrentCubemap();
-        }
+        std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&nextCubemap, _1, _2);
+        cubemapSource->setOnNextCubemap(callback);
+        while(true){}
     }
     else
     {

@@ -92,8 +92,24 @@ public:
         }
         source_ = CubemapSource::createFromRTSP(url, flags.resolution, avpf);
         cached_frame_ = 0;
+        
+        std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&CubemapVideoSource::onNextCubemap,
+                                                                                    this,
+                                                                                    _1,
+                                                                                    _2);
+        source_->setOnNextCubemap(callback);
     }
 
+    void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
+    {
+        CubemapStereoFrame* new_frame_ = new CubemapStereoFrame(cubemap);
+        
+        lockFrame();
+        if(cached_frame_) delete cached_frame_;
+        cached_frame_ = new_frame_;
+        unlockFrame();
+    }
+    
     virtual Frame* getCurrentFrame() {
         return cached_frame_;
     }
@@ -104,14 +120,17 @@ public:
         mutex.unlock();
     }
     virtual bool nextFrame() {
-        CubemapStereoFrame* new_frame_ = new CubemapStereoFrame(source_->getCurrentCubemap());
-
         lockFrame();
-        if(cached_frame_) delete cached_frame_;
-        cached_frame_ = new_frame_;
+        bool result;
+        if (cached_frame_) {
+            result = true;
+        }
+        else {
+            result = false;
+        }
         unlockFrame();
 
-        return true;
+        return result;
     }
 
     ~CubemapVideoSource() {

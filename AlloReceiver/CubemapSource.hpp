@@ -11,7 +11,9 @@ extern "C"
 class CubemapSource
 {
 public:
-    virtual StereoCubemap* getCurrentCubemap() = 0;
+    //virtual StereoCubemap* getCurrentCubemap() = 0;
+    virtual void setOnNextCubemap(std::function<void (CubemapSource*, StereoCubemap*)>& nextCubemap) = 0;
+    
     
     static CubemapSource* createFromRTSP(const char* url, int resolution, AVPixelFormat format);
     static void destroy(CubemapSource* cubemapSource);

@@ -120,6 +120,8 @@ void setupRTSP(int rtspPort)
 
     char multicastAddressStr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(destinationAddress.s_addr), multicastAddressStr, sizeof(multicastAddressStr));
+    inet_pton(AF_INET, "224.0.0.1", &(destinationAddress.s_addr));
+    
     printf("Multicast address: %s\n", multicastAddressStr);
 
 

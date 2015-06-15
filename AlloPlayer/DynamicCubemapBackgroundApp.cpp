@@ -4,7 +4,9 @@
 #define STR(x) QUOTE(x)
 
 DynamicCubemapBackgroundApp::DynamicCubemapBackgroundApp(CubemapSource* cubemapSource)
-    : al::OmniApp("AlloPlayer", false, 2048), cubemapSource(cubemapSource), cubemap(nullptr)
+    :
+    al::OmniApp("AlloPlayer", false, 2048), resizeCtx(nullptr), cubemapSource(cubemapSource),
+    cubemap(nullptr), newCubemap(false)
 {
     nav().smooth(0.8);
     
@@ -31,7 +33,13 @@ DynamicCubemapBackgroundApp::DynamicCubemapBackgroundApp(CubemapSource* cubemapS
     light.ambient(al::Color(0.4, 0.4, 0.4, 1.0));
     light.pos(5, 5, 5);
     
-    resizeCtx = nullptr;
+    
+    
+    std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&DynamicCubemapBackgroundApp::onNextCubemap,
+                                                                                this,
+                                                                                _1,
+                                                                                _2);
+    cubemapSource->setOnNextCubemap(callback);
 }
 
 DynamicCubemapBackgroundApp::~DynamicCubemapBackgroundApp()
@@ -48,49 +56,60 @@ bool DynamicCubemapBackgroundApp::onFrame()
 {
     now = al::MainLoop::now();
     
-    if (cubemap)
-    {
-        StereoCubemap::destroy(cubemap);
-    }
-    cubemap = cubemapSource->getCurrentCubemap();
-    
     //std::cout << "FPS: " << FPS::fps() << std::endl;
     bool result = OmniApp::onFrame();
     stats.displayedFrame();
     return result;
 }
 
+void DynamicCubemapBackgroundApp::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
+{
+    boost::mutex::scoped_lock lock(nextCubemapMutex);
+    if (this->cubemap)
+    {
+        StereoCubemap::destroy(this->cubemap);
+    }
+    this->cubemap = cubemap;
+    newCubemap = true;
+}
+
 void DynamicCubemapBackgroundApp::onDraw(al::Graphics& gl)
 {
     int faceIndex = mOmni.face();
     
-    // render cubemap
-    if (cubemap->getEyesCount() > 0)
     {
-        Cubemap* eye = cubemap->getEye(0);
-        if (eye->getFacesCount() > faceIndex)
+        boost::mutex::scoped_lock lock(nextCubemapMutex);
+        
+        // render cubemap
+        if (cubemap && cubemap->getEyesCount() > 0)
         {
-            CubemapFace* face = eye->getFace(faceIndex);
-            
-            glUseProgram(0);
-            glDepthMask(GL_FALSE);
-            
-            // draw the background
-            glDrawPixels(face->getWidth(),
-                         face->getHeight(),
-                         GL_RGB,
-                         GL_UNSIGNED_BYTE,
-                         (GLvoid*)face->getPixels());
-            
-            glDepthMask(GL_TRUE);
-            
-            
-            
-            if(newCubemap)
+            Cubemap* eye = cubemap->getEye(0);
+            if (eye->getFacesCount() > faceIndex)
             {
-                stats.displayedCubemapFace(faceIndex);
+                CubemapFace* face = eye->getFace(faceIndex);
+                
+                glUseProgram(0);
+                glDepthMask(GL_FALSE);
+                
+                // draw the background
+                glDrawPixels(face->getWidth(),
+                             face->getHeight(),
+                             GL_RGB,
+                             GL_UNSIGNED_BYTE,
+                             (GLvoid*)face->getPixels());
+                
+                glDepthMask(GL_TRUE);
+                
+                
+                
+                if(newCubemap)
+                {
+                    stats.displayedCubemapFace(faceIndex);
+                }
             }
         }
+        
+        newCubemap = false;
     }
     
     light();
