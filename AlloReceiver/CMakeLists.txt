@@ -56,7 +56,8 @@ target_compile_definitions(AlloReceiver
 )
 set_target_properties(AlloReceiver
     PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin"
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin" # for Windows
+    LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Lib" # for Unix
 )
 
 if(WIN32)

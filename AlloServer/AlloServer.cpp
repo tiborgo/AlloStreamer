@@ -39,7 +39,6 @@ static char const* descriptionString
 static boost::interprocess::managed_shared_memory* shm;
 static boost::barrier stopStreamingBarrier(2);
 static std::vector<FaceStreamState> faceStreams;
-static std::atomic_bool isStoppingStreaming(false);
 
 static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms)
 {
@@ -155,13 +154,11 @@ void startStreaming()
 
     cubemap = shm->find<Cubemap::Ptr>("Cubemap").first->get();
 
-    isStoppingStreaming = false;
     env->taskScheduler().triggerEvent(addFaceSubstreamsTriggerId, NULL);
 }
 
 void stopStreaming()
 {
-    isStoppingStreaming = true;
     env->taskScheduler().triggerEvent(removeFaceSubstreamsTriggerId, NULL);
     stopStreamingBarrier.wait();
     delete shm;
