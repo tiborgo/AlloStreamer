@@ -1,9 +1,9 @@
 #include "AlloReceiver.h"
-#include "H264CubemapSource.h"
+#include "RTSPCubemapSource.hpp"
 
 CubemapSource* CubemapSource::createFromRTSP(const char* url, int resolution, AVPixelFormat format)
 {
-    return new H264CubemapSource(url, resolution, format);
+    return RTSPCubemapSource::create(url, resolution, format);
 }
 
 void CubemapSource::destroy(CubemapSource *cubemapSource)

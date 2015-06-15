@@ -8,24 +8,20 @@
 #include "AlloReceiver.h"
 #include "H264RawPixelsSink.h"
 #include "RTSPCubemapSourceClient.hpp"
+#include "RTSPCubemapSource.hpp"
 
-class H264CubemapSource : public CubemapSource, private RTSPCubemapSourceClientDelegate
+class H264CubemapSource : public RTSPCubemapSource
 {
 public:
     virtual StereoCubemap* getCurrentCubemap();
     
-    H264CubemapSource(const char* url, int resolution, AVPixelFormat format);
+    H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks, int resolution, AVPixelFormat format);
     
 private:
-    virtual MediaSink* getSinkForSubsession(RTSPCubemapSourceClient* client, MediaSubsession* subsession);
-    virtual void didIdentifyStreams(RTSPCubemapSourceClient *client);
-    
     std::vector<H264RawPixelsSink*> sinks;
     std::vector<AVFrame*>           lastFrames;
     SwsContext*                     resizeCtx;
     int                             resolution;
     AVPixelFormat                   format;
     HeapAllocator                   heapAllocator;
-    RTSPCubemapSourceClient*        client;
-    boost::barrier                  didIdentifyStreamsBarrier;
 };

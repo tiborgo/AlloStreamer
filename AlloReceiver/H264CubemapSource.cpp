@@ -95,40 +95,13 @@ StereoCubemap* H264CubemapSource::getCurrentCubemap()
     return nullptr;
 }
 
-H264CubemapSource::H264CubemapSource(const char* url, int resolution, AVPixelFormat format)
+H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks, int resolution, AVPixelFormat format)
     :
-    resizeCtx(NULL), resolution(resolution), format(format), didIdentifyStreamsBarrier(2)
+    sinks(sinks), resizeCtx(NULL), resolution(resolution), format(format)
 {
     av_log_set_level(AV_LOG_WARNING);
-    
-    client = RTSPCubemapSourceClient::createNew(url, SINK_BUFFER_SIZE);
-    client->delegate = this;
-    client->connect();
-    // wait until streams are identified
-    didIdentifyStreamsBarrier.wait();
-}
-
-MediaSink* H264CubemapSource::getSinkForSubsession(RTSPCubemapSourceClient* client, MediaSubsession* subsession)
-{
-    static int counter = 0;
-    
-    if (strcmp(subsession->mediumName(), "video") == 0 &&
-        strcmp(subsession->codecName(), "H264") == 0)
+    for (int i = 0; i < sinks.size(); i++)
     {
-        std::cout << "xxxxxxx " << counter++ << " " << subsession->savedSDPLines() << std::endl;
-        H264RawPixelsSink* sink = H264RawPixelsSink::createNew(client->envir(), SINK_BUFFER_SIZE);
-        sinks.push_back(sink);
-        std::cout << "yyyyyyy " << sinks.size() << std::endl;
         lastFrames.push_back(NULL);
-        return sink;
     }
-    else
-    {
-        return NULL;
-    }
-}
-
-void H264CubemapSource::didIdentifyStreams(RTSPCubemapSourceClient *client)
-{
-    didIdentifyStreamsBarrier.wait();
 }

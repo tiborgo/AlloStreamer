@@ -133,6 +133,7 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
 
 	MediaSubsessionIterator iter(*session);
     MediaSubsession* subsession;
+    std::vector<MediaSubsession*> subsessions;
 	while ((subsession = iter.next()) != NULL)
 	{
 		if (subsession->readSource() == NULL) continue; // was not initiated
@@ -144,32 +145,26 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
 		sprintf(outFileName, "%s-%s-%d%s", subsession->mediumName(),
 			subsession->codecName(), ++streamCounter, periodicFilenameSuffix);
         
-        if (delegate)
-        {
-            subsession->sink = delegate->getSinkForSubsession(this, subsession);
-        }
-        else
-        {
-            subsession->sink = NULL;
-        }
-
-		/*H264RawPixelsSink* sink = NULL;
-		if (strcmp(subsession->mediumName(), "video") == 0)
-		{
-			if (strcmp(subsession->codecName(), "H264") == 0)
-			{
-				// Open window displaying the H.264 video
-				sink = H264RawPixelsSink::createNew(*env, fileSinkBufferSize);
-                sinks.push_back(sink);
-                lastFrames.push_back(NULL);
-			}
-		}*/
-		//subsession->sink = sink;
+        subsessions.push_back(subsession);
     }
     
-    if (delegate)
+    if (onGetSinksForSubsessions)
     {
-        delegate->didIdentifyStreams(this);
+        std::vector<MediaSink*> sinks = onGetSinksForSubsessions(this, subsessions);
+        assert(sinks.size() == subsessions.size());
+        
+        int i = 0;
+        iter.reset();
+        while ((subsession = iter.next()) != NULL)
+        {
+            subsession->sink = sinks[i];
+            i++;
+        }
+    }
+    
+    if (onDidIdentifyStreams)
+    {
+        onDidIdentifyStreams(this);
     }
     
     iter.reset();

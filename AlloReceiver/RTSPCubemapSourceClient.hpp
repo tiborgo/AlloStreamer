@@ -5,15 +5,6 @@
 #include <liveMedia.hh>
 #include <boost/thread.hpp>
 
-class RTSPCubemapSourceClient;
-
-class RTSPCubemapSourceClientDelegate
-{
-public:
-    virtual MediaSink* getSinkForSubsession(RTSPCubemapSourceClient* client, MediaSubsession* subsession) = 0;
-    virtual void didIdentifyStreams(RTSPCubemapSourceClient* client) = 0;
-};
-
 class RTSPCubemapSourceClient : public RTSPClient
 {
 public:
@@ -27,7 +18,8 @@ public:
                                               portNumBits tunnelOverHTTPPortNum = 0,
                                               int socketNumToServer = -1);
     
-    RTSPCubemapSourceClientDelegate* delegate;
+    std::function<std::vector<MediaSink*> (RTSPCubemapSourceClient*, std::vector<MediaSubsession*>&)> onGetSinksForSubsessions;
+    std::function<void (RTSPCubemapSourceClient*)> onDidIdentifyStreams;
     
 protected:
     RTSPCubemapSourceClient(UsageEnvironment& env,
