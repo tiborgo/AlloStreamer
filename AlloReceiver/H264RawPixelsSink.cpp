@@ -89,6 +89,8 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 	unsigned numTruncatedBytes,
 	timeval presentationTime)
 {
+    std::cout << "got data" << std::endl;
+    
     u_int8_t nal_unit_type = buffer[0] & 0x1F;
     AVPacket* pkt = (pktPool.try_pop(pkt)) ? pkt : nullptr;
     
