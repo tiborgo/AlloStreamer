@@ -1,5 +1,6 @@
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/filesystem/path.hpp>
+#include <boost/program_options.hpp>
 #include <liveMedia.hh>
 #include <GroupsockHelper.hh>
 #define EventTime server_EventTime
@@ -39,6 +40,7 @@ static char const* descriptionString
 static boost::interprocess::managed_shared_memory* shm;
 static boost::barrier stopStreamingBarrier(2);
 static std::vector<FaceStreamState> faceStreams;
+static boost::uint16_t rtspPort;
 
 static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms)
 {
@@ -105,23 +107,15 @@ void networkLoop()
     env->taskScheduler().doEventLoop(); // does not return
 }
 
-void setupRTSP(int rtspPort)
+void setupRTSP()
 {
     // Begin by setting up our usage environment:
     TaskScheduler* scheduler = BasicTaskScheduler::createNew();
 
     env = BasicUsageEnvironment::createNew(*scheduler);
-
-    // Create 'groupsocks' for RTP and RTCP:
-    destinationAddress.s_addr = chooseRandomIPv4SSMAddress(*env);
-    // Note: This is a multicast address.  If you wish instead to stream
-    // using unicast, then you should use the "testOnDemandRTSPServer"
-    // test program - not this test program - as a model.
-
+    
     char multicastAddressStr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(destinationAddress.s_addr), multicastAddressStr, sizeof(multicastAddressStr));
-    inet_pton(AF_INET, "224.0.0.1", &(destinationAddress.s_addr));
-    
     printf("Multicast address: %s\n", multicastAddressStr);
 
 
@@ -168,18 +162,55 @@ void stopStreaming()
 
 int main(int argc, char* argv[])
 {
-    if (argc != 2)
-    {
-        boost::filesystem::path exePath(argv[0]);
-        std::cout << "usage: " << exePath.filename().string() << " <RTSP port>" << std::endl;
-        return -1;
-    }
+    boost::program_options::options_description desc("");
+    desc.add_options()
+        ("multicast-address", boost::program_options::value<std::string>(), "")
+        ("interface", boost::program_options::value<std::string>(), "")
+        ("rtsp-port", boost::program_options::value<boost::uint16_t>(), "");
+    
+    boost::program_options::variables_map vm;
+    boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+    boost::program_options::notify(vm);
 
-    int rtspPort = atoi(argv[1]);
+    if (vm.count("interface"))
+    {
+        std::string interface = vm["interface"].as<std::string>();
+        NetAddressList addresses(interface.c_str());
+        if (addresses.numAddresses() == 0)
+        {
+            std::cout << "Failed to find network address for \"" << interface << "\"" << std::endl;
+            return -1;
+        }
+        ReceivingInterfaceAddr = *(unsigned*)(addresses.firstAddress()->data());
+    }
+    
+    char sourceAddressStr[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(ReceivingInterfaceAddr), sourceAddressStr, sizeof(sourceAddressStr));
+    std::cout << "Using source address " << sourceAddressStr << std::endl;
+    
+    if (vm.count("rtsp-port"))
+    {
+        rtspPort = vm["rtsp-port"].as<boost::uint16_t>();
+    }
+    else
+    {
+        rtspPort = 8555;
+    }
+    std::cout << "Using RTSP port " << rtspPort << std::endl;
+    
+    // Create 'groupsocks' for RTP and RTCP:
+    if(vm.count("multicast-address"))
+    {
+        inet_pton(AF_INET, vm["multicast-address"].as<std::string>().c_str(), &(destinationAddress.s_addr));
+    }
+    else
+    {
+        inet_pton(AF_INET, "224.0.0.1", &(destinationAddress.s_addr));
+    }
 
     av_log_set_level(AV_LOG_WARNING);
     avcodec_register_all();
-    setupRTSP(rtspPort);
+    setupRTSP();
     boost::thread networkThread = boost::thread(&networkLoop);
 
     Process unityProcess(CUBEMAPEXTRACTIONPLUGIN_ID, false);
