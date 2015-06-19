@@ -214,9 +214,16 @@ void copyFromGPUToCPU(CubemapFace* face)
         if (!alloServerProcess.isAlive())
         {
             // Reset the mutex otherwise it will block forever
+            // Reset the condition otherwise it my be in inconsistent state
             // Hacky solution indeed
-            void* addr = &face->getMutex();
-            new (addr) boost::interprocess::interprocess_mutex;
+            void* mutexAddr     = &face->getMutex();
+            void* conditionAddr = &face->getNewPixelsCondition();
+            // That's not possible unfortunately since the mutex is locked and abandoned
+            //face->getMutex().~interprocess_mutex();
+            memset(mutexAddr, 0, sizeof(boost::interprocess::interprocess_mutex));
+            memset(conditionAddr, 0, sizeof(boost::interprocess::interprocess_condition));
+            new (mutexAddr)     boost::interprocess::interprocess_mutex;
+            new (conditionAddr) boost::interprocess::interprocess_condition;
             return;
         }
     }

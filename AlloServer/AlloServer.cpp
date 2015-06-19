@@ -70,7 +70,7 @@ void addFaceSubstream0(void*)
 
         Port rtpPort(RTP_PORT_NUM + state->face->getIndex());
         Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, TTL);
-        rtpGroupsock->multicastSendOnly(); // we're a SSM source
+        //rtpGroupsock->multicastSendOnly(); // we're a SSM source
 
         // Create a 'H264 Video RTP' sink from the RTP 'groupsock':
         // OutPacketBuffer::maxSize = 100000;
