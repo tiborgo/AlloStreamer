@@ -26,5 +26,5 @@ target_link_libraries(FakeUnity
 )
 set_target_properties(FakeUnity
     	PROPERTIES
-    	RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin"
+    	RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin/${CMAKE_BUILD_TYPE}"
 )
