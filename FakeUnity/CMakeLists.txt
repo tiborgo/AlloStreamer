@@ -28,3 +28,11 @@ set_target_properties(FakeUnity
     	PROPERTIES
     	RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin/${CMAKE_BUILD_TYPE}"
 )
+
+# link against posix extension library on linux
+if(CMAKE_SYSTEM MATCHES "Linux")
+	target_link_libraries(FakeUnity
+        	rt
+		pthread
+	)
+endif()

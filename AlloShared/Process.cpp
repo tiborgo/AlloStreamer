@@ -8,7 +8,7 @@ static boost::filesystem::path getLockfilePath(std::string& id)
 {
     boost::filesystem::path path = boost::filesystem::temp_directory_path();
 
-    path += "." + id;
+    path /= ("." + id);
     return path;
 }
 
