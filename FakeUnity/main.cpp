@@ -49,14 +49,16 @@ void releaseSHM()
 
 int main(int argc, char* argv[])
 {
-    if (argc < 3)
+    if (argc < 4)
     {
-        std::cout << "FakeUnity <faces count> <face resolution>" << std::endl;
+        std::cout << "FakeUnity <faces count> <face resolution> <target FPS>" << std::endl;
         return -1;
     }
     
     int cubemapFacesCount = atoi(argv[1]);
     int resolution = atoi(argv[2]);
+    int targetFPS = atoi(argv[3]);
+    boost::chrono::milliseconds targetFrameDuration(1000 / targetFPS);
     presentationTime = boost::chrono::system_clock::now();
     
     // Create and/or open shared memory
@@ -83,6 +85,8 @@ int main(int argc, char* argv[])
     
     while(true)
     {
+        presentationTime = boost::chrono::system_clock::now();
+        
         for (CubemapFace* face : faces)
         {
             while (!face->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
@@ -105,11 +109,21 @@ int main(int argc, char* argv[])
             
             boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->getMutex(),
                                                                                            boost::interprocess::accept_ownership);
+            
+            face->setPresentationTime(presentationTime);
             face->getNewPixelsCondition().notify_all();
         }
         frames++;
         
         boost::chrono::system_clock::time_point now = boost::chrono::system_clock::now();
+        boost::chrono::milliseconds frameDuration = boost::chrono::duration_cast<boost::chrono::milliseconds>(now - presentationTime);
+        
+        if (frameDuration < targetFrameDuration)
+        {
+            boost::posix_time::milliseconds remainingDuration((targetFrameDuration - frameDuration).count());
+            boost::this_thread::sleep(remainingDuration);
+        }
+        
         boost::chrono::milliseconds period =  boost::chrono::duration_cast<boost::chrono::milliseconds>(now - lastTime);
         
         if (period >= fpsMeasurementPeriod)
