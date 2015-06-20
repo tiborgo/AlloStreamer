@@ -72,7 +72,7 @@ target_compile_definitions(AlloPlayer
 )
 set_target_properties(AlloPlayer
     PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin"
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin/${CMAKE_BUILD_TYPE}"
 )
 
 if(WIN32)

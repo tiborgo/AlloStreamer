@@ -40,7 +40,7 @@ target_link_libraries(AlloServer
 )
 set_target_properties(AlloServer
     PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin"
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin/${CMAKE_BUILD_TYPE}"
 )
 
 if(WIN32)

@@ -56,8 +56,8 @@ target_compile_definitions(AlloReceiver
 )
 set_target_properties(AlloReceiver
     PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin" # for Windows
-    LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Lib" # for Unix
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin/${CMAKE_BUILD_TYPE}" # for Windows
+    LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Bin/${CMAKE_BUILD_TYPE}" # for Unix
 )
 
 if(WIN32)

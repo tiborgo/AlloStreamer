@@ -37,5 +37,5 @@ target_include_directories(AlloShared
 )
 set_target_properties(AlloShared
     PROPERTIES
-	ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Lib"
+	ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/Lib/${CMAKE_BUILD_TYPE}"
 )
