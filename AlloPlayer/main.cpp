@@ -30,7 +30,8 @@ int main(int argc, char* argv[])
     boost::program_options::options_description desc("");
     desc.add_options()
         ("no-display", "")
-        ("url", boost::program_options::value<std::string>(), "url");
+        ("url", boost::program_options::value<std::string>(), "url")
+        ("interface", boost::program_options::value<std::string>(), "interface");
     
     boost::program_options::positional_options_description p;
     p.add("url", -1);
@@ -40,7 +41,17 @@ int main(int argc, char* argv[])
               options(desc).positional(p).run(), vm);
     boost::program_options::notify(vm);
     
-    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), 2048, AV_PIX_FMT_RGB24);
+    const char* interface;
+    if (vm.count("interface"))
+    {
+        interface = vm["interface"].as<std::string>().c_str();
+    }
+    else
+    {
+        interface = "0.0.0.0";
+    }
+
+    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(interface, 2048, AV_PIX_FMT_RGB24);
     
     if (vm.count("no-display"))
     {
