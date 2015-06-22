@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
         interface = "0.0.0.0";
     }
 
-    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(interface, 2048, AV_PIX_FMT_RGB24);
+    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), 2048, AV_PIX_FMT_RGB24, interface);
     
     if (vm.count("no-display"))
     {
