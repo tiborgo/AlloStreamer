@@ -58,7 +58,9 @@ bool DynamicCubemapBackgroundApp::onFrame()
     
     //std::cout << "FPS: " << FPS::fps() << std::endl;
     bool result = OmniApp::onFrame();
-    if (onDisplayedFrame) onDisplayedFrame(this);
+    if (onDisplayedFrame)
+        
+        onDisplayedFrame(this);
     return result;
 }
 

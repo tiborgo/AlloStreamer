@@ -3,18 +3,30 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
+#include <boost/ref.hpp>
 
+#include "Stats.h"
 #include "AlloReceiver/AlloReceiver.h"
 
-int counter = 0;
-void nextCubemap(CubemapSource* source, StereoCubemap* cubemap)
+Stats stats;
+
+void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
-    if (counter % 10 == 0)
+    for (int i = 0; i < cubemap->getEye(0)->getFacesCount(); i++)
     {
-        std::cout << "cubemap " << counter << std::endl;
+        stats.displayedCubemapFace(i);
     }
-    counter++;
     StereoCubemap::destroy(cubemap);
+}
+
+void onDroppedNALU(CubemapSource* source, int face, u_int8_t type)
+{
+    stats.droppedNALU(type);
+}
+
+void onAddedNALU(CubemapSource* source, int face, u_int8_t type)
+{
+    stats.addedNALU(type);
 }
 
 int main(int argc, char* argv[])
@@ -53,10 +65,17 @@ int main(int argc, char* argv[])
 
     CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), 2048, AV_PIX_FMT_RGB24, interface);
     
+    std::function<void (CubemapSource*, int, u_int8_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3);
+    cubemapSource->setOnDroppedNALU(callback);
+    callback = boost::bind(&onAddedNALU, _1, _2, _3);
+    cubemapSource->setOnAddedNALU(callback);
+    
+    stats.autoSummary(boost::chrono::seconds(10));
+    
     if (vm.count("no-display"))
     {
         std::cout << "network only" << std::endl;
-        std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&nextCubemap, _1, _2);
+        std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&onNextCubemap, _1, _2);
         cubemapSource->setOnNextCubemap(callback);
         while(true){}
     }

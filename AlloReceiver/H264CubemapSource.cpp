@@ -1,8 +1,18 @@
 #include "H264CubemapSource.h"
 
-void H264CubemapSource::setOnNextCubemap(std::function<void (CubemapSource*, StereoCubemap*)>& onNextCubemap)
+void H264CubemapSource::setOnNextCubemap(std::function<void (CubemapSource*, StereoCubemap*)>& callback)
 {
-    this->onNextCubemap = onNextCubemap;
+    onNextCubemap = callback;
+}
+
+void H264CubemapSource::setOnDroppedNALU(std::function<void (CubemapSource*, int face, u_int8_t type)>& callback)
+{
+    onDroppedNALU = callback;
+}
+
+void H264CubemapSource::setOnAddedNALU(std::function<void (CubemapSource*, int face, u_int8_t type)>& callback)
+{
+    onAddedNALU = callback;
 }
 
 void H264CubemapSource::getNextCubemapLoop()
@@ -101,5 +111,28 @@ H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks, int
     sinks(sinks), resizeCtx(NULL), resolution(resolution), format(format)
 {
     av_log_set_level(AV_LOG_WARNING);
+    for (H264RawPixelsSink* sink : sinks)
+    {
+        std::function<void (H264RawPixelsSink *, u_int8_t)> onDroppedNaluCallback =
+            boost::bind(&H264CubemapSource::sinkOnDroppedNALU, this, _1, _2);
+        sink->setOnDroppedNALU(onDroppedNaluCallback);
+        std::function<void (H264RawPixelsSink *, u_int8_t)> onAddedNaluCallback =
+            boost::bind(&H264CubemapSource::sinkOnAddedNALU, this, _1, _2);
+        sink->setOnAddedNALU(onAddedNaluCallback);
+    }
     getNextCubemapThread = boost::thread(boost::bind(&H264CubemapSource::getNextCubemapLoop, this));
+}
+
+void H264CubemapSource::sinkOnDroppedNALU(H264RawPixelsSink* sink, u_int8_t type)
+{
+    int face = std::find(sinks.begin(), sinks.end(), sink) - sinks.begin();
+    assert(face < sinks.size());
+    onDroppedNALU(this, face, type);
+}
+
+void H264CubemapSource::sinkOnAddedNALU(H264RawPixelsSink* sink, u_int8_t type)
+{
+    int face = std::find(sinks.begin(), sinks.end(), sink) - sinks.begin();
+    assert(face < sinks.size());
+    onAddedNALU(this, face, type);
 }

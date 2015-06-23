@@ -273,8 +273,8 @@ void Stats::autoSummaryLoop(boost::chrono::microseconds frequency)
 {
     while (true)
     {
-        std::cout << summary(frequency);
         boost::this_thread::sleep(boost::posix_time::microseconds(frequency.count()));
+        std::cout << summary(frequency);
     }
 }
 
