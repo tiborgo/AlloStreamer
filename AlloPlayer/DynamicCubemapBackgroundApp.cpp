@@ -58,7 +58,7 @@ bool DynamicCubemapBackgroundApp::onFrame()
     
     //std::cout << "FPS: " << FPS::fps() << std::endl;
     bool result = OmniApp::onFrame();
-    stats.displayedFrame();
+    if (onDisplayedFrame) onDisplayedFrame(this);
     return result;
 }
 
@@ -104,7 +104,7 @@ void DynamicCubemapBackgroundApp::onDraw(al::Graphics& gl)
                 
                 if(newCubemap)
                 {
-                    stats.displayedCubemapFace(faceIndex);
+                    if (onDisplayedCubemapFace) onDisplayedCubemapFace(this, faceIndex);
                 }
             }
         }
@@ -146,4 +146,14 @@ void DynamicCubemapBackgroundApp::onMessage(al::osc::Message& m)
 bool DynamicCubemapBackgroundApp::onKeyDown(const al::Keyboard& k)
 {
     return true;
+}
+
+void DynamicCubemapBackgroundApp::setOnDisplayedFrame(std::function<void (DynamicCubemapBackgroundApp*)>& callback)
+{
+    onDisplayedFrame = callback;
+}
+
+void DynamicCubemapBackgroundApp::setOnDisplayedCubemapFace(std::function<void (DynamicCubemapBackgroundApp*, int)>& callback)
+{
+    onDisplayedCubemapFace = callback;
 }

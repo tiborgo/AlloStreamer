@@ -1,7 +1,5 @@
 #include "H264CubemapSource.h"
 
-Stats stats;
-
 void H264CubemapSource::setOnNextCubemap(std::function<void (CubemapSource*, StereoCubemap*)>& onNextCubemap)
 {
     this->onNextCubemap = onNextCubemap;

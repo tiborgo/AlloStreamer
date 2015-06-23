@@ -1,6 +1,8 @@
+#include <boost/thread/mutex.hpp>
+#include <boost/bind.hpp>
+
 #include "CubemapSource.hpp"
 #include "Source.hpp"
-#include <boost/thread/mutex.hpp>
 
 class CubemapVideoSource : public VideoSource {
 public:

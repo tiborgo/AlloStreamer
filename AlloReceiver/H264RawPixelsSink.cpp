@@ -18,6 +18,16 @@ H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
 	return new H264RawPixelsSink(env, bufferSize);
 }
 
+void H264RawPixelsSink::setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type)>& callback)
+{
+    onDroppedNALU = callback;
+}
+
+void H264RawPixelsSink::setOnAddedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type)>& callback)
+{
+    onAddedNALU = callback;
+}
+
 H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 	unsigned int bufferSize)
 	: MediaSink(env), bufferSize(bufferSize), buffer(new unsigned char[bufferSize]),
@@ -110,7 +120,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
             pktBuffer.push(lastIFramePkt);
             lastIFramePkt = nullptr;
             gotFirstIFrame = true;
-            stats.droppedNALU(nal_unit_type);
+            if (onDroppedNALU) onDroppedNALU(this, nal_unit_type);
         }
         else if (nal_unit_type != 7 && gotFirstIFrame)
         {
@@ -119,19 +129,19 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
             
             packageData(pkt, frameSize, presentationTime);
             pktBuffer.push(pkt);
-            stats.addedNALU(nal_unit_type);
+            if (onAddedNALU) onAddedNALU(this, nal_unit_type);
         }
         else if (nal_unit_type == 7)
         {
             packageData(pkt, frameSize, presentationTime);
             pktBuffer.push(pkt);
             gotFirstIFrame = true;
-            stats.addedNALU(nal_unit_type);
+            if (onAddedNALU) onAddedNALU(this, nal_unit_type);
         }
         else
         {
             pktPool.push(pkt);
-            stats.droppedNALU(nal_unit_type);
+            if (onDroppedNALU) onDroppedNALU(this, nal_unit_type);
         }
     }
     else
@@ -156,7 +166,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
             // We can safely skip it.
         }
         
-        stats.droppedNALU(nal_unit_type);
+        if (onDroppedNALU) onDroppedNALU(this, nal_unit_type);
     }
     
     //if (nal_unit_type == 7)

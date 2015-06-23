@@ -1,7 +1,6 @@
 set(SOURCES
 	AlloReceiver.cpp
 	H264RawPixelsSink.cpp
-    Stats.cpp
     CubemapSource.cpp
     Source.cpp
     H264CubemapSource.cpp
@@ -11,7 +10,6 @@ set(SOURCES
 
 set(HEADERS
 	H264RawPixelsSink.h
-    Stats.h
     AlloReceiver.h
     CubemapSource.hpp
     Source.hpp

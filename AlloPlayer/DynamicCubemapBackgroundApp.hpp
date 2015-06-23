@@ -11,10 +11,12 @@ extern "C"
     #include <libswscale/swscale.h>
     #include <x264.h>
 }
+#include <boost/thread.hpp>
 #include "AlloReceiver/AlloReceiver.h"
 
 struct DynamicCubemapBackgroundApp : al::OmniApp
 {
+public:
     al::Mesh cube, sphere;
     al::Light light;
     al_sec now;
@@ -35,4 +37,11 @@ struct DynamicCubemapBackgroundApp : al::OmniApp
     virtual void onMessage(al::osc::Message& m);
     virtual bool onKeyDown(const al::Keyboard& k);
     void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
+    
+    void setOnDisplayedFrame(std::function<void (DynamicCubemapBackgroundApp*)>& callback);
+    void setOnDisplayedCubemapFace(std::function<void (DynamicCubemapBackgroundApp*, int)>& callback);
+    
+protected:
+    std::function<void (DynamicCubemapBackgroundApp*)> onDisplayedFrame;
+    std::function<void (DynamicCubemapBackgroundApp*, int)> onDisplayedCubemapFace;
 };

@@ -24,6 +24,9 @@ public:
 		unsigned int bufferSize);
 
     AVFrame* getNextFrame();
+    
+    void setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type)>& callback);
+    void setOnAddedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type)>& callback);
 
 protected:
 	H264RawPixelsSink(UsageEnvironment& env,
@@ -40,6 +43,9 @@ protected:
 		unsigned numTruncatedBytes,
 		timeval presentationTime,
 		unsigned durationInMicroseconds);
+    
+    std::function<void (H264RawPixelsSink*, u_int8_t type)> onDroppedNALU;
+    std::function<void (H264RawPixelsSink*, u_int8_t type)> onAddedNALU;
 
 private:
 	unsigned int bufferSize;
