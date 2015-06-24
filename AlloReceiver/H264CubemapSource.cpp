@@ -41,52 +41,17 @@ void H264CubemapSource::getNextCubemapLoop()
             AVFrame* nextFrame = nextFrames[i];
             if (nextFrame)
             {
-                if (!resizeCtx)
-                {
-                    // setup resizer for received frames
-                    resizeCtx = sws_getContext(nextFrame->width, nextFrame->height, (AVPixelFormat)nextFrame->format,
-                                               resolution, resolution, format,
-                                               SWS_BICUBIC, NULL, NULL, NULL);
-                }
-                
-                AVFrame* resizedFrame = av_frame_alloc();
-
-                if (!resizedFrame)
-                {
-                    fprintf(stderr, "Could not allocate video frame\n");
-                    exit(-1);
-                }
-                resizedFrame->format = format;
-                resizedFrame->width = resolution;
-                resizedFrame->height = resolution;
-
-                if (av_image_alloc(resizedFrame->data, resizedFrame->linesize, resizedFrame->width, resizedFrame->height,
-                                   (AVPixelFormat)resizedFrame->format, 32) < 0)
-                {
-                    fprintf(stderr, "Could not allocate raw picture buffer\n");
-                    exit(-1);
-                }
-
-                // resize frame
-                sws_scale(resizeCtx, nextFrame->data, nextFrame->linesize, 0, nextFrame->height,
-                          resizedFrame->data, resizedFrame->linesize);
-
-                // delete nextFrame
-                av_freep(&nextFrame->data[0]);
-                //av_frame_free(&nextFrame);
-//                AVFrame* resizedFrame = nextFrame;
-            
                 // read pixels from frame
-                if (avpicture_layout((AVPicture*)resizedFrame, (AVPixelFormat)resizedFrame->format,
-                                     resizedFrame->width, resizedFrame->height,
-                                     (unsigned char*)face->getPixels(), resizedFrame->width * resizedFrame->height * 4) < 0)
+                if (avpicture_layout((AVPicture*)nextFrame, (AVPixelFormat)nextFrame->format,
+                                     nextFrame->width, nextFrame->height,
+                                     (unsigned char*)face->getPixels(), nextFrame->width * nextFrame->height * 4) < 0)
                 {
                     fprintf(stderr, "Could not read pixels from frame\n");
                     exit(0);
                 }
                 
-                av_freep(&resizedFrame->data[0]);
-                //av_frame_free(&resizedFrame);
+                // delete nextFrame
+                av_freep(&nextFrame->data[0]);
             }
             else
             {
@@ -118,7 +83,7 @@ void H264CubemapSource::getNextCubemapLoop()
 
 H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks, int resolution, AVPixelFormat format)
     :
-    sinks(sinks), resizeCtx(NULL), resolution(resolution), format(format)
+    sinks(sinks), resolution(resolution), format(format)
 {
     av_log_set_level(AV_LOG_WARNING);
     for (H264RawPixelsSink* sink : sinks)

@@ -21,7 +21,9 @@ class H264RawPixelsSink: public MediaSink
 {
 public:
 	static H264RawPixelsSink* createNew(UsageEnvironment& env,
-		unsigned int bufferSize);
+                                        unsigned int bufferSize,
+                                        int resolution,
+                                        AVPixelFormat format);
 
     AVFrame* getNextFrame();
     
@@ -30,7 +32,9 @@ public:
 
 protected:
 	H264RawPixelsSink(UsageEnvironment& env,
-		unsigned int bufferSize);
+                      unsigned int bufferSize,
+                      int resolution,
+                      AVPixelFormat format);
 
 	virtual void afterGettingFrame(unsigned frameSize,
 		unsigned numTruncatedBytes,
@@ -51,18 +55,24 @@ private:
 	unsigned int bufferSize;
 	unsigned char* buffer;
 	AVCodecContext* codecContext;
+    concurrent_queue<AVPacket*> pktBuffer;
+    concurrent_queue<AVPacket*> pktPool;
 	concurrent_queue<AVFrame*> frameBuffer;
 	concurrent_queue<AVFrame*> framePool;
-	concurrent_queue<AVPacket*> pktBuffer;
-    concurrent_queue<AVPacket*> pktPool;
+    concurrent_queue<AVFrame*> resizedFrameBuffer;
+    concurrent_queue<AVFrame*> resizedFramePool;
 
-	SwsContext *img_convert_ctx;
+	SwsContext* imageConvertCtx;
 
-	boost::thread decodeFrameThread;
     AVPacket* lastIFramePkt;
     bool gotFirstIFrame;
+    int resolution;
+    AVPixelFormat format;
     
 	void decodeFrameLoop();
+    void convertFrameLoop();
+    boost::thread decodeFrameThread;
+    boost::thread convertFrameThread;
 
 	int counter;
 	long sumRelativePresentationTimeMicroSec;

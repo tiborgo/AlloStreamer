@@ -31,9 +31,12 @@ struct RTSPHelper
             {
                 std::vector<H264RawPixelsSink*> h264Sinks;
                 std::vector<MediaSink*> sinks;
-                for (int i = 0; i < 6; i++)
+                for (int i = 0; i < subsessions.size(); i++)
                 {
-                    H264RawPixelsSink* sink = H264RawPixelsSink::createNew(client->envir(), SINK_BUFFER_SIZE);
+                    H264RawPixelsSink* sink = H264RawPixelsSink::createNew(client->envir(),
+                                                                           SINK_BUFFER_SIZE,
+                                                                           resolution,
+                                                                           format);
                     h264Sinks.push_back(sink);
                     sinks.push_back(sink);
                 }

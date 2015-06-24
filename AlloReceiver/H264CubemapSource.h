@@ -30,7 +30,6 @@ private:
     void sinkOnAddedNALU(H264RawPixelsSink* sink, u_int8_t type);
     
     std::vector<H264RawPixelsSink*> sinks;
-    SwsContext*                     resizeCtx;
     int                             resolution;
     AVPixelFormat                   format;
     HeapAllocator                   heapAllocator;
