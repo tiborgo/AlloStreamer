@@ -1,11 +1,11 @@
 set(SOURCES
-    DynamicCubemapBackgroundApp.cpp
+    Renderer.cpp
     main.cpp
     Stats.cpp
 )
 	
 set(HEADERS
-    DynamicCubemapBackgroundApp.hpp
+    Renderer.hpp
     Stats.h
 )
 

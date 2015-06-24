@@ -1,5 +1,5 @@
 
-#include "DynamicCubemapBackgroundApp.hpp"
+#include "Renderer.hpp"
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
@@ -84,8 +84,8 @@ int main(int argc, char* argv[])
     }
     else
     {
-        DynamicCubemapBackgroundApp dynamicCubemapBackgroundApp(cubemapSource);
-        dynamicCubemapBackgroundApp.start();
+        Renderer renderer(cubemapSource);
+        renderer.start();
     }
     
     CubemapSource::destroy(cubemapSource);

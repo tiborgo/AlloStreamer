@@ -1,9 +1,9 @@
-#include "DynamicCubemapBackgroundApp.hpp"
+#include "Renderer.hpp"
 
 #define QUOTE(x) #x
 #define STR(x) QUOTE(x)
 
-DynamicCubemapBackgroundApp::DynamicCubemapBackgroundApp(CubemapSource* cubemapSource)
+Renderer::Renderer(CubemapSource* cubemapSource)
     :
     al::OmniApp("AlloPlayer", false, 2048), resizeCtx(nullptr), cubemapSource(cubemapSource),
     cubemap(nullptr), newCubemap(false)
@@ -35,24 +35,24 @@ DynamicCubemapBackgroundApp::DynamicCubemapBackgroundApp(CubemapSource* cubemapS
     
     
     
-    std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&DynamicCubemapBackgroundApp::onNextCubemap,
+    std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&Renderer::onNextCubemap,
                                                                                 this,
                                                                                 _1,
                                                                                 _2);
     cubemapSource->setOnNextCubemap(callback);
 }
 
-DynamicCubemapBackgroundApp::~DynamicCubemapBackgroundApp()
+Renderer::~Renderer()
 {
 }
 
-bool DynamicCubemapBackgroundApp::onCreate()
+bool Renderer::onCreate()
 {
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << ", GLSL version " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
     return OmniApp::onCreate();
 }
 
-bool DynamicCubemapBackgroundApp::onFrame()
+bool Renderer::onFrame()
 {
     now = al::MainLoop::now();
     
@@ -64,7 +64,7 @@ bool DynamicCubemapBackgroundApp::onFrame()
     return result;
 }
 
-void DynamicCubemapBackgroundApp::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
+void Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
     boost::mutex::scoped_lock lock(nextCubemapMutex);
     if (this->cubemap)
@@ -75,7 +75,7 @@ void DynamicCubemapBackgroundApp::onNextCubemap(CubemapSource* source, StereoCub
     newCubemap = true;
 }
 
-void DynamicCubemapBackgroundApp::onDraw(al::Graphics& gl)
+void Renderer::onDraw(al::Graphics& gl)
 {
     int faceIndex = mOmni.face();
     
@@ -135,27 +135,27 @@ void DynamicCubemapBackgroundApp::onDraw(al::Graphics& gl)
 }
 
 
-void DynamicCubemapBackgroundApp::onAnimate(al_sec dt)
+void Renderer::onAnimate(al_sec dt)
 {
     pose = nav();
 }
 
-void DynamicCubemapBackgroundApp::onMessage(al::osc::Message& m)
+void Renderer::onMessage(al::osc::Message& m)
 {
     OmniApp::onMessage(m);
 }
 
-bool DynamicCubemapBackgroundApp::onKeyDown(const al::Keyboard& k)
+bool Renderer::onKeyDown(const al::Keyboard& k)
 {
     return true;
 }
 
-void DynamicCubemapBackgroundApp::setOnDisplayedFrame(std::function<void (DynamicCubemapBackgroundApp*)>& callback)
+void Renderer::setOnDisplayedFrame(std::function<void (Renderer*)>& callback)
 {
     onDisplayedFrame = callback;
 }
 
-void DynamicCubemapBackgroundApp::setOnDisplayedCubemapFace(std::function<void (DynamicCubemapBackgroundApp*, int)>& callback)
+void Renderer::setOnDisplayedCubemapFace(std::function<void (Renderer*, int)>& callback)
 {
     onDisplayedCubemapFace = callback;
 }
