@@ -56,11 +56,13 @@ bool Renderer::onFrame()
 {
     now = al::MainLoop::now();
     
-    //std::cout << "FPS: " << FPS::fps() << std::endl;
-    bool result = OmniApp::onFrame();
-    if (onDisplayedFrame)
-        
-        onDisplayedFrame(this);
+    bool result;
+    {
+        boost::mutex::scoped_lock lock(nextCubemapMutex);
+        result = OmniApp::onFrame();
+        newCubemap = false;
+    }
+    if (onDisplayedFrame) onDisplayedFrame(this);
     return result;
 }
 
@@ -80,7 +82,7 @@ void Renderer::onDraw(al::Graphics& gl)
     int faceIndex = mOmni.face();
     
     {
-        boost::mutex::scoped_lock lock(nextCubemapMutex);
+        
         
         // render cubemap
         if (cubemap && cubemap->getEyesCount() > 0)
@@ -110,8 +112,6 @@ void Renderer::onDraw(al::Graphics& gl)
                 }
             }
         }
-        
-        newCubemap = false;
     }
     
     light();
