@@ -16,6 +16,7 @@ void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
     {
         stats.displayedCubemapFace(i);
     }
+    stats.displayedFrame();
     StereoCubemap::destroy(cubemap);
 }
 
@@ -27,6 +28,16 @@ void onDroppedNALU(CubemapSource* source, int face, u_int8_t type)
 void onAddedNALU(CubemapSource* source, int face, u_int8_t type)
 {
     stats.addedNALU(type);
+}
+
+void onDisplayedCubemapFace(Renderer* renderer, int face)
+{
+    stats.displayedCubemapFace(face);
+}
+
+void onDisplayedFrame(Renderer* renderer)
+{
+    stats.displayedFrame();
 }
 
 int main(int argc, char* argv[])
@@ -85,6 +96,10 @@ int main(int argc, char* argv[])
     else
     {
         Renderer renderer(cubemapSource);
+        std::function<void (Renderer*, int)> onDisplayedCubemapFaceCallback = boost::bind(&onDisplayedCubemapFace, _1, _2);
+        renderer.setOnDisplayedCubemapFace(onDisplayedCubemapFaceCallback);
+        std::function<void (Renderer*)> onDisplayedFrameCallback = boost::bind(&onDisplayedFrame, _1);
+        renderer.setOnDisplayedFrame(onDisplayedFrameCallback);
         renderer.start();
     }
     
