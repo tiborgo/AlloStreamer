@@ -23,7 +23,7 @@ Process::Process(std::string id, bool isSelf)
         lockfile = new  std::ofstream(lockfilePath.c_str());
         *lockfile << id;
         lockfile->flush();
-        fileLock = new boost::interprocess::file_lock(lockfilePath.c_str());
+		fileLock = new boost::interprocess::file_lock(lockfilePath.string().c_str());
         fileLock->lock();
     }
 }
@@ -46,7 +46,7 @@ bool Process::isAlive()
         {
             return false;
         }
-        boost::interprocess::file_lock fileLock(lockfilePath.c_str());
+        boost::interprocess::file_lock fileLock(lockfilePath.string().c_str());
         bool result = !fileLock.try_lock();
         if (!result)
         {
@@ -66,7 +66,7 @@ void Process::join()
     {
         if (boost::filesystem::exists(lockfilePath))
         {
-            boost::interprocess::file_lock fileLock(lockfilePath.c_str());
+            boost::interprocess::file_lock fileLock(lockfilePath.string().c_str());
             boost::interprocess::scoped_lock<boost::interprocess::file_lock> lock(fileLock);
         }
     }

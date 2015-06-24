@@ -174,11 +174,11 @@ int main(int argc, char* argv[])
 
     if (vm.count("interface"))
     {
-        std::string interface = vm["interface"].as<std::string>();
-        NetAddressList addresses(interface.c_str());
+        std::string interfaceAddress = vm["interface"].as<std::string>();
+        NetAddressList addresses(interfaceAddress.c_str());
         if (addresses.numAddresses() == 0)
         {
-            std::cout << "Failed to find network address for \"" << interface << "\"" << std::endl;
+            std::cout << "Failed to find network address for \"" << interfaceAddress << "\"" << std::endl;
             return -1;
         }
         ReceivingInterfaceAddr = *(unsigned*)(addresses.firstAddress()->data());

@@ -1,7 +1,7 @@
 set(SOURCES
 	CubemapExtractionPlugin.cpp
-	CubemapFaceD3D9.inl
-	CubemapFaceD3D11.inl
+	CubemapFaceD3D9.cpp
+	CubemapFaceD3D11.cpp
     CubemapFaceOpenGL.inl
 )
 

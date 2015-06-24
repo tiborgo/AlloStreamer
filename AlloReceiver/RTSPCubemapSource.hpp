@@ -15,7 +15,7 @@ public:
     static RTSPCubemapSource* create(const char* url,
                                      int resolution,
                                      AVPixelFormat format,
-                                     const char* interface = "0.0.0.0");
+                                     const char* interfaceAddress = "0.0.0.0");
     
 private:
     std::vector<MediaSink*> onGetSinksForSubsessions(RTSPCubemapSourceClient* client,

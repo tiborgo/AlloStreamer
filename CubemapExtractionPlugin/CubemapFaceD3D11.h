@@ -16,27 +16,22 @@ public:
 	ID3D11Texture2D* const cpuTexturePtr;
 	D3D11_MAPPED_SUBRESOURCE resource;
 
-	template <typename SegmentManager>
 	static CubemapFaceD3D11* create(ID3D11Texture2D*
-		texturePtr,
-		int face,
-		Allocator<SegmentManager>& allocator);
+		                            texturePtr,
+		                            int face,
+		                            Allocator& allocator);
 
 protected:
-
-	template <typename SegmentManager>
-	CubemapFaceD3D11(
-		boost::uint32_t width,
-		boost::uint32_t height,
-		int index,
-		Allocator<SegmentManager>& allocator,
-		ID3D11Texture2D* gpuTexturePtr,
-		ID3D11Texture2D* cpuTexturePtr,
-		D3D11_MAPPED_SUBRESOURCE resource,
-		D3D11_TEXTURE2D_DESC& description
-		);
+	CubemapFaceD3D11(boost::uint32_t width,
+                     boost::uint32_t height,
+		             int index,
+					 boost::chrono::system_clock::time_point presentationTime,
+                     void* pixels,
+				     Allocator& allocator,
+			         ID3D11Texture2D* gpuTexturePtr,
+			         ID3D11Texture2D* cpuTexturePtr,
+			         D3D11_MAPPED_SUBRESOURCE resource,
+			         D3D11_TEXTURE2D_DESC& description);
 };
-
-#include "CubemapFaceD3D11.inl"
 
 #endif

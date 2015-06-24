@@ -56,12 +56,12 @@ struct RTSPHelper
 RTSPCubemapSource* RTSPCubemapSource::create(const char* url,
                                              int resolution,
                                              AVPixelFormat format,
-                                             const char* interface)
+                                             const char* interfaceAddress)
 {
-    NetAddressList addresses(interface);
+    NetAddressList addresses(interfaceAddress);
     if (addresses.numAddresses() == 0)
     {
-       std::cout << "Inteface \"" << interface << "\" does not exist" << std::endl;
+       std::cout << "Inteface \"" << interfaceAddress << "\" does not exist" << std::endl;
        return nullptr;
     }
     ReceivingInterfaceAddr = *(unsigned*)(addresses.firstAddress()->data());

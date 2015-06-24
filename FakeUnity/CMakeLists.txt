@@ -11,7 +11,8 @@ find_package(Boost
   REQUIRED              # Fail with error if Boost is not found
   COMPONENTS thread date_time system chrono   # Boost libraries by their canonical name
 )                     # e.g. "date_time" for "libboost_date_time"
-  
+find_package(FFmpeg REQUIRED)
+
 add_executable(FakeUnity
 	${SOURCES}
 	${HEADERS}
@@ -19,6 +20,7 @@ add_executable(FakeUnity
 target_include_directories(FakeUnity
 	PRIVATE
 	${Boost_INCLUDE_DIRS}
+	${FFMPEG_INCLUDE_DIRS}
 )
 target_link_libraries(FakeUnity
 	${Boost_LIBRARIES}

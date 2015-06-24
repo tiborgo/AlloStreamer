@@ -237,7 +237,9 @@ void copyFromGPUToCPU(CubemapFace* face)
     if (g_DeviceType == kGfxRendererD3D9)
     {
         CubemapFaceD3D9* faceD3D9 = (CubemapFaceD3D9*)face;
-        memcpy(faceD3D9->pixels.get(), faceD3D9->lockedRect.pBits, faceD3D9->width * faceD3D9->height * 4);
+        memcpy(faceD3D9->getPixels(),
+			   faceD3D9->lockedRect.pBits,
+			   faceD3D9->getWidth() * faceD3D9->getHeight() * 4);
     }
 #endif
     
@@ -247,7 +249,9 @@ void copyFromGPUToCPU(CubemapFace* face)
     if (g_DeviceType == kGfxRendererD3D11)
     {
         CubemapFaceD3D11* faceD3D11 = (CubemapFaceD3D11*)face;
-        memcpy(faceD3D11->pixels.get(), faceD3D11->resource.pData, faceD3D11->width * faceD3D11->height * 4);
+        memcpy(faceD3D11->getPixels(),
+			   faceD3D11->resource.pData,
+			   faceD3D11->getWidth() * faceD3D11->getHeight() * 4);
     }
 #endif
     

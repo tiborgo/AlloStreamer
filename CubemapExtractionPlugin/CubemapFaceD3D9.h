@@ -19,27 +19,22 @@ public:
 	const D3DFORMAT format;
 	const D3DLOCKED_RECT lockedRect;
 
-	template <typename SegmentManager>
-	static Ptr create(
-		IDirect3DTexture9* texturePtr,
-		int index,
-		Allocator<SegmentManager>& allocator);
+	static CubemapFaceD3D9* create(IDirect3DTexture9* texturePtr,
+		                           int index,
+		                           Allocator& allocator);
 
 protected:
-	template <typename SegmentManager>
-	CubemapFaceD3D9(
-		boost::uint32_t width,
-		boost::uint32_t height,
-		int index,
-		Allocator<SegmentManager>& allocator,
-		IDirect3DTexture9* texturePtr,
-		IDirect3DSurface9* gpuSurfacePtr,
-		IDirect3DSurface9* cpuSurfacePtr,
-		D3DFORMAT format,
-		D3DLOCKED_RECT lockedRect
-		);
+	CubemapFaceD3D9(boost::uint32_t width,
+		            boost::uint32_t height,
+		            int index,
+		            boost::chrono::system_clock::time_point presentationTime,
+		            void* pixels,
+		            Allocator& allocator,
+		            IDirect3DTexture9* texturePtr,
+		            IDirect3DSurface9* gpuSurfacePtr,
+		            IDirect3DSurface9* cpuSurfacePtr,
+		            D3DFORMAT format,
+		            D3DLOCKED_RECT lockedRect);
 };
-
-#include "CubemapFaceD3D9.inl"
 
 #endif
