@@ -42,7 +42,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 			fprintf(stderr, "Could not allocate video frame\n");
 			exit(1);
 		}
-		frame->format = AV_PIX_FMT_RGBA;
+		//frame->format = AV_PIX_FMT_RGBA;
 
 		framePool.push(frame);
         
@@ -99,15 +99,8 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 	unsigned numTruncatedBytes,
 	timeval presentationTime)
 {
-    //std::cout << "got data" << std::endl;
-    
     u_int8_t nal_unit_type = buffer[0] & 0x1F;
     AVPacket* pkt = (pktPool.try_pop(pkt)) ? pkt : nullptr;
-    
-    if (nal_unit_type == 7)
-    {
-        int x = 0;
-    }
     
     if (pkt)
     {
@@ -168,11 +161,6 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
         
         if (onDroppedNALU) onDroppedNALU(this, nal_unit_type);
     }
-    
-    //if (nal_unit_type == 7)
-    //{
-        //std::cout << this << " received frame " << (int)nal_unit_type << std::endl;
-    //}
 
 	// Then try getting the next frame:
 	continuePlaying();
@@ -188,10 +176,10 @@ Boolean H264RawPixelsSink::continuePlaying()
 }
 
 void H264RawPixelsSink::afterGettingFrame(void*clientData,
-	unsigned frameSize,
-	unsigned numTruncatedBytes,
-	timeval presentationTime,
-	unsigned durationInMicroseconds)
+                                          unsigned frameSize,
+                                          unsigned numTruncatedBytes,
+                                          timeval presentationTime,
+                                          unsigned durationInMicroseconds)
 {
 	H264RawPixelsSink* sink = (H264RawPixelsSink*)clientData;
 	sink->afterGettingFrame(frameSize, numTruncatedBytes, presentationTime);
@@ -199,23 +187,17 @@ void H264RawPixelsSink::afterGettingFrame(void*clientData,
 
 void H264RawPixelsSink::decodeFrameLoop()
 {
-
-
 	while (true)
 	{
 		// Pop frame ptr from buffer
 		AVFrame* frame;
-		AVFrame* yuvFrame;
 		AVPacket* pkt;
-
 
 		if (!pktBuffer.wait_and_pop(pkt))
 		{
 			// queue did close
 			return;
 		}
-        
-        u_int8_t nal_unit_type = pkt->data[4] & 0x1F;
 
 		if (!framePool.wait_and_pop(frame))
 		{
@@ -223,85 +205,31 @@ void H264RawPixelsSink::decodeFrameLoop()
 			return;
 		}
 
-		yuvFrame = av_frame_alloc();
-		if (!yuvFrame)
-		{
-			fprintf(stderr, "Could not allocate video frame\n");
-			exit(1);
-		}
 		int got_frame;
-		int len = avcodec_decode_video2(codecContext, yuvFrame, &got_frame, pkt);
+		int len = avcodec_decode_video2(codecContext, frame, &got_frame, pkt);
 
         if (got_frame == 1)
 		{
             // We have decoded a frame :) ->
-            // Convert to RGB pixel format and make the pixels available to the application
-            
-			if (!frame->data[0])
-			{
-				frame->width = yuvFrame->width;
-				frame->height = yuvFrame->height;
-
-				/* the image can be allocated by any means and av_image_alloc() is
-				* just the most convenient way if av_malloc() is to be used */
-				if (av_image_alloc(frame->data, frame->linesize, frame->width, frame->height,
-					(AVPixelFormat)frame->format, 32) < 0)
-				{
-					fprintf(stderr, "Could not allocate raw picture buffer\n");
-					exit(1);
-				}
-			}
-
-			//x2y(yuvFrame, frame, codecContext);
-
-			if (!img_convert_ctx)
-			{
-				img_convert_ctx = sws_getContext(
-					yuvFrame->width, yuvFrame->height, (AVPixelFormat)yuvFrame->format,
-					frame->width, frame->height, (AVPixelFormat)frame->format,
-					SWS_BICUBIC, NULL, NULL, NULL);
-			}
-
-			int x = sws_scale(img_convert_ctx, yuvFrame->data,
-				yuvFrame->linesize, 0, yuvFrame->height,
-				frame->data, frame->linesize);
-            
-            //std::cout << "decoded frame " << (int)nal_unit_type << std::endl,
-            // Make it available to the application
+            // Make the frame available to the application
+            frame->pts = pkt->pts;
             frameBuffer.push(frame);
-            
-            //framePool.push(frame);
-
-			// Flip image vertically
-			/*for (int i = 0; i < 4; i++)
-			{
-				frame->data[i] += frame->linesize[i] * (frame->height - 1);
-				frame->linesize[i] = -frame->linesize[i];
-			}*/
-
-			//std::cout << this << ": afterGettingFrame: " << frame << "\n";
-
-			//printf("%ld.%06ld\n", presentationTime.tv_sec, presentationTime.tv_usec);
-
-			//av_freep(&yuvFrame->data[0]);
-			av_frame_free(&yuvFrame);
 		}
         else
         {
             // No frame could be decoded :( ->
             // Put frame back to the pool so that the next packet will be read
+            framePool.push(frame);
             
             if (len < 0)
             {
-                //std::cout << this << ": error decoding frame " << (int)nal_unit_type << std::endl;
+                // error decoding frame
             }
             else if (len == 0)
             {
-                //std::cout << this << ": no frame could be decoded " << (int)nal_unit_type << std::endl;
+                // package contained no frame
             }
-            
-            // Use frame for next try
-            framePool.push(frame);
+
         }
         
 
@@ -343,11 +271,11 @@ AVFrame* H264RawPixelsSink::getNextFrame()
     
     if (frameBuffer.wait_and_pop(frame))
     {
-        framePool.push(frame);
         AVFrame* clone = av_frame_clone(frame);
         // av_frame_clone only copies properties and still references the sources data.
         // Make full copy instead
         av_frame_copy(clone, frame);
+        framePool.push(frame);
         return clone;
     }
     else
