@@ -208,12 +208,17 @@ void CubemapFaceSource::frameFaceLoop()
             return;
         }
         
+        // barrier1  // barrier1
+                     // barrier2
+        
         // Fill frame
         avpicture_fill((AVPicture*)frame,
             (uint8_t*)face->getPixels(),
             face->getFormat(),
             face->getWidth(),
             face->getHeight());
+        
+        // barrier2
 
         // Set the actual presentation time
         // It is in the past probably but we will try our best

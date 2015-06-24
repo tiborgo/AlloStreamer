@@ -19,6 +19,14 @@ void H264CubemapSource::getNextCubemapLoop()
 {
     while (true)
     {
+        // Get all the decoded frames
+        std::vector<AVFrame*> nextFrames;
+        nextFrames.reserve(sinks.size());
+        for (int i = 0; i < sinks.size(); i++)
+        {
+            nextFrames.push_back(sinks[i]->getNextFrame());
+        }
+        
         std::vector<CubemapFace*> faces;
         for (int i = 0; i < sinks.size(); i++)
         {
@@ -29,7 +37,8 @@ void H264CubemapSource::getNextCubemapLoop()
                                                     boost::chrono::system_clock::time_point(),
                                                     heapAllocator);
             
-            AVFrame* nextFrame = sinks[i]->getNextFrame();
+            
+            AVFrame* nextFrame = nextFrames[i];
             if (nextFrame)
             {
                 if (!resizeCtx)
@@ -65,6 +74,7 @@ void H264CubemapSource::getNextCubemapLoop()
                 // delete nextFrame
                 av_freep(&nextFrame->data[0]);
                 //av_frame_free(&nextFrame);
+//                AVFrame* resizedFrame = nextFrame;
             
                 // read pixels from frame
                 if (avpicture_layout((AVPicture*)resizedFrame, (AVPixelFormat)resizedFrame->format,
@@ -76,7 +86,7 @@ void H264CubemapSource::getNextCubemapLoop()
                 }
                 
                 av_freep(&resizedFrame->data[0]);
-                av_frame_free(&resizedFrame);
+                //av_frame_free(&resizedFrame);
             }
             else
             {

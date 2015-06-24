@@ -77,7 +77,10 @@ int main(int argc, char* argv[])
         std::cout << "network only" << std::endl;
         std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&onNextCubemap, _1, _2);
         cubemapSource->setOnNextCubemap(callback);
-        while(true){}
+        while(true)
+        {
+            boost::this_thread::yield();
+        }
     }
     else
     {
