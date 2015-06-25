@@ -34,7 +34,13 @@ Process::~Process()
     {
         fileLock->unlock();
         delete lockfile;
-        boost::filesystem::remove(lockfilePath);
+		// This would clean up resources we used.
+		// However, on Windows files will not get removed until
+		// the process holding the file is closed.
+		// When using the Unity editor the process will not get closed
+		// in between tries causing the crash of the process
+		// in the next try.
+        // boost::filesystem::remove(lockfilePath);
     }
 }
 
