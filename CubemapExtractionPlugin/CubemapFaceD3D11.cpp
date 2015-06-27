@@ -1,5 +1,3 @@
-#pragma once
-
 #include "CubemapExtractionPlugin.h"
 #include "CubemapFaceD3D11.h"
 #include <boost/thread/mutex.hpp>

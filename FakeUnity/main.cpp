@@ -61,6 +61,19 @@ int main(int argc, char* argv[])
     boost::chrono::milliseconds targetFrameDuration(1000 / targetFPS);
     presentationTime = boost::chrono::system_clock::now();
     
+    // Create random pixels to challenge the encoder
+    const size_t randomPixelsListCount = 5;
+    std::vector<char*> randomPixelsList;
+    for (int i = 0; i < randomPixelsListCount; i++)
+    {
+        char* randomPixels = new char[resolution * resolution * 4];
+        for (int j = 0; j < resolution * resolution * 4; j++)
+        {
+            randomPixels[j] = rand() % 255;
+        }
+        randomPixelsList.push_back(randomPixels);
+    }
+    
     // Create and/or open shared memory
     allocateSHM(cubemapFacesCount, resolution);
     std::vector<CubemapFace*> faces;
@@ -82,6 +95,8 @@ int main(int argc, char* argv[])
     boost::chrono::system_clock::time_point lastTime = boost::chrono::system_clock::now();
     int frames = 0;
     boost::chrono::milliseconds fpsMeasurementPeriod(5000);
+    
+    unsigned long frameIndex = 0;
     
     while(true)
     {
@@ -110,6 +125,10 @@ int main(int argc, char* argv[])
             boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->getMutex(),
                                                                                            boost::interprocess::accept_ownership);
             
+            // Give the encoder some random pixels
+            char* randomPixels = randomPixelsList[frameIndex % randomPixelsListCount];
+            memcpy(face->getPixels(), randomPixels, resolution * resolution * 4);
+            
             face->setPresentationTime(presentationTime);
             face->getNewPixelsCondition().notify_all();
         }
@@ -133,6 +152,8 @@ int main(int argc, char* argv[])
             frames = 0;
             lastTime = now;
         }
+        
+        frameIndex++;
     }
     
     delete thisProcess;

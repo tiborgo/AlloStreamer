@@ -134,7 +134,7 @@ void setupRTSP()
     // "ServerMediaSubsession" objects for each audio/video substream.
 
 
-    OutPacketBuffer::maxSize = 4000000;
+    OutPacketBuffer::maxSize = 400000000;
 
     addFaceSubstreamsTriggerId = env->taskScheduler().createEventTrigger(&addFaceSubstream0);
     removeFaceSubstreamsTriggerId = env->taskScheduler().createEventTrigger(&removeFaceSubstreams0);

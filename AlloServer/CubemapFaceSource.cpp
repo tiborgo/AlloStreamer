@@ -50,8 +50,7 @@ unsigned CubemapFaceSource::referenceCount = 0;
 struct timeval prevtime;
 
 CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapFace* face)
-: FramedSource(env), face(face), /*encodeBarrier(2),*/ destructing(false),
-img_convert_ctx(NULL)
+: FramedSource(env), img_convert_ctx(NULL), face(face), /*encodeBarrier(2),*/ destructing(false)
 {
 
 	gettimeofday(&prevtime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.

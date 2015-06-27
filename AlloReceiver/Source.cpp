@@ -22,9 +22,17 @@ public:
             virtual int stride() {
                 ::AVPixelFormat fmt = face_->getFormat();
                 if(fmt == AV_PIX_FMT_RGB24)
+                {
                     return face_->getWidth() * 3;
-                if(fmt == AV_PIX_FMT_RGBA)
+                }
+                else if(fmt == AV_PIX_FMT_RGBA)
+                {
                     return face_->getWidth() * 4;
+                }
+                else
+                {
+                    return 0;
+                }
             }
             virtual void* pixels() {
                 return face_->getPixels();
