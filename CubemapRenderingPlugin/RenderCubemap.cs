@@ -10,7 +10,8 @@ public class RenderCubemap : MonoBehaviour {
 	
 	// Parameters
 	public int resolution = 1024;
-	public int faceCount = 6;
+	public int faceCount  = 6;
+	public bool extract   = true;
 	
 	[DllImport("CubemapExtractionPlugin")]
 	private static extern void StartFromUnity(System.IntPtr[] texturePtrs, int cubemapFacesCount, int resolution);
@@ -93,7 +94,10 @@ public class RenderCubemap : MonoBehaviour {
 		while (true)
 		{
 			yield return new WaitForEndOfFrame();
-			GL.IssuePluginEvent(1);
+			if (extract)
+			{
+				GL.IssuePluginEvent(1);
+			}
 		}
 	}
 }

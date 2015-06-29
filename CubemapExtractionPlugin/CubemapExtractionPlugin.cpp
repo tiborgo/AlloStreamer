@@ -23,6 +23,8 @@ static Process alloServerProcess(ALLOSERVER_ID, false);
 static boost::chrono::system_clock::time_point presentationTime;
 static boost::mutex d3D11DeviceContextMutex;
 
+GLuint tex;
+
 // Prints a string
 static void DebugLog (const char* str)
 {
@@ -206,6 +208,7 @@ void copyFromGPUToCPU(CubemapFace* face)
     {
         CubemapFaceOpenGL* faceOpenGL = (CubemapFaceOpenGL*)face;
         glBindTexture(GL_TEXTURE_2D, faceOpenGL->gpuTextureID);
+        //glBindTexture(GL_TEXTURE_2D, tex);
     }
 #endif
     
@@ -311,6 +314,12 @@ extern "C" void EXPORT_API StartFromUnity(void** texturePtrs, int cubemapFacesCo
         faces.push_back(getCubemapFaceFromTexture(texturePtrs[i], i));
     }
     allocateCubemap(faces);
+    
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    char* pixels = new char[resolution * resolution * 3];
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, resolution, resolution, 0, GL_RGB, GL_BYTE, pixels);
+    delete[] pixels;
     
     thisProcess = new Process(CUBEMAPEXTRACTIONPLUGIN_ID, true);
 }
