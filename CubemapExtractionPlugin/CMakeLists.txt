@@ -43,6 +43,9 @@ set_target_properties(CubemapExtractionPlugin
     RUNTIME_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}" # for Windows
     LIBRARY_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}/" # for OS X
 )
+add_dependencies(CubemapExtractionPlugin
+	CubemapRenderingPlugin
+)
 
 if(WIN32)
     target_link_libraries(CubemapExtractionPlugin
