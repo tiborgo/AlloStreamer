@@ -23,10 +23,14 @@ extern "C"
 class CubemapFaceSource : public FramedSource
 {
 public:
-	static CubemapFaceSource* createNew(UsageEnvironment& env, CubemapFace* face);
+	static CubemapFaceSource* createNew(UsageEnvironment& env,
+		                                CubemapFace* face,
+										int avgBitRate);
 
 protected:
-	CubemapFaceSource(UsageEnvironment& env, CubemapFace* face);
+	CubemapFaceSource(UsageEnvironment& env,
+		              CubemapFace* face,
+					  int avgBitRate);
 	// called only by createNew(), or by subclass constructors
 	virtual ~CubemapFaceSource();
 

@@ -21,6 +21,11 @@ extern "C"
 #include "CubemapExtractionPlugin/CubemapExtractionPlugin.h"
 #include "AlloServer.h"
 
+extern "C"
+{
+	#include "to_human_readable_byte_count.h"
+}
+
 struct FaceStreamState
 {
     RTPSink* sink;
@@ -41,6 +46,7 @@ static boost::interprocess::managed_shared_memory* shm;
 static boost::barrier stopStreamingBarrier(2);
 static std::vector<FaceStreamState> faceStreams;
 static boost::uint16_t rtspPort;
+static int avgBitRate;
 
 static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms)
 {
@@ -80,7 +86,10 @@ void addFaceSubstream0(void*)
 
         sms->addSubsession(subsession);
 
-        state->source =  H264VideoStreamDiscreteFramer::createNew(*env, CubemapFaceSource::createNew(*env, state->face));
+		state->source = H264VideoStreamDiscreteFramer::createNew(*env,
+			                                                     CubemapFaceSource::createNew(*env,
+																                              state->face,
+																							  avgBitRate));
         state->sink->startPlaying(*state->source, NULL, NULL);
 
         std::cout << "added face " << state->face->getIndex() << std::endl;
@@ -163,10 +172,12 @@ void stopStreaming()
 int main(int argc, char* argv[])
 {
     boost::program_options::options_description desc("");
-    desc.add_options()
-        ("multicast-address", boost::program_options::value<std::string>(), "")
-        ("interface", boost::program_options::value<std::string>(), "")
-        ("rtsp-port", boost::program_options::value<boost::uint16_t>(), "");
+	desc.add_options()
+		("multicast-address", boost::program_options::value<std::string>(), "")
+		("interface", boost::program_options::value<std::string>(), "")
+		("rtsp-port", boost::program_options::value<boost::uint16_t>(), "")
+		("avg-bit-rate", boost::program_options::value<int>(), "");
+		
     
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
@@ -207,6 +218,19 @@ int main(int argc, char* argv[])
     {
         inet_pton(AF_INET, "224.0.0.1", &(destinationAddress.s_addr));
     }
+
+	if (vm.count("avg-bit-rate"))
+	{
+		avgBitRate = vm["avg-bit-rate"].as<int>();
+	}
+	else
+	{
+		avgBitRate = DEFAULT_AVG_BIT_RATE;
+	}
+	double coeff;
+	const char* units = new char[128];
+	to_human_readable_byte_count(avgBitRate, 0, 1, &coeff, &units);
+	std::cout << "Using an average encoding bitrate of " << std::setprecision(2) << coeff << " " << units << " per face" << std::endl;
 
     av_log_set_level(AV_LOG_WARNING);
     avcodec_register_all();

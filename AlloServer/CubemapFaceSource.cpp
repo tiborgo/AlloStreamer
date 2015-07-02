@@ -40,17 +40,22 @@ int CubemapFaceSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext 
 		yuvFrame->data, yuvFrame->linesize);
 }
 
-CubemapFaceSource* CubemapFaceSource::createNew(UsageEnvironment& env, CubemapFace* face)
+CubemapFaceSource* CubemapFaceSource::createNew(UsageEnvironment& env,
+	                                            CubemapFace* face,
+												int avgBitRate)
 {
-	return new CubemapFaceSource(env, face);
+	return new CubemapFaceSource(env, face, avgBitRate);
 }
 
 unsigned CubemapFaceSource::referenceCount = 0;
 
 struct timeval prevtime;
 
-CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapFace* face)
-: FramedSource(env), img_convert_ctx(NULL), face(face), /*encodeBarrier(2),*/ destructing(false)
+CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env,
+	                                 CubemapFace* face,
+									 int avgBitRate)
+	:
+	FramedSource(env), img_convert_ctx(NULL), face(face), /*encodeBarrier(2),*/ destructing(false)
 {
 
 	gettimeofday(&prevtime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
@@ -114,7 +119,7 @@ CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env, CubemapFace* face)
 	}
 
 	/* put sample parameters */
-	codecContext->bit_rate = BIT_RATE;
+	codecContext->bit_rate = avgBitRate;
 	/* resolution must be a multiple of two */
 	codecContext->width = face->getWidth();
 	codecContext->height = face->getHeight();
@@ -216,6 +221,8 @@ void CubemapFaceSource::frameFaceLoop()
             face->getFormat(),
             face->getWidth(),
             face->getHeight());
+
+		std::cout << "framed face" << std::endl;
         
         // barrier2
 
@@ -342,6 +349,8 @@ void CubemapFaceSource::encodeFrameLoop()
 		//mutex.lock();
 		int ret = avcodec_encode_video2(codecContext, &pkt, yuv420pFrame, &got_output);
 		//mutex.unlock();
+
+		std::cout << "encoded frame" << std::endl;
 
 //		fprintf(myfile, "packet size: %i \n", pkt.size);
 	//	fflush(myfile);
@@ -504,6 +513,8 @@ void CubemapFaceSource::deliverFrame()
 
 	// Tell live555 that a new frame is available
 	FramedSource::afterGetting(this);
+
+	std::cout << "sent frame" << std::endl;
 
 	lastFrameTime = thisTime;
 
