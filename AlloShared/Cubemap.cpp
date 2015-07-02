@@ -10,8 +10,13 @@ CubemapFace::CubemapFace(boost::uint32_t width,
                          void* pixels,
                          Allocator& allocator)
     :
-    allocator(allocator), width(width), height(height), index(index), format(format),
-    presentationTime(presentationTime), pixels(pixels)
+    Frame(width,
+          height,
+          format,
+          presentationTime,
+          pixels,
+          allocator),
+    index(index)
 {
 
 }
@@ -20,44 +25,9 @@ CubemapFace::~CubemapFace()
 {
 }
 
-boost::uint32_t CubemapFace::getWidth()
-{
-    return width;
-}
-
-boost::uint32_t CubemapFace::getHeight()
-{
-    return height;
-}
-
 int CubemapFace::getIndex()
 {
     return index;
-}
-
-AVPixelFormat CubemapFace::getFormat()
-{
-    return format;
-}
-
-boost::chrono::system_clock::time_point CubemapFace::getPresentationTime()
-{
-    return presentationTime;
-}
-
-void* CubemapFace::getPixels()
-{
-    return pixels.get();
-}
-
-boost::interprocess::interprocess_mutex& CubemapFace::getMutex()
-{
-    return mutex;
-}
-
-boost::interprocess::interprocess_condition& CubemapFace::getNewPixelsCondition()
-{
-    return newPixelsCondition;
 }
 
 void CubemapFace::setPresentationTime(boost::chrono::system_clock::time_point presentationTime)

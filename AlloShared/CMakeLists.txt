@@ -2,6 +2,7 @@ set(SOURCES
 	Cubemap.cpp
     Process.cpp
     Allocator.cpp
+    Frame.cpp
 )
 	
 set(HEADERS
@@ -10,6 +11,7 @@ set(HEADERS
     concurrent_queue.h
     Process.h
     Allocator.h
+    Frame.hpp
 )
 
 find_package(Boost
