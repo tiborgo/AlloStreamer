@@ -20,11 +20,7 @@ extern "C"
 #include "CubemapFaceSource.h"
 #include "CubemapExtractionPlugin/CubemapExtractionPlugin.h"
 #include "AlloServer.h"
-
-extern "C"
-{
-	#include "to_human_readable_byte_count.h"
-}
+#include "to_human_readable_byte_count.hpp"
 
 struct FaceStreamState
 {
@@ -227,10 +223,8 @@ int main(int argc, char* argv[])
 	{
 		avgBitRate = DEFAULT_AVG_BIT_RATE;
 	}
-	double coeff;
-	const char* units = new char[128];
-	to_human_readable_byte_count(avgBitRate, 0, 1, &coeff, &units);
-	std::cout << "Using an average encoding bitrate of " << std::setprecision(2) << coeff << " " << units << " per face" << std::endl;
+    std::string bitRateString = to_human_readable_byte_count(avgBitRate, true, false);
+	std::cout << "Using an average encoding bit rate of " << bitRateString << "/s per face" << std::endl;
 
     av_log_set_level(AV_LOG_WARNING);
     avcodec_register_all();

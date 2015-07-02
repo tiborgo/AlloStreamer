@@ -1,7 +1,7 @@
 set(SOURCES
 	AlloServer.cpp
 	CubemapFaceSource.cpp
-	to_human_readable_byte_count.c
+	to_human_readable_byte_count.cpp
 )
 	
 set(HEADERS
@@ -9,7 +9,7 @@ set(HEADERS
 	FrameData.h
 	CubemapFaceSource.h
 	AlloServer.h
-	to_human_readable_byte_count.h
+	to_human_readable_byte_count.hpp
 )
 
 # include Boost, FFMpeg, live555, x264

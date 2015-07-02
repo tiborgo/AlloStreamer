@@ -3,35 +3,35 @@
 #include <errno.h>
 #include <stdlib.h>
 
-#include "to_human_readable_byte_count.h"
+#include <string>
+#include <algorithm>
+#include <sstream>
+#include <iomanip>
 
-// From http://agentzlerich.blogspot.com/2011/01/converting-to-and-from-human-readable.html
-// Adapted from http://stackoverflow.com/questions/3758606/
+#include "to_human_readable_byte_count.hpp"
+
+// Adapted from http://agentzlerich.blogspot.com/2011/01/converting-to-and-from-human-readable.html
 // how-to-convert-byte-size-into-human-readable-format-in-java
-void to_human_readable_byte_count(long bytes,
-	int si,
-	int bit,
-	double *coeff,
-	const char **units)
+std::string to_human_readable_byte_count(unsigned long bs, bool bit, bool si)
 {
-	// Static lookup table of byte-based SI units
-	static const char *suffix[][2][2] = { { { "B", "b" }, { "B", "b" } },
-	{ { "kB", "Kib" }, { "kB", "Kib" } },
-	{ { "MB", "Mib" }, { "MB", "Mib" } },
-	{ { "GB", "Gib" }, { "GB", "Gib" } },
-	{ { "TB", "Tib" }, { "TB", "Tib" } },
-	{ { "EB", "Eib" }, { "EB", "Eib" } },
-	{ { "ZB", "Zib" }, { "ZB", "Zib" } },
-	{ { "YB", "Yib" }, { "YB", "Yib" } } };
-	int unit = si ? 1000 : 1024;
+    static const char* unit[2] = { "Byte", "Bit" };
+    static const char* siSuffix[2] = { "", "i" };
+    static const char* factor[] = { "", "k", "M", "G", "T", "E", "Z", "Y" };
+    
+    int base = si ? 1024 : 1000;
+    
 	int exp = 0;
-	if (bytes > 0)
+	if (bs > 0)
 	{
-		exp = min((int)(log(bytes) / log(unit)),
-			(int) sizeof(suffix) / sizeof(suffix[0]) - 1);
+        exp = std::min((int)(log(bs) / log(base)),
+			(int) (sizeof(factor) / sizeof(factor[0]) - 1));
 	}
-	*coeff = bytes / pow(unit, exp);
-	*units = suffix[exp][!!si][!!bit];
+    
+    double coeff = (double)bs / pow(base, exp);
+
+    std::stringstream result;
+    result << std::setprecision(3) << coeff << " " << factor[exp] << (bit ? unit[1] : unit[0]) << (si ? siSuffix[1] : siSuffix[0]);
+    return result.str();
 }
 
 // Convert strings like the following into byte counts
