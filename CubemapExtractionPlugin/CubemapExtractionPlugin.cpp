@@ -177,10 +177,7 @@ CubemapFace* getCubemapFaceFromTexture(void* texturePtr, int index)
 	// Will update texture pixels each frame from the plugin rendering event (texture update
 	// needs to happen on the rendering thread).
     
-    AVPixelFormat format = AV_PIX_FMT_NONE;
-    void* userData       = nullptr;
-    int width            = 0;
-    int height           = 0;
+    Frame* content = nullptr;
 
 #if SUPPORT_D3D9
 	// D3D9 case
@@ -212,23 +209,24 @@ CubemapFace* getCubemapFaceFromTexture(void* texturePtr, int index)
 	{
         GLuint textureID = (GLuint)(size_t)texturePtr;
         glBindTexture(GL_TEXTURE_2D, textureID);
+        int width, height;
         glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
         glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
         
         UserDataOpenGL* userDataOpenGL = new UserDataOpenGL;
         userDataOpenGL->gpuTextureID = textureID;
         
-        format = AV_PIX_FMT_RGB24;
-        userData = userDataOpenGL;
+        content = Frame::create(width,
+                                height,
+                                AV_PIX_FMT_RGB24,
+                                presentationTime,
+                                userDataOpenGL,
+                                *shmAllocator);
 	}
 #endif
     
-    return CubemapFace::create(width,
-                               height,
+    return CubemapFace::create(content,
                                index,
-                               format,
-                               presentationTime,
-                               userData,
                                *shmAllocator);
 }
 
@@ -360,7 +358,7 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
             boost::thread* threads = new boost::thread[cubemap->getFacesCount()];
 
             for (int i = 0; i < cubemap->getFacesCount(); i++) {
-                threads[i] = boost::thread(boost::bind(&copyFromGPUToCPU, cubemap->getFace(i)));
+                threads[i] = boost::thread(boost::bind(&copyFromGPUToCPU, cubemap->getFace(i)->getContent()));
             }
 
             for (int i = 0; i < cubemap->getFacesCount(); i++) {
@@ -370,7 +368,7 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
         }
         else {
             for (int i = 0; i < cubemap->getFacesCount(); i++) {
-                copyFromGPUToCPU(cubemap->getFace(i));
+                copyFromGPUToCPU(cubemap->getFace(i)->getContent());
             }
         }
     }

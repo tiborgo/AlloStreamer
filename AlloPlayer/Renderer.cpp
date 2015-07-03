@@ -96,11 +96,11 @@ void Renderer::onDraw(al::Graphics& gl)
                 glDepthMask(GL_FALSE);
                 
                 // draw the background
-                glDrawPixels(face->getWidth(),
-                             face->getHeight(),
+                glDrawPixels(face->getContent()->getWidth(),
+                             face->getContent()->getHeight(),
                              GL_RGB,
                              GL_UNSIGNED_BYTE,
-                             (GLvoid*)face->getPixels());
+                             (GLvoid*)face->getContent()->getPixels());
                 
                 glDepthMask(GL_TRUE);
                 

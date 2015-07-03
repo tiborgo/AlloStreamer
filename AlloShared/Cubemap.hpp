@@ -16,37 +16,29 @@
 #include "Allocator.h"
 #include "Frame.hpp"
 
-class CubemapFace : public Frame
+class CubemapFace
 {
 
 public:
 	typedef boost::interprocess::offset_ptr<CubemapFace> Ptr;
     
     int getIndex();
+    Frame* getContent();
     
-    void setPresentationTime(boost::chrono::system_clock::time_point presentationTime);
-    
-    static CubemapFace* create(boost::uint32_t width,
-                               boost::uint32_t height,
+    static CubemapFace* create(Frame* content,
                                int index,
-                               AVPixelFormat format,
-                               boost::chrono::system_clock::time_point presentationTime,
-                               void* userData,
                                Allocator& allocator);
     static void destroy(CubemapFace* cubemapFace);
     
 protected:
-    CubemapFace(boost::uint32_t width,
-                boost::uint32_t height,
+    CubemapFace(Frame* content,
                 int index,
-                AVPixelFormat format,
-                boost::chrono::system_clock::time_point presentationTime,
-                void* pixels,
-                void* userData,
                 Allocator& allocator);
     ~CubemapFace();
     
+    Frame::Ptr content;
     int index;
+    Allocator& allocator;
 };
 
 class Cubemap

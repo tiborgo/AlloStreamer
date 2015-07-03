@@ -14,20 +14,20 @@ public:
             CubemapPixelData(CubemapFace* face) : face_(face) { }
 
             virtual int width() {
-                return face_->getWidth();
+                return face_->getContent()->getWidth();
             }
             virtual int height() {
-                return face_->getHeight();
+                return face_->getContent()->getHeight();
             }
             virtual int stride() {
-                ::AVPixelFormat fmt = face_->getFormat();
+                ::AVPixelFormat fmt = face_->getContent()->getFormat();
                 if(fmt == AV_PIX_FMT_RGB24)
                 {
-                    return face_->getWidth() * 3;
+                    return face_->getContent()->getWidth() * 3;
                 }
                 else if(fmt == AV_PIX_FMT_RGBA)
                 {
-                    return face_->getWidth() * 4;
+                    return face_->getContent()->getWidth() * 4;
                 }
                 else
                 {
@@ -35,7 +35,7 @@ public:
                 }
             }
             virtual void* pixels() {
-                return face_->getPixels();
+                return face_->getContent()->getPixels();
             }
 
             CubemapFace* face_;

@@ -79,12 +79,14 @@ int main(int argc, char* argv[])
     std::vector<CubemapFace*> faces;
     for (int i = 0; i < cubemapFacesCount; i++)
     {
-        faces.push_back(CubemapFace::create(resolution,
-                                            resolution,
+        Frame* content = Frame::create(resolution,
+                                       resolution,
+                                       AV_PIX_FMT_RGB24,
+                                       presentationTime,
+                                       nullptr,
+                                       *shmAllocator);
+        faces.push_back(CubemapFace::create(content,
                                             i,
-                                            AV_PIX_FMT_RGB24,
-                                            presentationTime,
-                                            nullptr,
                                             *shmAllocator));
     }
     allocateCubemap(faces);
@@ -105,15 +107,15 @@ int main(int argc, char* argv[])
         
         for (CubemapFace* face : faces)
         {
-            while (!face->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
+            while (!face->getContent()->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
             {
                 if (!alloServerProcess.isAlive())
                 {
                     // Reset the mutex otherwise it will block forever
                     // Reset the condition otherwise it my be in inconsistent state
                     // Hacky solution indeed
-                    void* mutexAddr     = &face->getMutex();
-                    void* conditionAddr = &face->getNewPixelsCondition();
+                    void* mutexAddr     = &face->getContent()->getMutex();
+                    void* conditionAddr = &face->getContent()->getNewPixelsCondition();
                     // That's not possible unfortunately since the mutex is locked and abandoned
                     //face->getMutex().~interprocess_mutex();
                     memset(mutexAddr, 0, sizeof(boost::interprocess::interprocess_mutex));
@@ -123,15 +125,15 @@ int main(int argc, char* argv[])
                 }
             }
             
-            boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->getMutex(),
+            boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->getContent()->getMutex(),
                                                                                            boost::interprocess::accept_ownership);
             
             // Give the encoder some random pixels
             char* randomPixels = randomPixelsList[frameIndex % randomPixelsListCount];
-            memcpy(face->getPixels(), randomPixels, resolution * resolution * 4);
+            memcpy(face->getContent()->getPixels(), randomPixels, resolution * resolution * 4);
             
-            face->setPresentationTime(presentationTime);
-            face->getNewPixelsCondition().notify_all();
+            face->getContent()->setPresentationTime(presentationTime);
+            face->getContent()->getNewPixelsCondition().notify_all();
         }
         frames++;
         

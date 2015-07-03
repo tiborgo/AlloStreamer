@@ -30,12 +30,14 @@ void H264CubemapSource::getNextCubemapLoop()
         std::vector<CubemapFace*> faces;
         for (int i = 0; i < sinks.size(); i++)
         {
-            CubemapFace* face = CubemapFace::create(resolution,
-                                                    resolution,
+            Frame* content = Frame::create(resolution,
+                                           resolution,
+                                           format,
+                                           boost::chrono::system_clock::time_point(),
+                                           nullptr,
+                                           heapAllocator);
+            CubemapFace* face = CubemapFace::create(content,
                                                     i,
-                                                    format,
-                                                    boost::chrono::system_clock::time_point(),
-                                                    nullptr,
                                                     heapAllocator);
             
             
@@ -45,7 +47,7 @@ void H264CubemapSource::getNextCubemapLoop()
                 // read pixels from frame
                 if (avpicture_layout((AVPicture*)nextFrame, (AVPixelFormat)nextFrame->format,
                                      nextFrame->width, nextFrame->height,
-                                     (unsigned char*)face->getPixels(), nextFrame->width * nextFrame->height * 4) < 0)
+                                     (unsigned char*)face->getContent()->getPixels(), nextFrame->width * nextFrame->height * 4) < 0)
                 {
                     fprintf(stderr, "Could not read pixels from frame\n");
                     exit(0);

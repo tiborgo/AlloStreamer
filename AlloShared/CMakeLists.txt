@@ -3,6 +3,7 @@ set(SOURCES
     Process.cpp
     Allocator.cpp
     Frame.cpp
+    Binoculars.cpp
 )
 	
 set(HEADERS
@@ -12,6 +13,7 @@ set(HEADERS
     Process.h
     Allocator.h
     Frame.hpp
+    Binoculars.hpp
 )
 
 find_package(Boost

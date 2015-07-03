@@ -2,29 +2,20 @@
 
 boost::interprocess::offset_ptr<Cubemap> cubemap;
 
-CubemapFace::CubemapFace(boost::uint32_t width,
-                         boost::uint32_t height,
+CubemapFace::CubemapFace(Frame* content,
                          int index,
-                         AVPixelFormat format,
-                         boost::chrono::system_clock::time_point presentationTime,
-                         void* pixels,
-                         void* userData,
                          Allocator& allocator)
     :
-    Frame(width,
-          height,
-          format,
-          presentationTime,
-          pixels,
-          userData,
-          allocator),
-    index(index)
+    content(content),
+    index(index),
+    allocator(allocator)
 {
 
 }
 
 CubemapFace::~CubemapFace()
 {
+    Frame::destroy(content.get());
 }
 
 int CubemapFace::getIndex()
@@ -32,28 +23,22 @@ int CubemapFace::getIndex()
     return index;
 }
 
-void CubemapFace::setPresentationTime(boost::chrono::system_clock::time_point presentationTime)
+Frame* CubemapFace::getContent()
 {
-    this->presentationTime = presentationTime;
+    return content.get();
 }
 
-CubemapFace* CubemapFace::create(boost::uint32_t width,
-                                 boost::uint32_t height,
+CubemapFace* CubemapFace::create(Frame* content,
                                  int index,
-                                 AVPixelFormat format,
-                                 boost::chrono::system_clock::time_point presentationTime,
-                                 void* userData,
                                  Allocator& allocator)
 {
     void* addr = allocator.allocate(sizeof(CubemapFace));
-    void* pixels = allocator.allocate(width * height * 4);
-    return new (addr) CubemapFace(width, height, index, format, presentationTime, pixels, userData, allocator);
+    return new (addr) CubemapFace(content, index, allocator);
 }
 
 void CubemapFace::destroy(CubemapFace* cubemapFace)
 {
     cubemapFace->~CubemapFace();
-    cubemapFace->allocator.deallocate(cubemapFace->pixels.get(), cubemapFace->width * cubemapFace->height * 4);
     cubemapFace->allocator.deallocate(cubemapFace, sizeof(CubemapFace));
 }
 

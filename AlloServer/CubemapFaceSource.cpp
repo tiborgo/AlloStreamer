@@ -79,14 +79,14 @@ CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env,
 			fprintf(stderr, "Could not allocate video frame\n");
 			exit(1);
 		}
-		frame->format = face->getFormat();
-		frame->width = face->getWidth();
-		frame->height = face->getHeight();
+		frame->format = face->getContent()->getFormat();
+		frame->width = face->getContent()->getWidth();
+		frame->height = face->getContent()->getHeight();
 
 		/* the image can be allocated by any means and av_image_alloc() is
 		* just the most convenient way if av_malloc() is to be used */
 		if (av_image_alloc(frame->data, frame->linesize, frame->width, frame->height,
-			face->getFormat(), 32) < 0)
+			face->getContent()->getFormat(), 32) < 0)
 		{
 			fprintf(stderr, "Could not allocate raw picture buffer\n");
 			abort();
@@ -121,8 +121,8 @@ CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env,
 	/* put sample parameters */
 	codecContext->bit_rate = avgBitRate;
 	/* resolution must be a multiple of two */
-	codecContext->width = face->getWidth();
-	codecContext->height = face->getHeight();
+	codecContext->width = face->getContent()->getWidth();
+	codecContext->height = face->getContent()->getHeight();
 	/* frames per second */
 	codecContext->time_base = av_make_q(1, FPS);
 	codecContext->gop_size = 20; /* emit one intra frame every ten frames */
@@ -195,7 +195,7 @@ void CubemapFaceSource::frameFaceLoop()
 
 	while (!destructing)
 	{
-        while (!face->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
+        while (!face->getContent()->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
         {
             if (destructing)
             {
@@ -203,7 +203,7 @@ void CubemapFaceSource::frameFaceLoop()
             }
         }
         
-		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->getMutex(),
+		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->getContent()->getMutex(),
                                                                                        boost::interprocess::accept_ownership);
 
 		AVFrame* frame;
@@ -217,10 +217,10 @@ void CubemapFaceSource::frameFaceLoop()
         
         // Fill frame
         avpicture_fill((AVPicture*)frame,
-            (uint8_t*)face->getPixels(),
-            face->getFormat(),
-            face->getWidth(),
-            face->getHeight());
+            (uint8_t*)face->getContent()->getPixels(),
+            face->getContent()->getFormat(),
+            face->getContent()->getWidth(),
+            face->getContent()->getHeight());
 
 		std::cout << "framed face" << std::endl;
         
@@ -230,7 +230,7 @@ void CubemapFaceSource::frameFaceLoop()
         // It is in the past probably but we will try our best
         AVRational microSecBase = { 1, 1000000 };
         bc::microseconds presentationTimeSinceEpochMicroSec =
-            bc::duration_cast<bc::microseconds>(face->getPresentationTime().time_since_epoch());
+            bc::duration_cast<bc::microseconds>(face->getContent()->getPresentationTime().time_since_epoch());
         
         
 //        const time_t time = bc::system_clock::to_time_t(face->getPresentationTime());
@@ -250,7 +250,7 @@ void CubemapFaceSource::frameFaceLoop()
         frameBuffer.push(frame);
 
 		// Wait for new frame
-		while (!face->getNewPixelsCondition().timed_wait(lock,
+		while (!face->getContent()->getNewPixelsCondition().timed_wait(lock,
 			boost::get_system_time() + boost::posix_time::milliseconds(100)))
 		{
 			if (destructing)
