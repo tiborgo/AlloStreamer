@@ -31,6 +31,7 @@ public:
                                int index,
                                AVPixelFormat format,
                                boost::chrono::system_clock::time_point presentationTime,
+                               void* userData,
                                Allocator& allocator);
     static void destroy(CubemapFace* cubemapFace);
     
@@ -41,6 +42,7 @@ protected:
                 AVPixelFormat format,
                 boost::chrono::system_clock::time_point presentationTime,
                 void* pixels,
+                void* userData,
                 Allocator& allocator);
     ~CubemapFace();
     

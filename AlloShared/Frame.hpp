@@ -22,6 +22,7 @@ public:
     void*                                        getPixels();
     boost::interprocess::interprocess_mutex&     getMutex();
     boost::interprocess::interprocess_condition& getNewPixelsCondition();
+    void*                                        getUserData();
     
     void setPresentationTime(boost::chrono::system_clock::time_point presentationTime);
     
@@ -29,6 +30,7 @@ public:
                          boost::uint32_t                         height,
                          AVPixelFormat                           format,
                          boost::chrono::system_clock::time_point presentationTime,
+                         void*                                   userData,
                          Allocator&                              allocator);
     static void   destroy(Frame* Frame);
     
@@ -38,6 +40,7 @@ protected:
           AVPixelFormat                           format,
           boost::chrono::system_clock::time_point presentationTime,
           void*                                   pixels,
+          void*                                   userData,
           Allocator&                              allocator);
     ~Frame();
     
@@ -49,4 +52,5 @@ protected:
     boost::interprocess::offset_ptr<void>       pixels;
     boost::interprocess::interprocess_mutex     mutex;
     boost::interprocess::interprocess_condition newPixelsCondition;
+    boost::interprocess::offset_ptr<void>       userData;
 };

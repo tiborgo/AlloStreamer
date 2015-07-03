@@ -9,7 +9,7 @@
 #include "CubemapExtractionPlugin.h"
 #include "CubemapFaceD3D9.h"
 #include "CubemapFaceD3D11.h"
-#include "CubemapFaceOpenGL.h"
+#include "UserDataOpenGL.hpp"
 #include "AlloShared/config.h"
 #include "AlloShared/Process.h"
 #include "AlloServer/AlloServer.h"
@@ -174,7 +174,10 @@ CubemapFace* getCubemapFaceFromTexture(void* texturePtr, int index)
 	// Will update texture pixels each frame from the plugin rendering event (texture update
 	// needs to happen on the rendering thread).
     
-    CubemapFace* face = nullptr;
+    AVPixelFormat format = AV_PIX_FMT_NONE;
+    void* userData       = nullptr;
+    int width            = 0;
+    int height           = 0;
 
 #if SUPPORT_D3D9
 	// D3D9 case
@@ -204,19 +207,31 @@ CubemapFace* getCubemapFaceFromTexture(void* texturePtr, int index)
 	// OpenGL case
 	if (g_DeviceType == kGfxRendererOpenGL)
 	{
-        face = CubemapFaceOpenGL::create(
-            (GLuint)(size_t)texturePtr,
-            index,
-            *shmAllocator);
+        GLuint textureID = (GLuint)(size_t)texturePtr;
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+        
+        UserDataOpenGL* userDataOpenGL = new UserDataOpenGL;
+        userDataOpenGL->gpuTextureID = textureID;
+        
+        format = AV_PIX_FMT_RGB24;
+        userData = userDataOpenGL;
 	}
 #endif
     
-    return face;
+    return CubemapFace::create(width,
+                               height,
+                               index,
+                               format,
+                               presentationTime,
+                               userData,
+                               *shmAllocator);
 }
 
-void copyFromGPUToCPU(CubemapFace* face)
+void copyFromGPUToCPU(Frame* frame)
 {
-    face->setPresentationTime(presentationTime);
+    frame->setPresentationTime(presentationTime);
     
     // PREPARE COPYING
     
@@ -253,21 +268,21 @@ void copyFromGPUToCPU(CubemapFace* face)
     // OpenGL case
     if (g_DeviceType == kGfxRendererOpenGL)
     {
-        CubemapFaceOpenGL* faceOpenGL = (CubemapFaceOpenGL*)face;
-        glBindTexture(GL_TEXTURE_2D, faceOpenGL->gpuTextureID);
+        UserDataOpenGL* userDataOpenGL = (UserDataOpenGL*)frame->getUserData();
+        glBindTexture(GL_TEXTURE_2D, userDataOpenGL->gpuTextureID);
         //glBindTexture(GL_TEXTURE_2D, tex);
     }
 #endif
     
-    while (!face->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
+    while (!frame->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
     {
         if (!alloServerProcess.isAlive())
         {
             // Reset the mutex otherwise it will block forever
             // Reset the condition otherwise it my be in inconsistent state
             // Hacky solution indeed
-            void* mutexAddr     = &face->getMutex();
-            void* conditionAddr = &face->getNewPixelsCondition();
+            void* mutexAddr     = &frame->getMutex();
+            void* conditionAddr = &frame->getNewPixelsCondition();
             // That's not possible unfortunately since the mutex is locked and abandoned
             //face->getMutex().~interprocess_mutex();
             memset(mutexAddr, 0, sizeof(boost::interprocess::interprocess_mutex));
@@ -278,7 +293,7 @@ void copyFromGPUToCPU(CubemapFace* face)
         }
     }
 
-    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->getMutex(),
+    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(frame->getMutex(),
                                                                                    boost::interprocess::accept_ownership);
     // COPY
     
@@ -310,12 +325,11 @@ void copyFromGPUToCPU(CubemapFace* face)
     // OpenGL case
     if (g_DeviceType == kGfxRendererOpenGL)
     {
-        CubemapFaceOpenGL* faceOpenGL = (CubemapFaceOpenGL*)face;
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, faceOpenGL->getPixels());
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->getPixels());
     }
 #endif
     
-    face->getNewPixelsCondition().notify_all();
+    frame->getNewPixelsCondition().notify_all();
 }
 
 // --------------------------------------------------------------------------
@@ -336,24 +350,31 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
     
     presentationTime = boost::chrono::system_clock::now();
     
-	if (g_DeviceType == kGfxRendererD3D9 || g_DeviceType == kGfxRendererD3D11)
-	{
-		boost::thread* threads = new boost::thread[cubemap->getFacesCount()];
+    if (eventID == 1)
+    {
+        if (g_DeviceType == kGfxRendererD3D9 || g_DeviceType == kGfxRendererD3D11)
+        {
+            boost::thread* threads = new boost::thread[cubemap->getFacesCount()];
 
-		for (int i = 0; i < cubemap->getFacesCount(); i++) {
-			threads[i] = boost::thread(boost::bind(&copyFromGPUToCPU, cubemap->getFace(i)));
-		}
+            for (int i = 0; i < cubemap->getFacesCount(); i++) {
+                threads[i] = boost::thread(boost::bind(&copyFromGPUToCPU, cubemap->getFace(i)));
+            }
 
-		for (int i = 0; i < cubemap->getFacesCount(); i++) {
-			threads[i].join();
-		}
+            for (int i = 0; i < cubemap->getFacesCount(); i++) {
+                threads[i].join();
+            }
 
-	}
-	else {
-		for (int i = 0; i < cubemap->getFacesCount(); i++) {
-            copyFromGPUToCPU(cubemap->getFace(i));
-		}
-	}
+        }
+        else {
+            for (int i = 0; i < cubemap->getFacesCount(); i++) {
+                copyFromGPUToCPU(cubemap->getFace(i));
+            }
+        }
+    }
+    else if (eventID == 2)
+    {
+        
+    }
 }
 
 // --------------------------------------------------------------------------
@@ -377,11 +398,15 @@ extern "C" void EXPORT_API ConfigureCubemapFromUnity(void** texturePtrs, int cub
 
 extern "C" void EXPORT_API ConfigureBinocularsFromUnity(void* texturePtr, int width, int height)
 {
-    
+    binocularsConfig             = new BinocularsConfig;
+    binocularsConfig->texturePtr = texturePtr;
+    binocularsConfig->width      = width;
+    binocularsConfig->height     = height;
 }
 
 extern "C" void EXPORT_API StopFromUnity()
 {
     delete thisProcess;
+    thisProcess = nullptr;
     releaseSHM();
 }

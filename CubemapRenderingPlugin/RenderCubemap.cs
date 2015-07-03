@@ -14,7 +14,7 @@ public class RenderCubemap : MonoBehaviour {
 	public bool extract   = true;
 	
 	[DllImport("CubemapExtractionPlugin")]
-	private static extern void StartFromUnity(System.IntPtr[] texturePtrs, int cubemapFacesCount, int resolution);
+	private static extern void ConfigureCubemapFromUnity(System.IntPtr[] texturePtrs, int cubemapFacesCount, int resolution);
 	[DllImport("CubemapExtractionPlugin")]
 	private static extern void StopFromUnity();
 	
@@ -78,7 +78,7 @@ public class RenderCubemap : MonoBehaviour {
 		}
 		
 		// Tell native plugin that rendering has started
-		StartFromUnity(texturePtrs, faceCount, resolution);
+		ConfigureCubemapFromUnity(texturePtrs, faceCount, resolution);
 		
 		yield return StartCoroutine("CallPluginAtEndOfFrames");
 	}

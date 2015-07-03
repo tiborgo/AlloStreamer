@@ -5,10 +5,11 @@ Frame::Frame(boost::uint32_t                         width,
              AVPixelFormat                           format,
              boost::chrono::system_clock::time_point presentationTime,
              void*                                   pixels,
+             void*                                   userData,
              Allocator&                              allocator)
     :
     allocator(allocator), width(width), height(height), format(format),
-    presentationTime(presentationTime), pixels(pixels)
+    presentationTime(presentationTime), pixels(pixels), userData(userData)
 {
 
 }
@@ -52,6 +53,11 @@ boost::interprocess::interprocess_condition& Frame::getNewPixelsCondition()
     return newPixelsCondition;
 }
 
+void* Frame::getUserData()
+{
+    return userData.get();
+}
+
 void Frame::setPresentationTime(boost::chrono::system_clock::time_point presentationTime)
 {
     this->presentationTime = presentationTime;
@@ -61,11 +67,12 @@ Frame* Frame::create(boost::uint32_t                         width,
                      boost::uint32_t                         height,
                      AVPixelFormat                           format,
                      boost::chrono::system_clock::time_point presentationTime,
+                     void*                                   userData,
                      Allocator&                              allocator)
 {
     void* addr = allocator.allocate(sizeof(Frame));
     void* pixels = allocator.allocate(width * height * 4);
-    return new (addr) Frame(width, height, format, presentationTime, pixels, allocator);
+    return new (addr) Frame(width, height, format, presentationTime, pixels, userData, allocator);
 }
 
 void Frame::destroy(Frame* Frame)

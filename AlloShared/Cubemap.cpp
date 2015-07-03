@@ -8,6 +8,7 @@ CubemapFace::CubemapFace(boost::uint32_t width,
                          AVPixelFormat format,
                          boost::chrono::system_clock::time_point presentationTime,
                          void* pixels,
+                         void* userData,
                          Allocator& allocator)
     :
     Frame(width,
@@ -15,6 +16,7 @@ CubemapFace::CubemapFace(boost::uint32_t width,
           format,
           presentationTime,
           pixels,
+          userData,
           allocator),
     index(index)
 {
@@ -40,11 +42,12 @@ CubemapFace* CubemapFace::create(boost::uint32_t width,
                                  int index,
                                  AVPixelFormat format,
                                  boost::chrono::system_clock::time_point presentationTime,
+                                 void* userData,
                                  Allocator& allocator)
 {
     void* addr = allocator.allocate(sizeof(CubemapFace));
     void* pixels = allocator.allocate(width * height * 4);
-    return new (addr) CubemapFace(width, height, index, format, presentationTime, pixels, allocator);
+    return new (addr) CubemapFace(width, height, index, format, presentationTime, pixels, userData, allocator);
 }
 
 void CubemapFace::destroy(CubemapFace* cubemapFace)

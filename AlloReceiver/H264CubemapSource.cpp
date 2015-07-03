@@ -35,6 +35,7 @@ void H264CubemapSource::getNextCubemapLoop()
                                                     i,
                                                     format,
                                                     boost::chrono::system_clock::time_point(),
+                                                    nullptr,
                                                     heapAllocator);
             
             

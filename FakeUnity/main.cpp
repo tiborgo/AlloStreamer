@@ -84,6 +84,7 @@ int main(int argc, char* argv[])
                                             i,
                                             AV_PIX_FMT_RGB24,
                                             presentationTime,
+                                            nullptr,
                                             *shmAllocator));
     }
     allocateCubemap(faces);
