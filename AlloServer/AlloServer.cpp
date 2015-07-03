@@ -153,15 +153,25 @@ void startStreaming()
     shm = new boost::interprocess::managed_shared_memory(boost::interprocess::open_only,
                                                          SHM_NAME);
 
-    cubemap = shm->find<Cubemap::Ptr>("Cubemap").first->get();
-
-    env->taskScheduler().triggerEvent(addFaceSubstreamsTriggerId, NULL);
+    auto cubemapPair = shm->find<Cubemap::Ptr>("Cubemap");
+    if (cubemapPair.first)
+    {
+        cubemap = cubemapPair.first->get();
+        env->taskScheduler().triggerEvent(addFaceSubstreamsTriggerId, NULL);
+    }
+    else
+    {
+        cubemap = nullptr;
+    }
 }
 
 void stopStreaming()
 {
-    env->taskScheduler().triggerEvent(removeFaceSubstreamsTriggerId, NULL);
-    stopStreamingBarrier.wait();
+    if (cubemap)
+    {
+        env->taskScheduler().triggerEvent(removeFaceSubstreamsTriggerId, NULL);
+        stopStreamingBarrier.wait();
+    }
     delete shm;
 }
 
@@ -239,7 +249,10 @@ int main(int argc, char* argv[])
         unityProcess.waitForBirth();
         std::cout << "Connected to Unity :)" << std::endl;
         startStreaming();
-        std::cout << "Streaming ..." << std::endl;
+        if (cubemap)
+        {
+            std::cout << "Streaming ..." << std::endl;
+        }
         unityProcess.join();
         std::cout << "Lost connection to Unity :(" << std::endl;
         stopStreaming();

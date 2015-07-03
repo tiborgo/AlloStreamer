@@ -110,8 +110,11 @@ void allocateSHM(CubemapConfig* cubemapConfig, BinocularsConfig* binocularsConfi
 
 void releaseSHM()
 {
-    boost::interprocess::shared_memory_object::remove(SHM_NAME);
+    shm.destroy<Cubemap::Ptr>("Cubemap");
     cubemap = nullptr;
+    boost::interprocess::shared_memory_object::remove(SHM_NAME);
+    delete thisProcess;
+    thisProcess = nullptr;
 }
 
 // --------------------------------------------------------------------------
@@ -406,7 +409,5 @@ extern "C" void EXPORT_API ConfigureBinocularsFromUnity(void* texturePtr, int wi
 
 extern "C" void EXPORT_API StopFromUnity()
 {
-    delete thisProcess;
-    thisProcess = nullptr;
     releaseSHM();
 }

@@ -89,7 +89,7 @@ CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env,
 			face->getFormat(), 32) < 0)
 		{
 			fprintf(stderr, "Could not allocate raw picture buffer\n");
-			exit(1);
+			abort();
 		}
 
 		framePool.push(frame);
@@ -337,7 +337,7 @@ void CubemapFaceSource::encodeFrameLoop()
 			AV_PIX_FMT_YUV420P, 32) < 0)
 		{
 			fprintf(stderr, "Could not allocate raw picture buffer\n");
-			return;
+			abort();
 		}
 
 		x2yuv(xFrame, yuv420pFrame, codecContext);

@@ -66,7 +66,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
                            (AVPixelFormat)resizedFrame->format, 32) < 0)
         {
             fprintf(stderr, "Could not allocate raw picture buffer\n");
-            exit(-1);
+            abort();
         }
         resizedFramePool.push(resizedFrame);
 	}
