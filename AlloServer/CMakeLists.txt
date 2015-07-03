@@ -6,7 +6,6 @@ set(SOURCES
 	
 set(HEADERS
 	config.h
-	FrameData.h
 	CubemapFaceSource.h
 	AlloServer.h
 	to_human_readable_byte_count.hpp
