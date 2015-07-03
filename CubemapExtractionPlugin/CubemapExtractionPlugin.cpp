@@ -14,6 +14,8 @@
 #include "AlloShared/Process.h"
 #include "AlloServer/AlloServer.h"
 
+CubemapFace* getCubemapFaceFromTexture(void* texturePtr, int index);
+
 // --------------------------------------------------------------------------
 // Helper utilities
 
@@ -22,6 +24,23 @@ static Process* thisProcess = nullptr;
 static Process alloServerProcess(ALLOSERVER_ID, false);
 static boost::chrono::system_clock::time_point presentationTime;
 static boost::mutex d3D11DeviceContextMutex;
+static boost::interprocess::managed_shared_memory shm;
+
+struct CubemapConfig
+{
+    void** texturePtrs;
+    int facesCount;
+    int resolution;
+};
+static CubemapConfig* cubemapConfig = nullptr;
+
+struct BinocularsConfig
+{
+    void* texturePtr;
+    int width;
+    int height;
+};
+static BinocularsConfig* binocularsConfig = nullptr;
 
 GLuint tex;
 
@@ -35,31 +54,59 @@ static void DebugLog (const char* str)
 	#endif
 }
 
-boost::interprocess::managed_shared_memory shm;
-
-void allocateSHM(int facesCount, int resolution)
+void allocateCubemap(CubemapConfig* cubemapConfig)
 {
+    shm.destroy<Cubemap::Ptr>("Cubemap");
+    
+    if (cubemapConfig)
+    {
+        std::vector<CubemapFace*> faces;
+        for (int i = 0; i < cubemapConfig->facesCount; i++)
+        {
+            faces.push_back(getCubemapFaceFromTexture(cubemapConfig->texturePtrs[i], i));
+        }
+        
+        cubemap = Cubemap::create(faces, *shmAllocator);
+        Cubemap::Ptr cubemapPtr = *shm.construct<Cubemap::Ptr>("Cubemap")(cubemap.get());
+    }
+    else
+    {
+        cubemap = nullptr;
+    }
+}
+
+void allocateBinoculars(BinocularsConfig* binocularsConfig)
+{
+}
+
+void allocateSHM(CubemapConfig* cubemapConfig, BinocularsConfig* binocularsConfig)
+{
+    unsigned long shmSize = 65536;
+    if (cubemapConfig)
+    {
+        shmSize += cubemapConfig->resolution * cubemapConfig->resolution * 4 * cubemapConfig->facesCount +
+                   sizeof(Cubemap) + cubemapConfig->facesCount * sizeof(CubemapFace);
+    }
+    if (binocularsConfig)
+    {
+        shmSize += binocularsConfig->width * binocularsConfig->height * 4 + sizeof(Frame);
+    }
+    
     boost::interprocess::shared_memory_object::remove(SHM_NAME);
     
-    shm =
-    boost::interprocess::managed_shared_memory(boost::interprocess::open_or_create,
-                                               SHM_NAME,
-                                               resolution * resolution * 4 * facesCount +
-                                               sizeof(Cubemap) +
-                                               facesCount * sizeof(CubemapFace) +
-                                               65536);
+    shm = boost::interprocess::managed_shared_memory(boost::interprocess::open_or_create,
+                                                     SHM_NAME,
+                                                     shmSize);
     
     shmAllocator = new ShmAllocator(*(new ShmAllocator::BoostShmAllocator(shm.get_segment_manager())));
     
-    shm.destroy<Cubemap::Ptr>("Cubemap");
-    cubemap = nullptr;
+    allocateCubemap(cubemapConfig);
+    allocateBinoculars(binocularsConfig);
+    
+    thisProcess = new Process(CUBEMAPEXTRACTIONPLUGIN_ID, true);
 }
 
-void allocateCubemap(std::vector<CubemapFace*>& faces)
-{
-    cubemap = Cubemap::create(faces, *shmAllocator);
-    Cubemap::Ptr cubemapPtr = *shm.construct<Cubemap::Ptr>("Cubemap")(cubemap.get());
-}
+
 
 void releaseSHM()
 {
@@ -279,6 +326,14 @@ void copyFromGPUToCPU(CubemapFace* face)
 
 extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 {
+    // Allocate cubemap the first time we render a frame.
+    // By doing so, we can make sure that both
+    // the cubemap and the binoculars are fully configured.
+    if (!thisProcess)
+    {
+        allocateSHM(cubemapConfig, binocularsConfig);
+    }
+    
     presentationTime = boost::chrono::system_clock::now();
     
 	if (g_DeviceType == kGfxRendererD3D9 || g_DeviceType == kGfxRendererD3D11)
@@ -304,24 +359,25 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 // --------------------------------------------------------------------------
 // Start stop management
 
-extern "C" void EXPORT_API StartFromUnity(void** texturePtrs, int cubemapFacesCount, int resolution)
+extern "C" void EXPORT_API ConfigureCubemapFromUnity(void** texturePtrs, int cubemapFacesCount, int resolution)
 {
-    // Create and/or open shared memory
-    allocateSHM(cubemapFacesCount, resolution);
-    std::vector<CubemapFace*> faces;
-    for (int i = 0; i < cubemapFacesCount; i++)
-    {
-        faces.push_back(getCubemapFaceFromTexture(texturePtrs[i], i));
-    }
-    allocateCubemap(faces);
     
-    glGenTextures(1, &tex);
+    
+    /*glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
     char* pixels = new char[resolution * resolution * 3];
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, resolution, resolution, 0, GL_RGB, GL_BYTE, pixels);
-    delete[] pixels;
+    delete[] pixels;*/
     
-    thisProcess = new Process(CUBEMAPEXTRACTIONPLUGIN_ID, true);
+    cubemapConfig              = new CubemapConfig;
+    cubemapConfig->texturePtrs = texturePtrs;
+    cubemapConfig->facesCount  = cubemapFacesCount;
+    cubemapConfig->resolution  = resolution;
+}
+
+extern "C" void EXPORT_API ConfigureBinocularsFromUnity(void* texturePtr, int width, int height)
+{
+    
 }
 
 extern "C" void EXPORT_API StopFromUnity()
