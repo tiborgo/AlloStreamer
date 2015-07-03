@@ -83,7 +83,6 @@ int main(int argc, char* argv[])
                                        resolution,
                                        AV_PIX_FMT_RGB24,
                                        presentationTime,
-                                       nullptr,
                                        *shmAllocator);
         faces.push_back(CubemapFace::create(content,
                                             i,

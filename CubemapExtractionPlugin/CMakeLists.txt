@@ -2,6 +2,7 @@ set(SOURCES
 	CubemapExtractionPlugin.cpp
 	CubemapFaceD3D9.cpp
 	CubemapFaceD3D11.cpp
+    FrameOpenGL.cpp
 )
 
 set(HEADERS
@@ -9,7 +10,7 @@ set(HEADERS
 	UnityPluginInterface.h
 	CubemapFaceD3D9.h
 	CubemapFaceD3D11.h
-    UserDataOpenGL.hpp
+    FrameOpenGL.hpp
 )
 
 # include boost

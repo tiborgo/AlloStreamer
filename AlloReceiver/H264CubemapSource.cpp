@@ -34,7 +34,6 @@ void H264CubemapSource::getNextCubemapLoop()
                                            resolution,
                                            format,
                                            boost::chrono::system_clock::time_point(),
-                                           nullptr,
                                            heapAllocator);
             CubemapFace* face = CubemapFace::create(content,
                                                     i,

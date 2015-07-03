@@ -9,7 +9,7 @@
 #include "CubemapExtractionPlugin.h"
 #include "CubemapFaceD3D9.h"
 #include "CubemapFaceD3D11.h"
-#include "UserDataOpenGL.hpp"
+#include "FrameOpenGL.hpp"
 #include "AlloShared/config.h"
 #include "AlloShared/Process.h"
 #include "AlloServer/AlloServer.h"
@@ -207,21 +207,8 @@ CubemapFace* getCubemapFaceFromTexture(void* texturePtr, int index)
 	// OpenGL case
 	if (g_DeviceType == kGfxRendererOpenGL)
 	{
-        GLuint textureID = (GLuint)(size_t)texturePtr;
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        int width, height;
-        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
-        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
-        
-        UserDataOpenGL* userDataOpenGL = new UserDataOpenGL;
-        userDataOpenGL->gpuTextureID = textureID;
-        
-        content = Frame::create(width,
-                                height,
-                                AV_PIX_FMT_RGB24,
-                                presentationTime,
-                                userDataOpenGL,
-                                *shmAllocator);
+        content = FrameOpenGL::create((GLuint)(size_t)texturePtr,
+                                      *shmAllocator);
 	}
 #endif
     
@@ -269,8 +256,8 @@ void copyFromGPUToCPU(Frame* frame)
     // OpenGL case
     if (g_DeviceType == kGfxRendererOpenGL)
     {
-        UserDataOpenGL* userDataOpenGL = (UserDataOpenGL*)frame->getUserData();
-        glBindTexture(GL_TEXTURE_2D, userDataOpenGL->gpuTextureID);
+        FrameOpenGL* frameOpenGL = (FrameOpenGL*)frame;
+        glBindTexture(GL_TEXTURE_2D, frameOpenGL->getGPUTextureID());
         //glBindTexture(GL_TEXTURE_2D, tex);
     }
 #endif
