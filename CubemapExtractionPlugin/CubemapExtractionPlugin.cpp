@@ -5,6 +5,7 @@
 #include <boost/thread.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/offset_ptr.hpp>
+#include <vector>
 
 #include "CubemapExtractionPlugin.h"
 #include "CubemapFaceD3D9.h"
@@ -13,8 +14,9 @@
 #include "AlloShared/config.h"
 #include "AlloShared/Process.h"
 #include "AlloServer/AlloServer.h"
+#include "AlloShared/Binoculars.hpp"
 
-CubemapFace* getCubemapFaceFromTexture(void* texturePtr, int index);
+Frame* getFrameFromTexture(void* texturePtr);
 
 // --------------------------------------------------------------------------
 // Helper utilities
@@ -25,6 +27,7 @@ static Process alloServerProcess(ALLOSERVER_ID, false);
 static boost::chrono::system_clock::time_point presentationTime;
 static boost::mutex d3D11DeviceContextMutex;
 static boost::interprocess::managed_shared_memory shm;
+static Binoculars* binoculars = nullptr;
 
 struct CubemapConfig
 {
@@ -63,7 +66,10 @@ void allocateCubemap(CubemapConfig* cubemapConfig)
         std::vector<CubemapFace*> faces;
         for (int i = 0; i < cubemapConfig->facesCount; i++)
         {
-            faces.push_back(getCubemapFaceFromTexture(cubemapConfig->texturePtrs[i], i));
+            CubemapFace* face = CubemapFace::create(getFrameFromTexture(cubemapConfig->texturePtrs[i]),
+                                                    i,
+                                                    *shmAllocator);
+            faces.push_back(face);
         }
         
         cubemap = Cubemap::create(faces, *shmAllocator);
@@ -77,6 +83,18 @@ void allocateCubemap(CubemapConfig* cubemapConfig)
 
 void allocateBinoculars(BinocularsConfig* binocularsConfig)
 {
+    shm.destroy<Binoculars::Ptr>("Binoculars");
+    
+    if (binocularsConfig)
+    {
+        binoculars = Binoculars::create(getFrameFromTexture(binocularsConfig->texturePtr),
+                                        *shmAllocator);
+        Binoculars::Ptr binocarlsPtr = *shm.construct<Binoculars::Ptr>("Binoculars")(binoculars);
+    }
+    else
+    {
+        binoculars = nullptr;
+    }
 }
 
 void allocateSHM(CubemapConfig* cubemapConfig, BinocularsConfig* binocularsConfig)
@@ -171,13 +189,13 @@ extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType,
 	#endif
 }
 
-CubemapFace* getCubemapFaceFromTexture(void* texturePtr, int index)
+Frame* getFrameFromTexture(void* texturePtr)
 {
 	// A script calls this at initialization time; just remember the texture pointer here.
 	// Will update texture pixels each frame from the plugin rendering event (texture update
 	// needs to happen on the rendering thread).
     
-    Frame* content = nullptr;
+    Frame* frame = nullptr;
 
 #if SUPPORT_D3D9
 	// D3D9 case
@@ -207,14 +225,12 @@ CubemapFace* getCubemapFaceFromTexture(void* texturePtr, int index)
 	// OpenGL case
 	if (g_DeviceType == kGfxRendererOpenGL)
 	{
-        content = FrameOpenGL::create((GLuint)(size_t)texturePtr,
-                                      *shmAllocator);
+        frame = FrameOpenGL::create((GLuint)(size_t)texturePtr,
+                                    *shmAllocator);
 	}
 #endif
     
-    return CubemapFace::create(content,
-                               index,
-                               *shmAllocator);
+    return frame;
 }
 
 void copyFromGPUToCPU(Frame* frame)
@@ -320,6 +336,31 @@ void copyFromGPUToCPU(Frame* frame)
     frame->getNewPixelsCondition().notify_all();
 }
 
+void copyFromGPUtoCPU (std::vector<Frame*>& frames)
+{
+    if (g_DeviceType == kGfxRendererD3D9 || g_DeviceType == kGfxRendererD3D11)
+    {
+        boost::thread* threads = new boost::thread[frames.size()];
+        
+        for (int i = 0; i < frames.size(); i++)
+        {
+            threads[i] = boost::thread(boost::bind(&copyFromGPUToCPU, frames[i]));
+        }
+        
+        for (int i = 0; i < frames.size(); i++)
+        {
+            threads[i].join();
+        }
+    }
+    else
+    {
+        for (int i = 0; i < frames.size(); i++)
+        {
+            copyFromGPUToCPU(frames[i]);
+        }
+    }
+}
+
 // --------------------------------------------------------------------------
 // UnityRenderEvent
 // This will be called for GL.IssuePluginEvent script calls; eventID will
@@ -328,40 +369,42 @@ void copyFromGPUToCPU(Frame* frame)
 
 extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 {
-    // Allocate cubemap the first time we render a frame.
-    // By doing so, we can make sure that both
-    // the cubemap and the binoculars are fully configured.
-    if (!thisProcess)
+    // When we use the RenderCubemap.cs and RenderBinoculars.cs scripts
+    // This function will get called twice (with different eventIDs).
+    // We have to make sure that the extraction only happens once!
+    static int extractionEventID = -1;
+    if (extractionEventID == -1)
     {
-        allocateSHM(cubemapConfig, binocularsConfig);
+        extractionEventID = eventID;
     }
     
-    presentationTime = boost::chrono::system_clock::now();
-    
-    if (eventID == 1)
+    if (extractionEventID == eventID)
     {
-        if (g_DeviceType == kGfxRendererD3D9 || g_DeviceType == kGfxRendererD3D11)
+        // Allocate cubemap the first time we render a frame.
+        // By doing so, we can make sure that both
+        // the cubemap and the binoculars are fully configured.
+        if (!thisProcess)
         {
-            boost::thread* threads = new boost::thread[cubemap->getFacesCount()];
-
-            for (int i = 0; i < cubemap->getFacesCount(); i++) {
-                threads[i] = boost::thread(boost::bind(&copyFromGPUToCPU, cubemap->getFace(i)->getContent()));
-            }
-
-            for (int i = 0; i < cubemap->getFacesCount(); i++) {
-                threads[i].join();
-            }
-
+            allocateSHM(cubemapConfig, binocularsConfig);
         }
-        else {
-            for (int i = 0; i < cubemap->getFacesCount(); i++) {
-                copyFromGPUToCPU(cubemap->getFace(i)->getContent());
-            }
-        }
-    }
-    else if (eventID == 2)
-    {
         
+        presentationTime = boost::chrono::system_clock::now();
+        
+        std::vector<Frame*> frames;
+        if (cubemap)
+        {
+            for (int i = 0; i < cubemap->getFacesCount(); i++)
+            {
+                frames.push_back(cubemap->getFace(i)->getContent());
+            }
+        }
+        
+        if (binoculars)
+        {
+            frames.push_back(binoculars->getContent());
+        }
+        
+        copyFromGPUtoCPU(frames);
     }
 }
 

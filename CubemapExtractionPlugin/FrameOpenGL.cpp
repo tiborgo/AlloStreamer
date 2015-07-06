@@ -12,7 +12,7 @@ FrameOpenGL::FrameOpenGL(boost::uint32_t                         width,
 	:
 	Frame(width,
 	      height,
-		  AV_PIX_FMT_NONE,
+		  format,
 		  presentationTime,
 		  pixels,
 		  allocator),

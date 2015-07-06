@@ -22,5 +22,3 @@ protected:
     Frame::Ptr content;
     Allocator& allocator;
 };
-
-extern Binoculars* binoculars;

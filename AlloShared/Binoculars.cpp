@@ -1,7 +1,5 @@
 #include "Binoculars.hpp"
 
-Binoculars* binoculars;
-
 Binoculars::Binoculars(Frame* content,
                        Allocator& allocator)
     :
@@ -14,6 +12,11 @@ Binoculars::Binoculars(Frame* content,
 Binoculars::~Binoculars()
 {
     Frame::destroy(content.get());
+}
+
+Frame* Binoculars::getContent()
+{
+    return content.get();
 }
 
 Binoculars* Binoculars::create(Frame* content,
