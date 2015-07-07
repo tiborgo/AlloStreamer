@@ -119,7 +119,7 @@ void removeFaceSubstreams0(void*)
         faceStreams.clear();
         cubemapSMS->deleteAllSubsessions();
     }
-    stopStreamingBarrier.wait();
+    boost::thread(boost::bind(&boost::barrier::wait, &stopStreamingBarrier));
 }
 
 void addBinocularsSubstream0(void*)
@@ -170,7 +170,7 @@ void removeBinocularsSubstream0(void*)
         
         binocularsSMS->deleteAllSubsessions();
     }
-    stopStreamingBarrier.wait();
+    boost::thread(boost::bind(&boost::barrier::wait, &stopStreamingBarrier));
 }
 
 void networkLoop()
