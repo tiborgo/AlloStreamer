@@ -2,13 +2,13 @@
 
 #include <boost/cstdint.hpp>
 #include "UnityPluginInterface.h"
-#include "AlloShared/Cubemap.hpp"
+#include "AlloShared/Frame.hpp"
 
 #if SUPPORT_D3D9
 
 #include <d3d9.h>
 
-class CubemapFaceD3D9 : public CubemapFace
+class CubemapFaceD3D9 : public Frame
 {
 public:
 	typedef boost::interprocess::offset_ptr<CubemapFaceD3D9> Ptr;

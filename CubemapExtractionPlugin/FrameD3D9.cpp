@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CubemapExtractionPlugin.h"
-#include "CubemapFaceD3D9.h"
+#include "FrameD3D9.hpp"
 
 #if SUPPORT_D3D9
 
@@ -17,9 +17,8 @@ CubemapFaceD3D9::CubemapFaceD3D9(boost::uint32_t width,
 	                             D3DFORMAT format,
 	                             D3DLOCKED_RECT lockedRect)
 	:
-	CubemapFace(width,
+	Frame(width,
 	            height,
-				index,
 				AV_PIX_FMT_NONE,
 				presentationTime,
 				pixels,

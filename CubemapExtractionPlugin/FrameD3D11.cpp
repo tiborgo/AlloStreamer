@@ -1,5 +1,5 @@
 #include "CubemapExtractionPlugin.h"
-#include "CubemapFaceD3D11.h"
+#include "FrameD3D11.hpp"
 #include <boost/thread/mutex.hpp>
 
 #if SUPPORT_D3D11
@@ -15,9 +15,8 @@ static AVPixelFormat avPixel2DXGIFormat(DXGI_FORMAT format)
 	}
 }
 
-CubemapFaceD3D11::CubemapFaceD3D11(boost::uint32_t width,
+FrameD3D11::FrameD3D11(boost::uint32_t width,
                                    boost::uint32_t height,
-	                               int index,
 								   boost::chrono::system_clock::time_point presentationTime,
                                    void* pixels,
 	                               Allocator& allocator,
@@ -26,21 +25,19 @@ CubemapFaceD3D11::CubemapFaceD3D11(boost::uint32_t width,
 	                               D3D11_MAPPED_SUBRESOURCE resource,
 	                               D3D11_TEXTURE2D_DESC& description)
 	:
-	CubemapFace(width,
-	            height,
-	            index,
-	            avPixel2DXGIFormat(description.Format),
-	            presentationTime,
-				pixels,
-	            allocator),
+	Frame(width,
+	      height,
+          avPixel2DXGIFormat(description.Format),
+	      presentationTime,
+		  pixels,
+	      allocator),
 	gpuTexturePtr(gpuTexturePtr),
 	cpuTexturePtr(cpuTexturePtr),
 	resource(resource)
 {
 }
 
-CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr,
-	                                       int index,
+FrameD3D11* FrameD3D11::create(ID3D11Texture2D* texturePtr,
 	                                       Allocator& allocator)
 {
 
@@ -70,14 +67,13 @@ CubemapFaceD3D11* CubemapFaceD3D11::create(ID3D11Texture2D* texturePtr,
 	g_D3D11DeviceContext->Unmap(cpuTexturePtr, subresource);
 
 	void* pixels = allocator.allocate(width * height * 4);
-	void* addr = allocator.allocate(sizeof(CubemapFaceD3D11));
+	void* addr = allocator.allocate(sizeof(FrameD3D11));
 
-	return new (addr) CubemapFaceD3D11(width,
-		                               height,
-		                               index,
-									   boost::chrono::system_clock::now(),
-									   pixels,
-						               allocator,
+	return new (addr) FrameD3D11(width,
+		                         height,
+							     boost::chrono::system_clock::now(),
+							     pixels,
+						         allocator,
 		                               gpuTexturePtr,
 		                               cpuTexturePtr,
 		                               resource,

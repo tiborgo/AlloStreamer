@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "CubemapExtractionPlugin.h"
-#include "CubemapFaceD3D9.h"
-#include "CubemapFaceD3D11.h"
+#include "FrameD3D9.hpp"
+#include "FrameD3D11.hpp"
 #include "FrameOpenGL.hpp"
 #include "AlloShared/config.h"
 #include "AlloShared/Process.h"
@@ -205,10 +205,10 @@ Frame* getFrameFromTexture(void* texturePtr)
 	// D3D9 case
 	if (g_DeviceType == kGfxRendererD3D9)
 	{
-        face = CubemapFaceD3D9::create(
+        /*frame = FrameD3D9::create(
 			(IDirect3DTexture9*)texturePtr,
 			index,
-			*shmAllocator);
+			*shmAllocator);*/
 	}
 #endif
 
@@ -217,10 +217,8 @@ Frame* getFrameFromTexture(void* texturePtr)
 	// D3D11 case
 	if (g_DeviceType == kGfxRendererD3D11)
 	{
-		face = CubemapFaceD3D11::create(
-			(ID3D11Texture2D*)texturePtr,
-			index,
-			*shmAllocator);
+		frame = FrameD3D11::create((ID3D11Texture2D*)texturePtr,
+			                       *shmAllocator);
 	}
 #endif
 
@@ -247,9 +245,9 @@ void copyFromGPUToCPU(Frame* frame)
     // D3D9 case
     if (g_DeviceType == kGfxRendererD3D9)
     {
-        CubemapFaceD3D9* faceD3D9 = (CubemapFaceD3D9*)face;
+        //CubemapFaceD3D9* faceD3D9 = (CubemapFaceD3D9*)face;
         // copy data from GPU to CPU
-        HRESULT hr = g_D3D9Device->GetRenderTargetData(faceD3D9->gpuSurfacePtr, faceD3D9->cpuSurfacePtr);
+        //HRESULT hr = g_D3D9Device->GetRenderTargetData(faceD3D9->gpuSurfacePtr, faceD3D9->cpuSurfacePtr);
     }
 #endif
     
@@ -258,7 +256,7 @@ void copyFromGPUToCPU(Frame* frame)
     // D3D11 case
     if (g_DeviceType == kGfxRendererD3D11)
     {
-        CubemapFaceD3D11* faceD3D11 = (CubemapFaceD3D11*)face;
+		FrameD3D11* frameD3D11 = (FrameD3D11*)frame;
         
         // DirectX 11 is not thread-safe
         boost::mutex::scoped_lock lock(d3D11DeviceContextMutex);
@@ -267,7 +265,7 @@ void copyFromGPUToCPU(Frame* frame)
         g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
         
         // copy data from GPU to CPU
-        g_D3D11DeviceContext->CopyResource(faceD3D11->cpuTexturePtr, faceD3D11->gpuTexturePtr);
+		g_D3D11DeviceContext->CopyResource(frameD3D11->cpuTexturePtr, frameD3D11->gpuTexturePtr);
     }
 #endif
     
@@ -309,10 +307,10 @@ void copyFromGPUToCPU(Frame* frame)
     // D3D9 case
     if (g_DeviceType == kGfxRendererD3D9)
     {
-        CubemapFaceD3D9* faceD3D9 = (CubemapFaceD3D9*)face;
+        /*CubemapFaceD3D9* faceD3D9 = (CubemapFaceD3D9*)face;
         memcpy(faceD3D9->getPixels(),
 			   faceD3D9->lockedRect.pBits,
-			   faceD3D9->getWidth() * faceD3D9->getHeight() * 4);
+			   faceD3D9->getWidth() * faceD3D9->getHeight() * 4);*/
     }
 #endif
     
@@ -321,10 +319,10 @@ void copyFromGPUToCPU(Frame* frame)
     // D3D11 case
     if (g_DeviceType == kGfxRendererD3D11)
     {
-        CubemapFaceD3D11* faceD3D11 = (CubemapFaceD3D11*)face;
-        memcpy(faceD3D11->getPixels(),
-			   faceD3D11->resource.pData,
-			   faceD3D11->getWidth() * faceD3D11->getHeight() * 4);
+		FrameD3D11* frameD3D11 = (FrameD3D11*)frame;
+		memcpy(frameD3D11->getPixels(),
+			   frameD3D11->resource.pData,
+			   frameD3D11->getWidth() * frameD3D11->getHeight() * 4);
     }
 #endif
     

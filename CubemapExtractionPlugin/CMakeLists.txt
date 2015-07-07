@@ -1,15 +1,15 @@
 set(SOURCES
 	CubemapExtractionPlugin.cpp
-	CubemapFaceD3D9.cpp
-	CubemapFaceD3D11.cpp
+	FrameD3D9.cpp
+	FrameD3D11.cpp
     FrameOpenGL.cpp
 )
 
 set(HEADERS
 	CubemapExtractionPlugin.h
 	UnityPluginInterface.h
-	CubemapFaceD3D9.h
-	CubemapFaceD3D11.h
+	FrameD3D9.hpp
+	FrameD3D11.hpp
     FrameOpenGL.hpp
 )
 
