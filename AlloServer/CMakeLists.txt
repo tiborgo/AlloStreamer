@@ -1,12 +1,12 @@
 set(SOURCES
 	AlloServer.cpp
-	CubemapFaceSource.cpp
+	RawPixelSource.cpp
 	to_human_readable_byte_count.cpp
 )
 	
 set(HEADERS
 	config.h
-	CubemapFaceSource.h
+	RawPixelSource.hpp
 	AlloServer.h
 	to_human_readable_byte_count.hpp
 )

@@ -8,7 +8,7 @@
 #include <iomanip>
 
 #include "config.h"
-#include "CubemapFaceSource.h"
+#include "RawPixelSource.hpp"
 
 namespace bc = boost::chrono;
 
