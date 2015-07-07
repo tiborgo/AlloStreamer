@@ -44,7 +44,7 @@ set_target_properties(CubemapExtractionPlugin
     LIBRARY_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}/" # for OS X
 )
 add_dependencies(CubemapExtractionPlugin
-	CubemapRenderingPlugin
+	UnityRenderingPlugin
 )
 
 if(WIN32)

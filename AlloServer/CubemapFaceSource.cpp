@@ -12,7 +12,7 @@
 
 namespace bc = boost::chrono;
 
-int CubemapFaceSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
+int RawPixelSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
 {
 	char *err = NULL;
 	if (img_convert_ctx == NULL)
@@ -40,22 +40,22 @@ int CubemapFaceSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext 
 		yuvFrame->data, yuvFrame->linesize);
 }
 
-CubemapFaceSource* CubemapFaceSource::createNew(UsageEnvironment& env,
-	                                            CubemapFace* face,
-												int avgBitRate)
+RawPixelSource* RawPixelSource::createNew(UsageEnvironment& env,
+                                          Frame* content,
+                                          int avgBitRate)
 {
-	return new CubemapFaceSource(env, face, avgBitRate);
+	return new RawPixelSource(env, content, avgBitRate);
 }
 
-unsigned CubemapFaceSource::referenceCount = 0;
+unsigned RawPixelSource::referenceCount = 0;
 
 struct timeval prevtime;
 
-CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env,
-	                                 CubemapFace* face,
-									 int avgBitRate)
+RawPixelSource::RawPixelSource(UsageEnvironment& env,
+                               Frame* content,
+                               int avgBitRate)
 	:
-	FramedSource(env), img_convert_ctx(NULL), face(face), /*encodeBarrier(2),*/ destructing(false)
+	FramedSource(env), img_convert_ctx(NULL), content(content), /*encodeBarrier(2),*/ destructing(false)
 {
 
 	gettimeofday(&prevtime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
@@ -79,14 +79,14 @@ CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env,
 			fprintf(stderr, "Could not allocate video frame\n");
 			exit(1);
 		}
-		frame->format = face->getContent()->getFormat();
-		frame->width = face->getContent()->getWidth();
-		frame->height = face->getContent()->getHeight();
+		frame->format = content->getFormat();
+		frame->width  = content->getWidth();
+		frame->height = content->getHeight();
 
 		/* the image can be allocated by any means and av_image_alloc() is
 		* just the most convenient way if av_malloc() is to be used */
 		if (av_image_alloc(frame->data, frame->linesize, frame->width, frame->height,
-			face->getContent()->getFormat(), 32) < 0)
+			content->getFormat(), 32) < 0)
 		{
 			fprintf(stderr, "Could not allocate raw picture buffer\n");
 			abort();
@@ -121,8 +121,8 @@ CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env,
 	/* put sample parameters */
 	codecContext->bit_rate = avgBitRate;
 	/* resolution must be a multiple of two */
-	codecContext->width = face->getContent()->getWidth();
-	codecContext->height = face->getContent()->getHeight();
+	codecContext->width = content->getWidth();
+	codecContext->height = content->getHeight();
 	/* frames per second */
 	codecContext->time_base = av_make_q(1, FPS);
 	codecContext->gop_size = 20; /* emit one intra frame every ten frames */
@@ -153,14 +153,14 @@ CubemapFaceSource::CubemapFaceSource(UsageEnvironment& env,
 
 	//std::cout << this << ": eventTriggerId: " << eventTriggerId  << std::endl;
 
-	frameFaceThread = boost::thread(boost::bind(&CubemapFaceSource::frameFaceLoop, this));
+	frameContentThread = boost::thread(boost::bind(&RawPixelSource::frameContentLoop, this));
 
-	encodeFrameThread = boost::thread(boost::bind(&CubemapFaceSource::encodeFrameLoop, this));
+	encodeFrameThread  = boost::thread(boost::bind(&RawPixelSource::encodeFrameLoop,  this));
 
 	lastFrameTime = av_gettime();
 }
 
-CubemapFaceSource::~CubemapFaceSource()
+RawPixelSource::~RawPixelSource()
 {
 	// Any instance-specific 'destruction' (i.e., resetting) of the device would be done here:
 	//std::cout << this << ": deconstructing..." << std::endl;
@@ -171,7 +171,7 @@ CubemapFaceSource::~CubemapFaceSource()
 	framePool.close();
 	pktPool.close();
 
-	frameFaceThread.join();
+	frameContentThread.join();
 	encodeFrameThread.join();
 
 	--referenceCount;
@@ -190,12 +190,12 @@ CubemapFaceSource::~CubemapFaceSource()
 	//std::cout << this << ": deconstructed" << std::endl;
 }
 
-void CubemapFaceSource::frameFaceLoop()
+void RawPixelSource::frameContentLoop()
 {
 
 	while (!destructing)
 	{
-        while (!face->getContent()->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
+        while (!content->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
         {
             if (destructing)
             {
@@ -203,7 +203,7 @@ void CubemapFaceSource::frameFaceLoop()
             }
         }
         
-		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(face->getContent()->getMutex(),
+		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(content->getMutex(),
                                                                                        boost::interprocess::accept_ownership);
 
 		AVFrame* frame;
@@ -217,12 +217,12 @@ void CubemapFaceSource::frameFaceLoop()
         
         // Fill frame
         avpicture_fill((AVPicture*)frame,
-            (uint8_t*)face->getContent()->getPixels(),
-            face->getContent()->getFormat(),
-            face->getContent()->getWidth(),
-            face->getContent()->getHeight());
+            (uint8_t*)content->getPixels(),
+            content->getFormat(),
+            content->getWidth(),
+            content->getHeight());
 
-		std::cout << "framed face" << std::endl;
+		// std::cout << "framed face" << std::endl;
         
         // barrier2
 
@@ -230,7 +230,7 @@ void CubemapFaceSource::frameFaceLoop()
         // It is in the past probably but we will try our best
         AVRational microSecBase = { 1, 1000000 };
         bc::microseconds presentationTimeSinceEpochMicroSec =
-            bc::duration_cast<bc::microseconds>(face->getContent()->getPresentationTime().time_since_epoch());
+            bc::duration_cast<bc::microseconds>(content->getPresentationTime().time_since_epoch());
         
         
 //        const time_t time = bc::system_clock::to_time_t(face->getPresentationTime());
@@ -250,7 +250,7 @@ void CubemapFaceSource::frameFaceLoop()
         frameBuffer.push(frame);
 
 		// Wait for new frame
-		while (!face->getContent()->getNewPixelsCondition().timed_wait(lock,
+		while (!content->getNewPixelsCondition().timed_wait(lock,
 			boost::get_system_time() + boost::posix_time::milliseconds(100)))
 		{
 			if (destructing)
@@ -261,7 +261,7 @@ void CubemapFaceSource::frameFaceLoop()
 	}
 }
 
-void CubemapFaceSource::doGetNextFrame()
+void RawPixelSource::doGetNextFrame()
 {
 	// This function is called (by our 'downstream' object) when it asks for new data.
 
@@ -283,15 +283,15 @@ void CubemapFaceSource::doGetNextFrame()
 
 }
 
-void CubemapFaceSource::deliverFrame0(void* clientData)
+void RawPixelSource::deliverFrame0(void* clientData)
 {
 	//std::cout << "deliver frame: " << ((CubemapFaceSource*)clientData)->face->index << std::endl;
-	((CubemapFaceSource*)clientData)->deliverFrame();
+	((RawPixelSource*)clientData)->deliverFrame();
 }
 
 boost::mutex triggerEventMutex;
 
-void CubemapFaceSource::encodeFrameLoop()
+void RawPixelSource::encodeFrameLoop()
 {
 
 
@@ -350,7 +350,7 @@ void CubemapFaceSource::encodeFrameLoop()
 		int ret = avcodec_encode_video2(codecContext, &pkt, yuv420pFrame, &got_output);
 		//mutex.unlock();
 
-		std::cout << "encoded frame" << std::endl;
+		// std::cout << "encoded frame" << std::endl;
 
 //		fprintf(myfile, "packet size: %i \n", pkt.size);
 	//	fflush(myfile);
@@ -380,7 +380,7 @@ void CubemapFaceSource::encodeFrameLoop()
 	}
 }
 
-void CubemapFaceSource::deliverFrame()
+void RawPixelSource::deliverFrame()
 {
 	// This function is called when new frame data is available from the device.
 	// We deliver this data by copying it to the 'downstream' object, using the following parameters (class members):
@@ -514,7 +514,7 @@ void CubemapFaceSource::deliverFrame()
 	// Tell live555 that a new frame is available
 	FramedSource::afterGetting(this);
 
-	std::cout << "sent frame" << std::endl;
+	//std::cout << "sent frame" << std::endl;
 
 	lastFrameTime = thisTime;
 

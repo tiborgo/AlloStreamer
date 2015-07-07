@@ -1,8 +1,9 @@
 #pragma once
 
 // RTP/RTSP params
-#define RTP_PORT_NUM 18888
-#define TTL          255
+#define FACE0_RTP_PORT_NUM      18888
+#define BINOCULARS_RTP_PORT_NUM 18988
+#define TTL                     255
 
 // Encoder params
 #define DEFAULT_AVG_BIT_RATE    1500000000

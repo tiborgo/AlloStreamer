@@ -14,6 +14,7 @@ extern "C"
 
 #include "AlloShared/concurrent_queue.h"
 #include "AlloShared/Cubemap.hpp"
+#include "AlloShared/Binoculars.hpp"
 #include "AlloShared/config.h"
 #include "AlloShared/Process.h"
 #include "config.h"
@@ -22,88 +23,153 @@ extern "C"
 #include "AlloServer.h"
 #include "to_human_readable_byte_count.hpp"
 
-struct FaceStreamState
+struct FrameStreamState
 {
-    RTPSink* sink;
-    CubemapFace* face;
+    RTPSink*      sink;
+    Frame*        content;
     FramedSource* source;
 };
 
 static UsageEnvironment* env;
-static ServerMediaSession* sms;
-static EventTriggerId addFaceSubstreamsTriggerId;
-static EventTriggerId removeFaceSubstreamsTriggerId;
 static struct in_addr destinationAddress;
 static RTSPServer* rtspServer;
-static char const* streamName = "h264ESVideoTest";
 static char const* descriptionString
-    = "Session streamed by \"testOnDemandRTSPServer\"";
+    = "Session streamed by \"AlloUnity\"";
 static boost::interprocess::managed_shared_memory* shm;
-static boost::barrier stopStreamingBarrier(2);
-static std::vector<FaceStreamState> faceStreams;
+static boost::barrier stopStreamingBarrier(3);
 static boost::uint16_t rtspPort;
 static int avgBitRate;
 
-static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms)
+// Cubemap related
+static ServerMediaSession*           cubemapSMS;
+static EventTriggerId                addFaceSubstreamsTriggerId;
+static EventTriggerId                removeFaceSubstreamsTriggerId;
+static std::string                   cubemapStreamName = "cubemap";
+static std::vector<FrameStreamState> faceStreams;
+
+// Binoculars related
+static Binoculars* binoculars = nullptr;
+static ServerMediaSession* binocularsSMS = NULL;
+static EventTriggerId addBinularsSubstreamTriggerId;
+static EventTriggerId removeBinularsSubstreamTriggerId;
+static std::string binocularsStreamName = "binoculars";
+static FrameStreamState binocularsStream;
+
+static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms, std::string& name)
 {
     char* url = rtspServer->rtspURL(sms);
-    UsageEnvironment& env = rtspServer->envir();
-
-    env << "Play this stream using the URL \"" << url << "\"\n";
+    std::cout << "Play " << name << " using the URL \"" << url << "\"" << std::endl;
     delete[] url;
 }
 
-void addFaceSubstream0(void*)
+void addFaceSubstreams0(void*)
 {
-    if (!sms)
+    if (!cubemapSMS)
     {
-        sms = ServerMediaSession::createNew(*env, streamName, streamName,
-                                            descriptionString, True);
-        rtspServer->addServerMediaSession(sms);
-        announceStream(rtspServer, sms);
+        cubemapSMS = ServerMediaSession::createNew(*env,
+                                                   cubemapStreamName.c_str(),
+                                                   cubemapStreamName.c_str(),
+                                                   descriptionString,
+                                                   True);
+        rtspServer->addServerMediaSession(cubemapSMS);
+        announceStream(rtspServer, cubemapSMS, cubemapStreamName);
     }
 
     for (int i = 0; i < cubemap->getFacesCount(); i++)
     {
-        faceStreams.push_back(FaceStreamState());
-        FaceStreamState* state = &faceStreams.back();
+        faceStreams.push_back(FrameStreamState());
+        FrameStreamState* state = &faceStreams.back();
         
-        state->face = cubemap->getFace(i);
+        state->content = cubemap->getFace(i)->getContent();
 
-        Port rtpPort(RTP_PORT_NUM + state->face->getIndex());
+        Port rtpPort(FACE0_RTP_PORT_NUM + i);
         Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, TTL);
         //rtpGroupsock->multicastSendOnly(); // we're a SSM source
 
         // Create a 'H264 Video RTP' sink from the RTP 'groupsock':
-        // OutPacketBuffer::maxSize = 100000;
         state->sink = H264VideoRTPSink::createNew(*env, rtpGroupsock, 96);
 
         ServerMediaSubsession* subsession = PassiveServerMediaSubsession::createNew(*state->sink);
 
-        sms->addSubsession(subsession);
+        cubemapSMS->addSubsession(subsession);
 
 		state->source = H264VideoStreamDiscreteFramer::createNew(*env,
-			                                                     CubemapFaceSource::createNew(*env,
-																                              state->face,
-																							  avgBitRate));
+			                                                     RawPixelSource::createNew(*env,
+                                                                                           state->content,
+                                                                                           avgBitRate));
         state->sink->startPlaying(*state->source, NULL, NULL);
 
-        std::cout << "added face " << state->face->getIndex() << std::endl;
+        std::cout << "Streaming face " << i << " ..." << std::endl;
     }
 }
 
 void removeFaceSubstreams0(void*)
 {
-    rtspServer->closeAllClientSessionsForServerMediaSession(sms);
-    for (FaceStreamState faceStream : faceStreams)
+    if (cubemapSMS)
     {
-        faceStream.sink->stopPlaying();
-        Medium::close(faceStream.sink);
-        Medium::close(faceStream.source);
-        std::cout << "removed face " << faceStream.face->getIndex() << std::endl;
+        rtspServer->closeAllClientSessionsForServerMediaSession(cubemapSMS);
+        for (int i = 0; i < faceStreams.size(); i++)
+        {
+            FrameStreamState stream = faceStreams[i];
+            stream.sink->stopPlaying();
+            Medium::close(stream.sink);
+            Medium::close(stream.source);
+            std::cout << "removed face " << i << std::endl;
+        }
+        faceStreams.clear();
+        cubemapSMS->deleteAllSubsessions();
     }
-    faceStreams.clear();
-    sms->deleteAllSubsessions();
+    stopStreamingBarrier.wait();
+}
+
+void addBinocularsSubstream0(void*)
+{
+    if (!binocularsSMS)
+    {
+        binocularsSMS = ServerMediaSession::createNew(*env,
+                                                      binocularsStreamName.c_str(),
+                                                      binocularsStreamName.c_str(),
+                                                      descriptionString,
+                                                      True);
+        rtspServer->addServerMediaSession(binocularsSMS);
+        announceStream(rtspServer, binocularsSMS, binocularsStreamName);
+    }
+        
+    binocularsStream.content = binoculars->getContent();
+    
+    Port rtpPort(BINOCULARS_RTP_PORT_NUM);
+    Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, TTL);
+    //rtpGroupsock->multicastSendOnly(); // we're a SSM source
+    
+    // Create a 'H264 Video RTP' sink from the RTP 'groupsock':
+    binocularsStream.sink = H264VideoRTPSink::createNew(*env, rtpGroupsock, 96);
+    
+    ServerMediaSubsession* subsession = PassiveServerMediaSubsession::createNew(*binocularsStream.sink);
+    
+    binocularsSMS->addSubsession(subsession);
+    
+    binocularsStream.source = H264VideoStreamDiscreteFramer::createNew(*env,
+                                                                       RawPixelSource::createNew(*env,
+                                                                                                 binocularsStream.content,
+                                                                                                 avgBitRate));
+    binocularsStream.sink->startPlaying(*binocularsStream.source, NULL, NULL);
+    
+    std::cout << "Streaming binoculars ..." << std::endl;
+}
+
+void removeBinocularsSubstream0(void*)
+{
+    if (binocularsSMS)
+    {
+        rtspServer->closeAllClientSessionsForServerMediaSession(binocularsSMS);
+
+        binocularsStream.sink->stopPlaying();
+        Medium::close(binocularsStream.sink);
+        Medium::close(binocularsStream.source);
+        std::cout << "removed binoculars" << std::endl;
+        
+        binocularsSMS->deleteAllSubsessions();
+    }
     stopStreamingBarrier.wait();
 }
 
@@ -141,8 +207,10 @@ void setupRTSP()
 
     OutPacketBuffer::maxSize = 400000000;
 
-    addFaceSubstreamsTriggerId = env->taskScheduler().createEventTrigger(&addFaceSubstream0);
+    addFaceSubstreamsTriggerId = env->taskScheduler().createEventTrigger(&addFaceSubstreams0);
     removeFaceSubstreamsTriggerId = env->taskScheduler().createEventTrigger(&removeFaceSubstreams0);
+    addBinularsSubstreamTriggerId = env->taskScheduler().createEventTrigger(&addBinocularsSubstream0);
+    removeBinularsSubstreamTriggerId = env->taskScheduler().createEventTrigger(&removeBinocularsSubstream0);
 }
 
 void startStreaming()
@@ -163,15 +231,26 @@ void startStreaming()
     {
         cubemap = nullptr;
     }
+    
+    auto binocularsPair = shm->find<Binoculars::Ptr>("Binoculars");
+    if (binocularsPair.first)
+    {
+        binoculars = binocularsPair.first->get();
+        env->taskScheduler().triggerEvent(addBinularsSubstreamTriggerId, NULL);
+    }
+    else
+    {
+        binoculars = nullptr;
+    }
 }
 
 void stopStreaming()
 {
-    if (cubemap)
-    {
-        env->taskScheduler().triggerEvent(removeFaceSubstreamsTriggerId, NULL);
-        stopStreamingBarrier.wait();
-    }
+
+    env->taskScheduler().triggerEvent(removeFaceSubstreamsTriggerId, NULL);
+    env->taskScheduler().triggerEvent(removeBinularsSubstreamTriggerId, NULL);
+    stopStreamingBarrier.wait();
+    
     delete shm;
 }
 
@@ -249,10 +328,6 @@ int main(int argc, char* argv[])
         unityProcess.waitForBirth();
         std::cout << "Connected to Unity :)" << std::endl;
         startStreaming();
-        if (cubemap)
-        {
-            std::cout << "Streaming ..." << std::endl;
-        }
         unityProcess.join();
         std::cout << "Lost connection to Unity :(" << std::endl;
         stopStreaming();

@@ -20,19 +20,19 @@ extern "C"
 #include "AlloShared/concurrent_queue.h"
 #include "AlloShared/Cubemap.hpp"
 
-class CubemapFaceSource : public FramedSource
+class RawPixelSource : public FramedSource
 {
 public:
-	static CubemapFaceSource* createNew(UsageEnvironment& env,
-		                                CubemapFace* face,
-										int avgBitRate);
+	static RawPixelSource* createNew(UsageEnvironment& env,
+                                     Frame* content,
+                                     int avgBitRate);
 
 protected:
-	CubemapFaceSource(UsageEnvironment& env,
-		              CubemapFace* face,
-					  int avgBitRate);
+	RawPixelSource(UsageEnvironment& env,
+                   Frame* content,
+                   int avgBitRate);
 	// called only by createNew(), or by subclass constructors
-	virtual ~CubemapFaceSource();
+	virtual ~RawPixelSource();
 
 private:
 	EventTriggerId eventTriggerId;
@@ -58,13 +58,13 @@ private:
 
 	static unsigned referenceCount; // used to count how many instances of this class currently exist
 
-	CubemapFace* face;
+	Frame* content;
 	AVCodecContext* codecContext;
 
-	boost::thread frameFaceThread;
+	boost::thread frameContentThread;
 	boost::thread encodeFrameThread;
 
-	void frameFaceLoop();
+	void frameContentLoop();
 	void encodeFrameLoop();
 
 	bool destructing;

@@ -130,6 +130,10 @@ void releaseSHM()
 {
     shm.destroy<Cubemap::Ptr>("Cubemap");
     cubemap = nullptr;
+    cubemapConfig = nullptr;
+    shm.destroy<Cubemap::Ptr>("Binoculars");
+    binoculars = nullptr;
+    binocularsConfig = nullptr;
     boost::interprocess::shared_memory_object::remove(SHM_NAME);
     delete thisProcess;
     thisProcess = nullptr;
