@@ -6,7 +6,7 @@
 #define TTL                     255
 
 // Encoder params
-#define DEFAULT_AVG_BIT_RATE    1500000000
+#define DEFAULT_AVG_BIT_RATE    15000000
 #define PRESET_VAL				"ultrafast"
 #define TUNE_VAL				"zerolatency:fastdecode"
 #define FPS						30
