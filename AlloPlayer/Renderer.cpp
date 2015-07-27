@@ -90,10 +90,27 @@ void Renderer::onDraw(al::Graphics& gl)
             Cubemap* eye = cubemap->getEye(0);
             if (eye->getFacesCount() > faceIndex)
             {
-                CubemapFace* face = eye->getFace(faceIndex);
+                // Choose right face for flipping
+                CubemapFace* face;
+                if (faceIndex == 0)
+                {
+                    face = eye->getFace(1);
+                }
+                else if (faceIndex == 1)
+                {
+                    face = eye->getFace(0);
+                }
+                else
+                {
+                    face = eye->getFace(faceIndex);
+                }
                 
                 glUseProgram(0);
                 glDepthMask(GL_FALSE);
+                
+                // flip face
+                glPixelZoom(-1.0, 1.0);
+                glRasterPos2d(1.0, -1.0);
                 
                 // draw the background
                 glDrawPixels(face->getContent()->getWidth(),
