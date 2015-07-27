@@ -53,7 +53,7 @@ static ServerMediaSession* binocularsSMS = NULL;
 static EventTriggerId addBinularsSubstreamTriggerId;
 static EventTriggerId removeBinularsSubstreamTriggerId;
 static std::string binocularsStreamName = "binoculars";
-static FrameStreamState binocularsStream;
+static FrameStreamState* binocularsStream = nullptr;
 
 static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms, std::string& name)
 {
@@ -64,17 +64,6 @@ static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms, std:
 
 void addFaceSubstreams0(void*)
 {
-    if (!cubemapSMS)
-    {
-        cubemapSMS = ServerMediaSession::createNew(*env,
-                                                   cubemapStreamName.c_str(),
-                                                   cubemapStreamName.c_str(),
-                                                   descriptionString,
-                                                   True);
-        rtspServer->addServerMediaSession(cubemapSMS);
-        announceStream(rtspServer, cubemapSMS, cubemapStreamName);
-    }
-
     for (int i = 0; i < cubemap->getFacesCount(); i++)
     {
         faceStreams.push_back(FrameStreamState());
@@ -101,11 +90,13 @@ void addFaceSubstreams0(void*)
 
         std::cout << "Streaming face " << i << " ..." << std::endl;
     }
+    
+    announceStream(rtspServer, cubemapSMS, cubemapStreamName);
 }
 
 void removeFaceSubstreams0(void*)
 {
-    if (cubemapSMS)
+    if (faceStreams.size() > 0)
     {
         rtspServer->closeAllClientSessionsForServerMediaSession(cubemapSMS);
         for (int i = 0; i < faceStreams.size(); i++)
@@ -124,51 +115,44 @@ void removeFaceSubstreams0(void*)
 
 void addBinocularsSubstream0(void*)
 {
-    if (!binocularsSMS)
-    {
-        binocularsSMS = ServerMediaSession::createNew(*env,
-                                                      binocularsStreamName.c_str(),
-                                                      binocularsStreamName.c_str(),
-                                                      descriptionString,
-                                                      True);
-        rtspServer->addServerMediaSession(binocularsSMS);
-        announceStream(rtspServer, binocularsSMS, binocularsStreamName);
-    }
-        
-    binocularsStream.content = binoculars->getContent();
+    binocularsStream = new FrameStreamState;
+    binocularsStream->content = binoculars->getContent();
     
     Port rtpPort(BINOCULARS_RTP_PORT_NUM);
     Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, TTL);
     //rtpGroupsock->multicastSendOnly(); // we're a SSM source
     
     // Create a 'H264 Video RTP' sink from the RTP 'groupsock':
-    binocularsStream.sink = H264VideoRTPSink::createNew(*env, rtpGroupsock, 96);
+    binocularsStream->sink = H264VideoRTPSink::createNew(*env, rtpGroupsock, 96);
     
-    ServerMediaSubsession* subsession = PassiveServerMediaSubsession::createNew(*binocularsStream.sink);
+    ServerMediaSubsession* subsession = PassiveServerMediaSubsession::createNew(*binocularsStream->sink);
     
     binocularsSMS->addSubsession(subsession);
     
-    binocularsStream.source = H264VideoStreamDiscreteFramer::createNew(*env,
-                                                                       RawPixelSource::createNew(*env,
-                                                                                                 binocularsStream.content,
-                                                                                                 avgBitRate));
-    binocularsStream.sink->startPlaying(*binocularsStream.source, NULL, NULL);
+    binocularsStream->source = H264VideoStreamDiscreteFramer::createNew(*env,
+                                                                        RawPixelSource::createNew(*env,
+                                                                                                  binocularsStream->content,
+                                                                                                  avgBitRate));
+    binocularsStream->sink->startPlaying(*binocularsStream->source, NULL, NULL);
     
     std::cout << "Streaming binoculars ..." << std::endl;
+    
+    announceStream(rtspServer, binocularsSMS, binocularsStreamName);
 }
 
 void removeBinocularsSubstream0(void*)
 {
-    if (binocularsSMS)
+    if (binocularsStream)
     {
         rtspServer->closeAllClientSessionsForServerMediaSession(binocularsSMS);
 
-        binocularsStream.sink->stopPlaying();
-        Medium::close(binocularsStream.sink);
-        Medium::close(binocularsStream.source);
+        binocularsStream->sink->stopPlaying();
+        Medium::close(binocularsStream->sink);
+        Medium::close(binocularsStream->source);
         std::cout << "removed binoculars" << std::endl;
         
         binocularsSMS->deleteAllSubsessions();
+        delete binocularsStream;
     }
     boost::thread(boost::bind(&boost::barrier::wait, &stopStreamingBarrier));
 }
@@ -206,6 +190,20 @@ void setupRTSP()
 
 
     OutPacketBuffer::maxSize = 400000000;
+    
+    cubemapSMS = ServerMediaSession::createNew(*env,
+                                               cubemapStreamName.c_str(),
+                                               cubemapStreamName.c_str(),
+                                               descriptionString,
+                                               True);
+    rtspServer->addServerMediaSession(cubemapSMS);
+    
+    binocularsSMS = ServerMediaSession::createNew(*env,
+                                                  binocularsStreamName.c_str(),
+                                                  binocularsStreamName.c_str(),
+                                                  descriptionString,
+                                                  True);
+    rtspServer->addServerMediaSession(binocularsSMS);
 
     addFaceSubstreamsTriggerId = env->taskScheduler().createEventTrigger(&addFaceSubstreams0);
     removeFaceSubstreamsTriggerId = env->taskScheduler().createEventTrigger(&removeFaceSubstreams0);
