@@ -40,12 +40,18 @@ public class RenderCubemap : MonoBehaviour {
 		new Vector3( 90,   0, 0),
 		new Vector3(  0,   0, 0),
 		new Vector3(  0, 180, 0),
+        new Vector3(  0,  90, 0),
+		new Vector3(  0, 270, 0),
+		new Vector3(270,   0, 0),
+		new Vector3( 90,   0, 0),
+		new Vector3(  0,   0, 0),
+		new Vector3(  0, 180, 0)
 	};
 	
 	// Use this for initialization
 	IEnumerator Start() {
 		
-		// Set up 6 cameras for cubemap
+		// Setup the cameras for cubemap
 		Camera thisCam = GetComponent<Camera>();
 		GameObject cubemap = new GameObject("Cubemap");
 		cubemap.transform.parent = transform;

@@ -15,7 +15,7 @@ struct RTSPHelper
     std::vector<MediaSink*> onGetSinksForSubsessions(RTSPCubemapSourceClient* client,
                                                      std::vector<MediaSubsession*>& subsessions)
     {
-        if (subsessions.size() <= 6)
+        if (subsessions.size() <= Cubemap::MAX_FACES_COUNT)
         {
             bool isH264 = true;
             for (MediaSubsession* subsession : subsessions)

@@ -79,19 +79,21 @@ public:
             return faces[eye][id];
         }
 
-        virtual int getSubImageCount() { return 6; }
+        virtual int getSubImageCount() {
+			int count = 0;
+			for (int i = 0; cubemap_->getEyesCount(); i++)
+			{
+				count += cubemap_->getEye(i)->getFacesCount();
+			}
+			return count;
+		}
         virtual bool isStereo() { return true; }
 
         virtual ~CubemapStereoFrame() {
             StereoCubemap::destroy(cubemap_);
-            for(int i = 0; i < 2; i++) {
-                for(int j = 0; j < 6; j++) {
-                    delete faces[i][j];
-                }
-            }
         }
         StereoCubemap* cubemap_;
-        CubemapPixelData* faces[2][6];
+        CubemapPixelData* faces[StereoCubemap::MAX_EYES_COUNT][Cubemap::MAX_FACES_COUNT];
     };
 
 
