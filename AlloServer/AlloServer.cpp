@@ -299,7 +299,7 @@ int main(int argc, char* argv[])
     }
     else
     {
-        inet_pton(AF_INET, "224.0.0.1", &(destinationAddress.s_addr));
+        inet_pton(AF_INET, "224.0.67.67", &(destinationAddress.s_addr));
     }
 
 	if (vm.count("avg-bit-rate"))
