@@ -320,9 +320,20 @@ void copyFromGPUToCPU(Frame* frame)
     if (g_DeviceType == kGfxRendererD3D11)
     {
 		FrameD3D11* frameD3D11 = (FrameD3D11*)frame;
-		memcpy(frameD3D11->getPixels(),
+		/*memcpy(frameD3D11->getPixels(),
 			   frameD3D11->resource.pData,
-			   frameD3D11->getWidth() * frameD3D11->getHeight() * 4);
+			   frameD3D11->getWidth() * frameD3D11->getHeight() * 4);*/
+
+		int numbeOfPixels = frameD3D11->getWidth() * frameD3D11->getHeight() * 4;
+		char* dst = (char*)frameD3D11->getPixels();
+		char* src = (char*)frameD3D11->resource.pData;
+
+		int j = 0;
+		for (int i = 0; i < numbeOfPixels; i += 4)
+		{
+			*((uint32_t*)(dst + j)) = *((uint32_t*)(src + i));
+			j += 3;
+		}
     }
 #endif
     

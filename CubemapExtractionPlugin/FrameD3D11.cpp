@@ -27,7 +27,7 @@ FrameD3D11::FrameD3D11(boost::uint32_t width,
 	:
 	Frame(width,
 	      height,
-          avPixel2DXGIFormat(description.Format),
+		  /*AV_PIX_FMT_RGB24,*/ avPixel2DXGIFormat(description.Format),
 	      presentationTime,
 		  pixels,
 	      allocator),

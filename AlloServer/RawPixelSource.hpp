@@ -52,6 +52,9 @@ private:
 	// and reuse them during runtime
 	concurrent_queue<AVFrame*> framePool;
 
+	concurrent_queue<AVFrame*> convertedFrameBuffer;
+	concurrent_queue<AVFrame*> convertedFramePool;
+
 	// Stores encoded frames
 	concurrent_queue<AVPacket> pktBuffer;
 	concurrent_queue<AVPacket> pktPool;
@@ -62,9 +65,11 @@ private:
 	AVCodecContext* codecContext;
 
 	boost::thread frameContentThread;
+	boost::thread convertFormatThread;
 	boost::thread encodeFrameThread;
 
 	void frameContentLoop();
+	void convertFormatLoop();
 	void encodeFrameLoop();
 
 	bool destructing;

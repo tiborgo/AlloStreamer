@@ -21,7 +21,7 @@ int RawPixelSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
 		int w = xFrame->width;
 		int h = xFrame->width;
 		img_convert_ctx = sws_getContext(w, h, (AVPixelFormat)xFrame->format, w, h,
-			c->pix_fmt, SWS_BICUBIC,
+			c->pix_fmt, 0,
 			NULL, NULL, NULL);
 		if (img_convert_ctx == NULL)
 		{
@@ -77,7 +77,7 @@ RawPixelSource::RawPixelSource(UsageEnvironment& env,
 		if (!frame)
 		{
 			fprintf(stderr, "Could not allocate video frame\n");
-			exit(1);
+			abort();
 		}
 		frame->format = content->getFormat();
 		frame->width  = content->getWidth();
@@ -97,17 +97,41 @@ RawPixelSource::RawPixelSource(UsageEnvironment& env,
 
 	for (int i = 0; i < 1; i++)
 	{
+		AVFrame* convertedFrame = av_frame_alloc();
+		if (!convertedFrame)
+		{
+			fprintf(stderr, "Could not allocate video frame\n");
+			abort();
+		}
+		convertedFrame->format = CODEC_FORMAT;
+		convertedFrame->width = content->getWidth();
+		convertedFrame->height = content->getHeight();
+
+		/* the image can be allocated by any means and av_image_alloc() is
+		* just the most convenient way if av_malloc() is to be used */
+		if (av_image_alloc(convertedFrame->data, convertedFrame->linesize, convertedFrame->width, convertedFrame->height,
+			CODEC_FORMAT, 32) < 0)
+		{
+			fprintf(stderr, "Could not allocate raw picture buffer\n");
+			abort();
+		}
+
+		convertedFramePool.push(convertedFrame);
+	}
+
+	for (int i = 0; i < 1; i++)
+	{
 		AVPacket pkt;
 		av_init_packet(&pkt);
 		pktPool.push(pkt);
 	}
 
 	// Initialize codec and encoder
-	AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+	AVCodec* codec = avcodec_find_encoder_by_name("libx264rgb");
 	if (!codec)
 	{
 		fprintf(stderr, "Codec not found\n");
-		exit(1);
+		abort();
 	}
 
 	codecContext = avcodec_alloc_context3(codec);
@@ -115,7 +139,7 @@ RawPixelSource::RawPixelSource(UsageEnvironment& env,
 	if (!codecContext)
 	{
 		fprintf(stderr, "could not allocate video codec context\n");
-		exit(1);
+		abort();
 	}
 
 	/* put sample parameters */
@@ -127,7 +151,7 @@ RawPixelSource::RawPixelSource(UsageEnvironment& env,
 	codecContext->time_base = av_make_q(1, FPS);
 	codecContext->gop_size = 20; /* emit one intra frame every ten frames */
 	codecContext->max_b_frames = 0;
-	codecContext->pix_fmt = AV_PIX_FMT_YUV420P;
+	codecContext->pix_fmt = CODEC_FORMAT;
 	//codecContext->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
 	av_opt_set(codecContext->priv_data, "preset", PRESET_VAL, 0);
@@ -137,7 +161,7 @@ RawPixelSource::RawPixelSource(UsageEnvironment& env,
 	if (avcodec_open2(codecContext, codec, NULL) < 0)
 	{
 		fprintf(stderr, "could not open codec\n");
-		exit(1);
+		abort();
 	}
 
 	// We arrange here for our "deliverFrame" member function to be called
@@ -153,9 +177,9 @@ RawPixelSource::RawPixelSource(UsageEnvironment& env,
 
 	//std::cout << this << ": eventTriggerId: " << eventTriggerId  << std::endl;
 
-	frameContentThread = boost::thread(boost::bind(&RawPixelSource::frameContentLoop, this));
-
-	encodeFrameThread  = boost::thread(boost::bind(&RawPixelSource::encodeFrameLoop,  this));
+	frameContentThread  = boost::thread(boost::bind(&RawPixelSource::frameContentLoop, this));
+	convertFormatThread = boost::thread(boost::bind(&RawPixelSource::convertFormatLoop, this));
+	encodeFrameThread   = boost::thread(boost::bind(&RawPixelSource::encodeFrameLoop,  this));
 
 	lastFrameTime = av_gettime();
 }
@@ -168,10 +192,13 @@ RawPixelSource::~RawPixelSource()
 	this->destructing = true;
 	frameBuffer.close();
 	pktBuffer.close();
+	convertedFrameBuffer.close();
+	convertedFramePool.close();
 	framePool.close();
 	pktPool.close();
 
 	frameContentThread.join();
+	convertFormatThread.join();
 	encodeFrameThread.join();
 
 	--referenceCount;
@@ -247,7 +274,7 @@ void RawPixelSource::frameContentLoop()
         frame->pts = av_rescale_q(presentationTimeSinceEpochMicroSec.count(), microSecBase, codecContext->time_base);
 
         // Make frame available to the encoder
-        frameBuffer.push(frame);
+		frameBuffer.push(frame);
 
 		// Wait for new frame
 		while (!content->getNewPixelsCondition().timed_wait(lock,
@@ -291,21 +318,52 @@ void RawPixelSource::deliverFrame0(void* clientData)
 
 boost::mutex triggerEventMutex;
 
-void RawPixelSource::encodeFrameLoop()
+void RawPixelSource::convertFormatLoop()
 {
-
-
 	while (!this->destructing)
 	{
 		// Pop frame ptr from buffer
-		AVFrame* xFrame;
-		AVFrame* yuv420pFrame;
+		AVFrame* frame;
+		AVFrame* convertedFrame;
+
+		if (!frameBuffer.wait_and_pop(frame))
+		{
+			// queue did close
+			return;
+		}
+
+		if (!convertedFramePool.wait_and_pop(convertedFrame))
+		{
+			// queue did close
+			return;
+		}
+
+		convertedFrame->pts = frame->pts;
+
+		if (frame->format != convertedFrame->format)
+		{
+			x2yuv(frame, convertedFrame, codecContext);
+			convertedFrameBuffer.push(convertedFrame);
+			framePool.push(frame);
+		}
+		else
+		{
+			convertedFrameBuffer.push(frame);
+			framePool.push(convertedFrame);
+		}
+	}
+}
+
+void RawPixelSource::encodeFrameLoop()
+{
+	while (!this->destructing)
+	{
+		// Pop frame ptr from buffer
+		AVFrame* convertedFrame;
 		AVPacket pkt;
 
 
-
-
-		if (!frameBuffer.wait_and_pop(xFrame))
+		if (!convertedFrameBuffer.wait_and_pop(convertedFrame))
 		{
 			// queue did close
 			return;
@@ -317,37 +375,12 @@ void RawPixelSource::encodeFrameLoop()
 			return;
 		}
 
-        //std::cout << this << " encode" << std::endl;
-        
-		yuv420pFrame = av_frame_alloc();
-		if (!yuv420pFrame)
-		{
-			fprintf(stderr, "Could not allocate video frame\n");
-			return;
-		}
-		yuv420pFrame->format = AV_PIX_FMT_YUV420P;
-		yuv420pFrame->width = xFrame->width;
-		yuv420pFrame->height = xFrame->height;
-
-
-
-		/* the image can be allocated by any means and av_image_alloc() is
-		* just the most convenient way if av_malloc() is to be used */
-		if (av_image_alloc(yuv420pFrame->data, yuv420pFrame->linesize, yuv420pFrame->width, yuv420pFrame->height,
-			AV_PIX_FMT_YUV420P, 32) < 0)
-		{
-			fprintf(stderr, "Could not allocate raw picture buffer\n");
-			abort();
-		}
-
-		x2yuv(xFrame, yuv420pFrame, codecContext);
-
 		pkt.data = NULL; // packet data will be allocated by the encoder
 		pkt.size = 0;
 		int got_output = 0;
 
 		//mutex.lock();
-		int ret = avcodec_encode_video2(codecContext, &pkt, yuv420pFrame, &got_output);
+		int ret = avcodec_encode_video2(codecContext, &pkt, convertedFrame, &got_output);
 		//mutex.unlock();
 
 		// std::cout << "encoded frame" << std::endl;
@@ -361,9 +394,9 @@ void RawPixelSource::encodeFrameLoop()
 			return;
 		}
 
-		pkt.pts = xFrame->pts;
+		pkt.pts = convertedFrame->pts;
 
-		framePool.push(xFrame);
+		convertedFramePool.push(convertedFrame);
 		pktBuffer.push(pkt);
 
 		//std::cout << this << ": encoded frame" << std::endl;
@@ -374,9 +407,6 @@ void RawPixelSource::encodeFrameLoop()
 			envir().taskScheduler().triggerEvent(eventTriggerId, this);
 			//std::cout << this << ": event triggered" << std::endl;
 		}
-
-		av_freep(&yuv420pFrame->data[0]);
-		av_frame_free(&yuv420pFrame);
 	}
 }
 
