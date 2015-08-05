@@ -20,6 +20,10 @@ add_definitions(-DBOOST_ALL_DYN_LINK)
 # Use unicode in every project
 add_definitions(-DUNICODE -D_UNICODE)
 
+if(WIN32)
+    add_definitions(-DBOOST_INTERPROCESS_BOOTSTAMP_IS_LASTBOOTUPTIME)
+endif()
+
 # In case the libraries have to be connected to Unity
 set(UNITY_PROJECT_ASSETS_DIR "${CMAKE_SOURCE_DIR}/AlloStreamer/Assets/" CACHE STRING "")
 set(UNITY_PROJECT_PLUGIN_DIR "${UNITY_PROJECT_ASSETS_DIR}/Plugins" CACHE STRING "")
