@@ -5,7 +5,9 @@
 #include <liveMedia.hh>
 #include <boost/thread.hpp>
 
-class RTSPCubemapSourceClient : public RTSPClient
+#include "AlloReceiver.h"
+
+class ALLORECEIVER_API RTSPCubemapSourceClient : public RTSPClient
 {
 public:
     void connect();

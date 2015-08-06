@@ -8,7 +8,7 @@ extern "C"
 #include "AlloReceiver.h"
 #include "AlloShared/Cubemap.hpp"
 
-class CubemapSource
+class ALLORECEIVER_API CubemapSource
 {
 public:
     virtual void setOnNextCubemap(std::function<void (CubemapSource*, StereoCubemap*)>& callback) = 0;

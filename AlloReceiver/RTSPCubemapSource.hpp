@@ -9,7 +9,7 @@
 #include "H264RawPixelsSink.h"
 #include "RTSPCubemapSourceClient.hpp"
 
-class RTSPCubemapSource : public CubemapSource
+class ALLORECEIVER_API RTSPCubemapSource : public CubemapSource
 {
 public:
     static RTSPCubemapSource* create(const char* url,

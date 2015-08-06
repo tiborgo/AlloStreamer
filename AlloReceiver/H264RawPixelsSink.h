@@ -14,10 +14,12 @@ extern "C"
 #include <MediaSession.hh>
 #include <boost/thread.hpp>
 
+#include "AlloReceiver.h"
+
 #include "AlloShared/concurrent_queue.h"
 #include "AlloShared/Cubemap.hpp"
 
-class H264RawPixelsSink: public MediaSink
+class ALLORECEIVER_API H264RawPixelsSink : public MediaSink
 {
 public:
 	static H264RawPixelsSink* createNew(UsageEnvironment& env,

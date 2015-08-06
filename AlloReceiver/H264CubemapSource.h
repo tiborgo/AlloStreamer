@@ -10,7 +10,7 @@
 #include "RTSPCubemapSourceClient.hpp"
 #include "RTSPCubemapSource.hpp"
 
-class H264CubemapSource : public RTSPCubemapSource
+class ALLORECEIVER_API H264CubemapSource : public RTSPCubemapSource
 {
 public:
     virtual void setOnNextCubemap(std::function<void (CubemapSource*, StereoCubemap*)>&          callback);
