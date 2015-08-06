@@ -17,12 +17,13 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 set(Boost_USE_STATIC_LIBS OFF)
 add_definitions(-DBOOST_ALL_DYN_LINK)
 
+if(WIN32)
+    add_definitions(-DBOOST_INTERPROCESS_BOOTSTAMP_IS_LASTBOOTUPTIME) # prevents error when startup time is not in Windows sys log
+	add_definitions(-DBOOST_INTERPROCESS_WINDOWS)
+endif()
+
 # Use unicode in every project
 add_definitions(-DUNICODE -D_UNICODE)
-
-if(WIN32)
-    add_definitions(-DBOOST_INTERPROCESS_BOOTSTAMP_IS_LASTBOOTUPTIME)
-endif()
 
 # In case the libraries have to be connected to Unity
 set(UNITY_PROJECT_ASSETS_DIR "${CMAKE_SOURCE_DIR}/AlloStreamer/Assets/" CACHE STRING "")
