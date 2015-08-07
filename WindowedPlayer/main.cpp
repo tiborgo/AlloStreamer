@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
         interface = "0.0.0.0";
     }
 
-    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), 2048, AV_PIX_FMT_RGB24, interface);
+    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), 512, AV_PIX_FMT_ARGB, interface);
     
     std::function<void (CubemapSource*, int, uint8_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3);
     cubemapSource->setOnDroppedNALU(callback);
@@ -89,6 +89,8 @@ int main(int argc, char* argv[])
     std::function<void (Renderer*)> onDisplayedFrameCallback = boost::bind(&onDisplayedFrame, _1);
     renderer.setOnDisplayedFrame(onDisplayedFrameCallback);
     renderer.start();
+
+	while (true){}
     
     CubemapSource::destroy(cubemapSource);
 }

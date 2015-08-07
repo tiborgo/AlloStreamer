@@ -1,6 +1,6 @@
 #pragma once
 
-extern "C"
+/*extern "C"
 {
     #include <libavcodec/avcodec.h>
     #include <libavutil/opt.h>
@@ -8,8 +8,12 @@ extern "C"
     #include <libavutil/imgutils.h>
     #include <libavutil/time.h>
     #include <libswscale/swscale.h>
-}
+}*/
+#include <SDL.h>
+#undef main
+//#include <SDL_thread.h>
 #include <boost/thread.hpp>
+#include "AlloShared/concurrent_queue.h"
 #include "AlloReceiver/AlloReceiver.h"
 
 class Renderer
@@ -29,11 +33,14 @@ protected:
 
 private:
 	void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
+	void renderLoop();
 
-	std::vector<AVFrame*> currentFrames;
-	SwsContext* resizeCtx;
-	CubemapSource* cubemapSource;
-	StereoCubemap* cubemap;
-	boost::mutex nextCubemapMutex;
-	bool newCubemap;
+	boost::thread                    renderThread;
+	CubemapSource*                   cubemapSource;
+	concurrent_queue<StereoCubemap*> cubemapBuffer;
+	concurrent_queue<StereoCubemap*> cubemapPool;
+	SDL_Window*                      window;
+	SDL_Renderer*                    renderer;
+	SDL_Surface*                     bmp;
+	SDL_Texture*                     texture;
 };
