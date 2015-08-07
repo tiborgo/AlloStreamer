@@ -21,16 +21,18 @@ public:
     
     // statistical values
     double naluDropRate(boost::chrono::microseconds window,
-        boost::chrono::microseconds nowSinceEpoch = boost::chrono::microseconds(0));
+                        boost::chrono::microseconds nowSinceEpoch);
     double cubemapFaceFramesPS(int face,
-        boost::chrono::microseconds window,
-        boost::chrono::microseconds nowSinceEpoch = boost::chrono::microseconds(0));
+                               boost::chrono::microseconds window,
+							   boost::chrono::microseconds nowSinceEpoch);
     double fps(boost::chrono::microseconds window,
-        boost::chrono::microseconds nowSinceEpoch = boost::chrono::microseconds(0));
+		       boost::chrono::microseconds nowSinceEpoch);
     double receivedNALUsPS(boost::chrono::microseconds window,
-        boost::chrono::microseconds nowSinceEpoch = boost::chrono::microseconds(0));
+		                   boost::chrono::microseconds nowSinceEpoch);
     double processedNALUsPS(boost::chrono::microseconds window,
-        boost::chrono::microseconds nowSinceEpoch = boost::chrono::microseconds(0));
+		                    boost::chrono::microseconds nowSinceEpoch);
+	double processedBytesPS(boost::chrono::microseconds window,
+		                    boost::chrono::microseconds nowSinceEpoch);
     
     // utility
     std::string summary(boost::chrono::microseconds window);
@@ -60,17 +62,6 @@ private:
     std::vector<TimeValueDatum<int> > displayedCubemapFaces;
     std::vector<TimeValueDatum<int> > displayedFrames;
     
-    template <typename ValueType>
-    bool isInTime(Stats::TimeValueDatum<ValueType> datum,
-        boost::chrono::microseconds window,
-        boost::chrono::microseconds nowSinceEpoch);
-    
-    template <typename Features, typename ValueType>
-    boost::accumulators::accumulator_set<Stats::TimeValueDatum<ValueType>, Features>filterTime(
-        std::vector<TimeValueDatum<ValueType> >& data,
-        boost::chrono::microseconds window,
-        boost::chrono::microseconds nowSinceEpoch);
-    
     template <typename Features, typename ValueType>
     boost::accumulators::accumulator_set<Stats::TimeValueDatum<ValueType>, Features> filter(
        std::vector<TimeValueDatum<ValueType> >& data,
@@ -80,13 +71,6 @@ private:
     boost::function<bool (TimeValueDatum<ValueType>)> timeFilter(
         boost::chrono::microseconds window,
         boost::chrono::microseconds nowSinceEpoch);
-    
-    template <typename Features>
-    boost::accumulators::accumulator_set<TimeValueDatum<int>, Features> filterTimeFace(
-        std::vector<TimeValueDatum<int> >& data,
-        boost::chrono::microseconds window,
-        boost::chrono::microseconds nowSinceEpoch,
-        int face);
     
     boost::chrono::microseconds nowSinceEpoch();
     

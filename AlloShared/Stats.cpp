@@ -29,41 +29,6 @@ Stats::NALU::NALU(int type, size_t size)
 }
 
 template <typename ValueType>
-bool Stats::isInTime(Stats::TimeValueDatum<ValueType> datum,
-    bc::microseconds window,
-    bc::microseconds nowSinceEpoch)
-{
-    return (nowSinceEpoch - datum.timeSinceEpoch) < window;
-}
-
-template <typename Features, typename ValueType>
-ba::accumulator_set<Stats::TimeValueDatum<ValueType>, Features> Stats::filterTime(
-    std::vector<TimeValueDatum<ValueType> >& data,
-    bc::microseconds window,
-    bc::microseconds nowSinceEpoch)
-{
-    ba::accumulator_set<TimeValueDatum<ValueType>, Features> acc;
-    auto filteredData = data | bad::filtered(boost::bind(&Stats::isInTime<ValueType>, this, _1, window, nowSinceEpoch));
-    std::for_each(filteredData.begin(), filteredData.end(), boost::bind<void>(boost::ref(acc), _1));
-    return acc;
-}
-
-template <typename Features>
-ba::accumulator_set<Stats::TimeValueDatum<int>, Features> Stats::filterTimeFace(
-    std::vector<TimeValueDatum<int> >& data,
-    bc::microseconds window,
-    bc::microseconds nowSinceEpoch,
-    int face)
-{
-    ba::accumulator_set<TimeValueDatum<int>, Features> acc;
-    auto filteredData = data
-        | bad::filtered(boost::bind(&Stats::isInTime<int>, this, _1, window, nowSinceEpoch))
-        | bad::filtered([face](Stats::TimeValueDatum<int> datum) { return datum.value == face; });
-    std::for_each(filteredData.begin(), filteredData.end(), boost::bind<void>(boost::ref(acc), _1));
-    return acc;
-}
-
-template <typename ValueType>
 boost::function<bool (Stats::TimeValueDatum<ValueType>)> Stats::timeFilter(
     bc::microseconds window,
     bc::microseconds nowSinceEpoch)
@@ -80,14 +45,27 @@ ba::accumulator_set<Stats::TimeValueDatum<ValueType>, Features> Stats::filter(
     std::initializer_list<boost::function<bool (TimeValueDatum<ValueType>)> > filters)
 {
     ba::accumulator_set<TimeValueDatum<ValueType>, Features> acc;
-    auto filteredData = data | bad::filtered([](TimeValueDatum<ValueType> datum) { return true; });
     
-    for (auto filter : filters)
-    {
-        filteredData | bad::filtered(filter);
-    }
-    
-    std::for_each(filteredData.begin(), filteredData.end(), boost::bind<void>(boost::ref(acc), _1));
+	auto filterAcc = [](TimeValueDatum<ValueType> datum,
+		                std::initializer_list<boost::function<bool(TimeValueDatum<ValueType>)> > filters,
+						ba::accumulator_set<TimeValueDatum<ValueType>, Features>& acc) {
+		bool passed = true;
+		for (auto filter : filters)
+		{
+			if (!filter(datum))
+			{
+				passed = false;
+				break;
+			}
+		}
+		if (passed)
+		{
+			acc(datum);
+		}
+	};
+
+	std::for_each(data.begin(), data.end(), boost::bind<void>(filterAcc, _1, filters, boost::ref(acc)));
+
     return acc;
 }
 
@@ -173,13 +151,12 @@ double Stats::naluDropRate(bc::microseconds window, bc::microseconds nowSinceEpo
 {
     boost::mutex::scoped_lock lock(mutex);
     
-    if (nowSinceEpoch.count() == 0)
-    {
-        nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
-    }
-    
-    auto accDropped = filterTime<ba::features<ba::tag::count> >(droppedNALUs, window, nowSinceEpoch);
-    auto accAdded = filterTime<ba::features<ba::tag::count> >(addedNALUs, window, nowSinceEpoch);
+	auto accDropped = filter<ba::features<ba::tag::count>, NALU>(droppedNALUs,
+	                                                             { timeFilter<NALU>(window,
+	                                                                                nowSinceEpoch) });
+    auto accAdded = filter<ba::features<ba::tag::count>, NALU>(addedNALUs,
+	                                                           { timeFilter<NALU>(window,
+	                                                                              nowSinceEpoch) });
     
     return (double)ba::count(accDropped) / (double)ba::count(accAdded);
 }
@@ -190,12 +167,9 @@ double Stats::cubemapFaceFramesPS(int face,
 {
     boost::mutex::scoped_lock lock(mutex);
     
-    if (nowSinceEpoch.count() == 0)
-    {
-        nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
-    }
-    
-    auto accDisplayedCubemapFaces = filterTimeFace<ba::features<ba::tag::count> >(displayedCubemapFaces, window, nowSinceEpoch, face);
+    auto accDisplayedCubemapFaces = filter<ba::features<ba::tag::count>, int>(displayedCubemapFaces,
+	                                                                          { timeFilter<int>(window, nowSinceEpoch),
+																			    [face](Stats::TimeValueDatum<int> datum) { return datum.value == face; } });
     
     return (double)ba::count(accDisplayedCubemapFaces) / bc::duration_cast<bc::seconds>(window).count();
 }
@@ -205,12 +179,9 @@ double Stats::fps(boost::chrono::microseconds window,
 {
     boost::mutex::scoped_lock lock(mutex);
     
-    if (nowSinceEpoch.count() == 0)
-    {
-        nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
-    }
-    
-    auto accDisplayedFrames = filterTime<ba::features<ba::tag::count> >(displayedFrames, window, nowSinceEpoch);
+    auto accDisplayedFrames = filter<ba::features<ba::tag::count>, int>(displayedFrames,
+	                                                                   { timeFilter<int>(window,
+	                                                                     nowSinceEpoch) });
     
     return (double)ba::count(accDisplayedFrames) / bc::duration_cast<bc::seconds>(window).count();
 }
@@ -220,15 +191,16 @@ double Stats::receivedNALUsPS(boost::chrono::microseconds window,
 {
     boost::mutex::scoped_lock lock(mutex);
     
-    if (nowSinceEpoch.count() == 0)
-    {
-        nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
-    }
+	auto accDropped = filter<ba::features<ba::tag::count>, NALU>(droppedNALUs,
+	                                                             { timeFilter<NALU>(window,
+	                                                                                nowSinceEpoch) });
+	auto accAdded = filter<ba::features<ba::tag::count>, NALU>(addedNALUs,
+	                                                           { timeFilter<NALU>(window,
+	                                                                              nowSinceEpoch) });
+
+	//std::cout << ba::count(accAdded) << std::endl;
     
-    auto accDropped = filterTime<ba::features<ba::tag::count> >(droppedNALUs, window, nowSinceEpoch);
-    auto accAdded = filterTime<ba::features<ba::tag::count> >(addedNALUs, window, nowSinceEpoch);
-    
-    return ((double)ba::count(accDropped) + ba::count(accAdded)) / bc::duration_cast<bc::seconds>(window).count();
+	return ((double)ba::count(accDropped) + ba::count(accAdded)) / bc::duration_cast<bc::seconds>(window).count();
 }
 
 double Stats::processedNALUsPS(boost::chrono::microseconds window,
@@ -236,14 +208,23 @@ double Stats::processedNALUsPS(boost::chrono::microseconds window,
 {
     boost::mutex::scoped_lock lock(mutex);
     
-    if (nowSinceEpoch.count() == 0)
-    {
-        nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
-    }
-    
-    auto accAdded = filterTime<ba::features<ba::tag::count> >(addedNALUs, window, nowSinceEpoch);
+	auto accAdded = filter<ba::features<ba::tag::count>, NALU>(addedNALUs,
+	                                                           { timeFilter<NALU>(window,
+	                                                                              nowSinceEpoch) });
     
     return (double)ba::count(accAdded) / bc::duration_cast<bc::seconds>(window).count();
+}
+
+double Stats::processedBytesPS(boost::chrono::microseconds window,
+	boost::chrono::microseconds nowSinceEpoch)
+{
+	boost::mutex::scoped_lock lock(mutex);
+
+	auto accAdded = filter<ba::features<ba::tag::count>, NALU>(addedNALUs,
+	                                                           { timeFilter<NALU>(window,
+	                                                                              nowSinceEpoch) });
+
+	return (double)ba::count(accAdded) / bc::duration_cast<bc::seconds>(window).count();
 }
 
 // ###### UTILITY ######
