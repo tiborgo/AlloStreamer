@@ -33,7 +33,7 @@ Renderer::Renderer(CubemapSource* cubemapSource)
 	}*/
 
 	//Now create a window with title "Hello World" at 100, 100 on the screen with w:640 h:480 and show it
-	window = SDL_CreateWindow("Hello World!", 100, 100, 1024, 1024, SDL_WINDOW_SHOWN);
+	window = SDL_CreateWindow("Hello World!", 100, 100, 500, 500, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 	//Make sure creating our window went ok
 	if (window == nullptr){
 		std::cerr << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
@@ -68,7 +68,7 @@ Renderer::Renderer(CubemapSource* cubemapSource)
 	//To use a hardware accelerated texture for rendering we can create one from
 	//the surface we loaded
 	//SDL_Texture *tex = SDL_CreateTextureFromSurface(ren, bmp);
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA8888, SDL_TEXTUREACCESS_STREAMING, 512, 512);
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA8888, SDL_TEXTUREACCESS_STREAMING, 2048, 2048);
 	//We no longer need the surface
 	//SDL_FreeSurface(bmp);
 	if (texture == nullptr){
@@ -116,6 +116,16 @@ void Renderer::setOnDisplayedCubemapFace(std::function<void (Renderer*, int)>& c
 void Renderer::start()
 {
 	renderThread = boost::thread(boost::bind(&Renderer::renderLoop, this));
+
+	SDL_Event evt;
+	while (true)
+	{
+		SDL_WaitEvent(&evt);
+		if (evt.type == SDL_QUIT)
+		{
+			return;
+		}
+	}
 }
 
 void Renderer::renderLoop()
