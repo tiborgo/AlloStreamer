@@ -6,7 +6,7 @@
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/thread/thread.hpp>
 
-#include "Stats.h"
+#include "Stats.hpp"
 
 namespace bc = boost::chrono;
 namespace ba = boost::accumulators;

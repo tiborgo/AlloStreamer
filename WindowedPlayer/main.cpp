@@ -5,7 +5,7 @@
 #include <boost/program_options.hpp>
 #include <boost/ref.hpp>
 
-#include "Stats.h"
+#include "AlloShared/Stats.hpp"
 #include "AlloReceiver/AlloReceiver.h"
 
 Stats stats;
@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
         interface = "0.0.0.0";
     }
 
-    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), 2048, AV_PIX_FMT_ARGB, interface);
+    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), 1024, AV_PIX_FMT_ARGB, interface);
     
     std::function<void (CubemapSource*, int, uint8_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3);
     cubemapSource->setOnDroppedNALU(callback);

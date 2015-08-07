@@ -4,6 +4,7 @@ set(SOURCES
     Allocator.cpp
     Frame.cpp
     Binoculars.cpp
+	Stats.cpp
 )
 	
 set(HEADERS
@@ -14,6 +15,7 @@ set(HEADERS
     Allocator.h
     Frame.hpp
     Binoculars.hpp
+	Stats.hpp
 )
 
 find_package(Boost
