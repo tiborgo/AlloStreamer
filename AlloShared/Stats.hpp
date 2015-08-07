@@ -11,10 +11,13 @@
 class Stats
 {
 public:
+	  
+
     // events
     void droppedNALU(int type, size_t size);
     void addedNALU(int type, size_t size);
-    /*void decodedNALU(int type);
+	void sentNALU(int type, size_t size);
+	/*void decodedNALU(int type);
     void failedToDecodeNALU(int type);*/
     void displayedCubemapFace(int face);
     void displayedFrame();
@@ -31,14 +34,19 @@ public:
 		                   boost::chrono::microseconds nowSinceEpoch);
     double processedNALUsPS(boost::chrono::microseconds window,
 		                    boost::chrono::microseconds nowSinceEpoch);
+	double sentNALUsPS(boost::chrono::microseconds window,
+		               boost::chrono::microseconds nowSinceEpoch);
 	double receivedNALUsBitRate(boost::chrono::microseconds window,
 		                        boost::chrono::microseconds nowSinceEpoch);
 	double processedNALUsBitRate(boost::chrono::microseconds window,
 		                         boost::chrono::microseconds nowSinceEpoch);
+	double sentNALUsBitRate(boost::chrono::microseconds window,
+		                    boost::chrono::microseconds nowSinceEpoch);
     
     // utility
     std::string summary(boost::chrono::microseconds window);
     void autoSummary(boost::chrono::microseconds frequency);
+	void stopAutoSummary();
 
 private:
     
@@ -61,6 +69,7 @@ private:
     
 	std::vector<TimeValueDatum<NALU> > droppedNALUs;
 	std::vector<TimeValueDatum<NALU> > addedNALUs;
+	std::vector<TimeValueDatum<NALU> > sentNALUs;
     std::vector<TimeValueDatum<int> > displayedCubemapFaces;
     std::vector<TimeValueDatum<int> > displayedFrames;
     
@@ -81,6 +90,7 @@ private:
     
     boost::mutex mutex;
     boost::thread autoSummaryThread;
+	bool stopAutoSummary_;
     void autoSummaryLoop(boost::chrono::microseconds frequency);
 };
 

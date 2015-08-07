@@ -18,10 +18,13 @@ extern "C"
 #include "AlloShared/Binoculars.hpp"
 #include "AlloShared/config.h"
 #include "AlloShared/Process.h"
+#include "AlloShared/Stats.hpp"
 #include "config.h"
 #include "RawPixelSource.hpp"
 #include "CubemapExtractionPlugin/CubemapExtractionPlugin.h"
 #include "AlloServer.h"
+
+static Stats stats;
 
 struct FrameStreamState
 {
@@ -62,6 +65,11 @@ static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms, std:
     delete[] url;
 }
 
+void onSentNALU(RawPixelSource*, uint8_t type, size_t size)
+{
+	stats.sentNALU(type, size);
+}
+
 void addFaceSubstreams0(void*)
 {
     for (int i = 0; i < cubemap->getFacesCount(); i++)
@@ -82,10 +90,18 @@ void addFaceSubstreams0(void*)
 
         cubemapSMS->addSubsession(subsession);
 
+		RawPixelSource* source = RawPixelSource::createNew(*env,
+			                                               state->content,
+			                                               avgBitRate);
+
+		std::function<void(RawPixelSource*,
+			uint8_t type,
+			size_t size)> callback(&onSentNALU);
+		source->setOnSentNALU(callback);
+
 		state->source = H264VideoStreamDiscreteFramer::createNew(*env,
-			                                                     RawPixelSource::createNew(*env,
-                                                                                           state->content,
-                                                                                           avgBitRate));
+			                                                     source);
+
         state->sink->startPlaying(*state->source, NULL, NULL);
 
         std::cout << "Streaming face " << i << " ..." << std::endl;
@@ -318,6 +334,8 @@ int main(int argc, char* argv[])
     setupRTSP();
     boost::thread networkThread = boost::thread(&networkLoop);
 
+	
+
     Process unityProcess(CUBEMAPEXTRACTIONPLUGIN_ID, false);
 
     while (true)
@@ -326,9 +344,11 @@ int main(int argc, char* argv[])
         unityProcess.waitForBirth();
         std::cout << "Connected to Unity :)" << std::endl;
         startStreaming();
+		stats.autoSummary(boost::chrono::seconds(10));
         unityProcess.join();
         std::cout << "Lost connection to Unity :(" << std::endl;
         stopStreaming();
+		stats.stopAutoSummary();
     }
 
     return 0;

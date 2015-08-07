@@ -134,6 +134,12 @@ void Stats::addedNALU(int type, size_t size)
 	addedNALUs.push_back(TimeValueDatum<NALU>(NALU(type, size)));
 }
 
+void Stats::sentNALU(int type, size_t size)
+{
+	boost::mutex::scoped_lock lock(mutex);
+	sentNALUs.push_back(TimeValueDatum<NALU>(NALU(type, size)));
+}
+
 void Stats::displayedCubemapFace(int face)
 {
     boost::mutex::scoped_lock lock(mutex);
@@ -221,6 +227,19 @@ double Stats::processedNALUsPS(boost::chrono::microseconds window,
     return (double)ba::count(accAdded) / bc::duration_cast<bc::seconds>(window).count();
 }
 
+double Stats::sentNALUsPS(boost::chrono::microseconds window,
+	                      boost::chrono::microseconds nowSinceEpoch)
+{
+	boost::mutex::scoped_lock lock(mutex);
+
+	auto countSent = filter<ba::features<ba::tag::count>, NALU, NALU>(sentNALUs,
+	                                                                  { timeFilter<NALU>(window,
+	                                                                                     nowSinceEpoch) },
+	                                                                  [](NALU nalu) { return nalu; });
+
+	return (double)ba::count(countSent) / bc::duration_cast<bc::seconds>(window).count();
+}
+
 double Stats::receivedNALUsBitRate(boost::chrono::microseconds window,
 	boost::chrono::microseconds nowSinceEpoch)
 {
@@ -252,6 +271,19 @@ double Stats::processedNALUsBitRate(boost::chrono::microseconds window,
 	return (double)ba::sum(accSum) * 8. / bc::duration_cast<bc::seconds>(window).count();
 }
 
+double Stats::sentNALUsBitRate(boost::chrono::microseconds window,
+	                           boost::chrono::microseconds nowSinceEpoch)
+{
+	boost::mutex::scoped_lock lock(mutex);
+
+	auto sentSum = filter<ba::features<ba::tag::sum>, NALU, int>(sentNALUs,
+	                                                             { timeFilter<NALU>(window,
+	                                                                                nowSinceEpoch) },
+	                                                             [](NALU nalu) { return nalu.size; });
+
+	return (double)ba::sum(sentSum) * 8. / bc::duration_cast<bc::seconds>(window).count();
+}
+
 // ###### UTILITY ######
 
 std::string Stats::summary(bc::microseconds window)
@@ -259,8 +291,10 @@ std::string Stats::summary(bc::microseconds window)
     bc::microseconds nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
     double receivedNALUsPSVal = receivedNALUsPS(window, nowSinceEpoch);
     double processedNALUsPSVal = processedNALUsPS(window, nowSinceEpoch);
+	double sentNALUsPSVal = sentNALUsPS(window, nowSinceEpoch);
 	double receivedNALUsBitRateVal = receivedNALUsBitRate(window, nowSinceEpoch);
 	double processedNALUsBitRateVal = processedNALUsBitRate(window, nowSinceEpoch);
+	double sentNALUsBitRateVal = sentNALUsBitRate(window, nowSinceEpoch);
     int faceCount = 6;
     std::vector<double> cubemapFacesPSVals(faceCount);
     for (int i = 0; i < faceCount; i++)
@@ -272,8 +306,9 @@ std::string Stats::summary(bc::microseconds window)
     std::stringstream stream;
     stream << "=================================================" << std::endl;
     stream << "Stats for last " << formatDuration(window) << ": " << std::endl;
-	stream << "received NALUs/s: " << receivedNALUsPSVal << "; bit rate: " << to_human_readable_byte_count(receivedNALUsBitRateVal, true, false) << ";" << std::endl;
-	stream << "processed NALUs/s: " << processedNALUsPSVal << "; bit rate: " << to_human_readable_byte_count(processedNALUsBitRateVal, true, false) << ";" << std::endl;
+	stream << "received NALUs/s: " << receivedNALUsPSVal << "; " << to_human_readable_byte_count(receivedNALUsBitRateVal, true, false) << "/s;" << std::endl;
+	stream << "processed NALUs/s: " << processedNALUsPSVal << "; " << to_human_readable_byte_count(processedNALUsBitRateVal, true, false) << "/s;" << std::endl;
+	stream << "sent NALUs/s: " << sentNALUsPSVal << "; " << to_human_readable_byte_count(sentNALUsBitRateVal, true, false) << "/s;" << std::endl;
     for (int i = 0; i < faceCount; i++)
     {
         stream << "cubemap face " << i << " fps: " << cubemapFacesPSVals[i] << ";" << std::endl;
@@ -289,11 +324,21 @@ void Stats::autoSummaryLoop(boost::chrono::microseconds frequency)
     while (true)
     {
         boost::this_thread::sleep(boost::posix_time::microseconds(frequency.count()));
+		if (stopAutoSummary_)
+		{
+			return;
+		}
         std::cout << summary(frequency);
     }
 }
 
 void Stats::autoSummary(boost::chrono::microseconds frequency)
 {
+	stopAutoSummary_ = false;
     autoSummaryThread = boost::thread(boost::bind(&Stats::autoSummaryLoop, this, frequency));
+}
+
+void Stats::stopAutoSummary()
+{
+	stopAutoSummary_ = true;
 }

@@ -27,12 +27,20 @@ public:
                                      Frame* content,
                                      int avgBitRate);
 
+	virtual void setOnSentNALU(std::function<void(RawPixelSource*,
+												  uint8_t type,
+												  size_t size)>& callback);
+
 protected:
 	RawPixelSource(UsageEnvironment& env,
                    Frame* content,
                    int avgBitRate);
 	// called only by createNew(), or by subclass constructors
 	virtual ~RawPixelSource();
+
+	std::function<void(RawPixelSource*,
+					   u_int8_t type,
+					   size_t size)> onSentNALU;
 
 private:
 	EventTriggerId eventTriggerId;

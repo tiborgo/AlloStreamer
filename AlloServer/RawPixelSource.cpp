@@ -190,6 +190,13 @@ RawPixelSource::~RawPixelSource()
 	//std::cout << this << ": deconstructed" << std::endl;
 }
 
+void RawPixelSource::setOnSentNALU(std::function<void(RawPixelSource*,
+	uint8_t type,
+	size_t size)>& callback)
+{
+	onSentNALU = callback;
+}
+
 void RawPixelSource::frameContentLoop()
 {
 
@@ -466,7 +473,7 @@ void RawPixelSource::deliverFrame()
 	u_int8_t* newFrameDataStart = (u_int8_t*)(pkt.data + truncateBytes);
 	unsigned newFrameSize = pkt.size - truncateBytes;
 
-	//u_int8_t nal_unit_type = newFrameDataStart[0] & 0x1F;
+	u_int8_t nal_unit_type = newFrameDataStart[0] & 0x1F;
 
 	//if (nal_unit_type == 8) // PPS
 	//{
@@ -513,6 +520,8 @@ void RawPixelSource::deliverFrame()
 
 	// Tell live555 that a new frame is available
 	FramedSource::afterGetting(this);
+
+	if (onSentNALU) onSentNALU(this, nal_unit_type, fFrameSize);
 
 	//std::cout << "sent frame" << std::endl;
 
