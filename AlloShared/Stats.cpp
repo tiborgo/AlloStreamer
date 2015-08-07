@@ -236,8 +236,6 @@ double Stats::receivedNALUsBitRate(boost::chrono::microseconds window,
 	nowSinceEpoch) },
 	[](NALU nalu) { return nalu.size; });
 
-	//std::cout << ba::count(accAdded) << std::endl;
-
 	return ((double)ba::sum(sumDropped) + ba::sum(sumAdded)) * 8. / bc::duration_cast<bc::seconds>(window).count();
 }
 
@@ -250,7 +248,7 @@ double Stats::processedNALUsBitRate(boost::chrono::microseconds window,
 	                                                           { timeFilter<NALU>(window,
 	                                                                              nowSinceEpoch) },
 																				  [](NALU nalu) { return nalu.size; });
-	std::cout << ba::sum(accSum) << std::endl;
+
 	return (double)ba::sum(accSum) * 8. / bc::duration_cast<bc::seconds>(window).count();
 }
 
