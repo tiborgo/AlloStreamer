@@ -31,8 +31,8 @@ public:
 		                   boost::chrono::microseconds nowSinceEpoch);
     double processedNALUsPS(boost::chrono::microseconds window,
 		                    boost::chrono::microseconds nowSinceEpoch);
-	double processedBytesPS(boost::chrono::microseconds window,
-		                    boost::chrono::microseconds nowSinceEpoch);
+	double processedNALUsBitRate(boost::chrono::microseconds window,
+		                         boost::chrono::microseconds nowSinceEpoch);
     
     // utility
     std::string summary(boost::chrono::microseconds window);
@@ -62,10 +62,11 @@ private:
     std::vector<TimeValueDatum<int> > displayedCubemapFaces;
     std::vector<TimeValueDatum<int> > displayedFrames;
     
-    template <typename Features, typename ValueType>
-    boost::accumulators::accumulator_set<Stats::TimeValueDatum<ValueType>, Features> filter(
+	template <typename Features, typename ValueType, typename AccType>
+    boost::accumulators::accumulator_set<AccType, Features> filter(
        std::vector<TimeValueDatum<ValueType> >& data,
-       std::initializer_list<boost::function<bool (TimeValueDatum<ValueType>)> > filters);
+       std::initializer_list<boost::function<bool (TimeValueDatum<ValueType>)> > filters,
+	   boost::function<AccType(ValueType)> accExtractor);
     
     template <typename ValueType>
     boost::function<bool (TimeValueDatum<ValueType>)> timeFilter(
