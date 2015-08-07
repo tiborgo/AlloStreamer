@@ -1,14 +1,12 @@
 set(SOURCES
 	AlloServer.cpp
 	RawPixelSource.cpp
-	to_human_readable_byte_count.cpp
 )
 	
 set(HEADERS
 	config.h
 	RawPixelSource.hpp
 	AlloServer.h
-	to_human_readable_byte_count.hpp
 )
 
 # include Boost, FFMpeg, live555, x264

@@ -7,6 +7,7 @@
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/thread/thread.hpp>
 
+#include "to_human_readable_byte_count.hpp"
 #include "Stats.hpp"
 
 namespace bc = boost::chrono;
@@ -255,7 +256,7 @@ std::string Stats::summary(bc::microseconds window)
     stream << "=================================================" << std::endl;
     stream << "Stats for last " << formatDuration(window) << ": " << std::endl;
     stream << "received NALUs/s: " << receivedNALUsPSVal << ";" << std::endl;
-	stream << "processed NALUs/s: " << processedNALUsPSVal << "; bit rate: " << processedNALUsBitRateVal << ";" << std::endl;
+	stream << "processed NALUs/s: " << processedNALUsPSVal << "; bit rate: " << to_human_readable_byte_count(processedNALUsBitRateVal, true, false) << ";" << std::endl;
     for (int i = 0; i < faceCount; i++)
     {
         stream << "cubemap face " << i << " fps: " << cubemapFacesPSVals[i] << ";" << std::endl;

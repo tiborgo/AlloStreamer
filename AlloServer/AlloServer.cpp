@@ -12,6 +12,7 @@ extern "C"
     #include <libavcodec/avcodec.h>
 }
 
+#include "AlloShared/to_human_readable_byte_count.hpp"
 #include "AlloShared/concurrent_queue.h"
 #include "AlloShared/Cubemap.hpp"
 #include "AlloShared/Binoculars.hpp"
@@ -21,7 +22,6 @@ extern "C"
 #include "RawPixelSource.hpp"
 #include "CubemapExtractionPlugin/CubemapExtractionPlugin.h"
 #include "AlloServer.h"
-#include "to_human_readable_byte_count.hpp"
 
 struct FrameStreamState
 {

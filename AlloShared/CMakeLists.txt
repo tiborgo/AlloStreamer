@@ -5,6 +5,7 @@ set(SOURCES
     Frame.cpp
     Binoculars.cpp
 	Stats.cpp
+	to_human_readable_byte_count.cpp
 )
 	
 set(HEADERS
@@ -16,6 +17,7 @@ set(HEADERS
     Frame.hpp
     Binoculars.hpp
 	Stats.hpp
+	to_human_readable_byte_count.hpp
 )
 
 find_package(Boost
