@@ -31,6 +31,8 @@ public:
 		                   boost::chrono::microseconds nowSinceEpoch);
     double processedNALUsPS(boost::chrono::microseconds window,
 		                    boost::chrono::microseconds nowSinceEpoch);
+	double receivedNALUsBitRate(boost::chrono::microseconds window,
+		                        boost::chrono::microseconds nowSinceEpoch);
 	double processedNALUsBitRate(boost::chrono::microseconds window,
 		                         boost::chrono::microseconds nowSinceEpoch);
     

@@ -204,8 +204,6 @@ double Stats::receivedNALUsPS(boost::chrono::microseconds window,
 	                                                           { timeFilter<NALU>(window,
 	                                                                              nowSinceEpoch) },
 																				  [](NALU nalu) { return nalu; });
-
-	//std::cout << ba::count(accAdded) << std::endl;
     
 	return ((double)ba::count(accDropped) + ba::count(accAdded)) / bc::duration_cast<bc::seconds>(window).count();
 }
@@ -221,6 +219,26 @@ double Stats::processedNALUsPS(boost::chrono::microseconds window,
 																				  [](NALU nalu) { return nalu; });
     
     return (double)ba::count(accAdded) / bc::duration_cast<bc::seconds>(window).count();
+}
+
+double Stats::receivedNALUsBitRate(boost::chrono::microseconds window,
+	boost::chrono::microseconds nowSinceEpoch)
+{
+	boost::mutex::scoped_lock lock(mutex);
+
+	auto sumDropped = filter<ba::features<ba::tag::sum>, NALU, int>(droppedNALUs,
+	{ timeFilter<NALU>(window,
+	nowSinceEpoch) },
+	[](NALU nalu) { return nalu.size; });
+
+	auto sumAdded = filter<ba::features<ba::tag::sum>, NALU, int>(addedNALUs,
+	{ timeFilter<NALU>(window,
+	nowSinceEpoch) },
+	[](NALU nalu) { return nalu.size; });
+
+	//std::cout << ba::count(accAdded) << std::endl;
+
+	return ((double)ba::sum(sumDropped) + ba::sum(sumAdded)) * 8. / bc::duration_cast<bc::seconds>(window).count();
 }
 
 double Stats::processedNALUsBitRate(boost::chrono::microseconds window,
@@ -243,6 +261,7 @@ std::string Stats::summary(bc::microseconds window)
     bc::microseconds nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
     double receivedNALUsPSVal = receivedNALUsPS(window, nowSinceEpoch);
     double processedNALUsPSVal = processedNALUsPS(window, nowSinceEpoch);
+	double receivedNALUsBitRateVal = receivedNALUsBitRate(window, nowSinceEpoch);
 	double processedNALUsBitRateVal = processedNALUsBitRate(window, nowSinceEpoch);
     int faceCount = 6;
     std::vector<double> cubemapFacesPSVals(faceCount);
@@ -255,7 +274,7 @@ std::string Stats::summary(bc::microseconds window)
     std::stringstream stream;
     stream << "=================================================" << std::endl;
     stream << "Stats for last " << formatDuration(window) << ": " << std::endl;
-    stream << "received NALUs/s: " << receivedNALUsPSVal << ";" << std::endl;
+	stream << "received NALUs/s: " << receivedNALUsPSVal << "; bit rate: " << to_human_readable_byte_count(receivedNALUsBitRateVal, true, false) << ";" << std::endl;
 	stream << "processed NALUs/s: " << processedNALUsPSVal << "; bit rate: " << to_human_readable_byte_count(processedNALUsBitRateVal, true, false) << ";" << std::endl;
     for (int i = 0; i < faceCount; i++)
     {
