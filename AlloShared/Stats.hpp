@@ -12,8 +12,8 @@ class Stats
 {
 public:
     // events
-    void droppedNALU(int type);
-    void addedNALU(int type);
+    void droppedNALU(int type, size_t size);
+    void addedNALU(int type, size_t size);
     /*void decodedNALU(int type);
     void failedToDecodeNALU(int type);*/
     void displayedCubemapFace(int face);
@@ -46,9 +46,17 @@ private:
         const boost::chrono::microseconds timeSinceEpoch;
         const ValueType value;
     };
+
+	class NALU
+	{
+	public:
+		NALU(int type, size_t size);
+		int type;
+		size_t size;
+	};
     
-    std::vector<TimeValueDatum<int> > droppedNALUs;
-    std::vector<TimeValueDatum<int> > addedNALUs;
+	std::vector<TimeValueDatum<NALU> > droppedNALUs;
+	std::vector<TimeValueDatum<NALU> > addedNALUs;
     std::vector<TimeValueDatum<int> > displayedCubemapFaces;
     std::vector<TimeValueDatum<int> > displayedFrames;
     

@@ -21,6 +21,13 @@ value(value)
 {
 }
 
+Stats::NALU::NALU(int type, size_t size)
+	:
+	type(type),
+	size(size)
+{
+}
+
 template <typename ValueType>
 bool Stats::isInTime(Stats::TimeValueDatum<ValueType> datum,
     bc::microseconds window,
@@ -136,16 +143,16 @@ std::string Stats::formatDuration(bc::microseconds duration)
 
 // ###### EVENTS ######
 
-void Stats::droppedNALU(int type)
+void Stats::droppedNALU(int type, size_t size)
 {
     boost::mutex::scoped_lock lock(mutex);
-    droppedNALUs.push_back(TimeValueDatum<int>(type));
+    droppedNALUs.push_back(TimeValueDatum<NALU>(NALU(type, size)));
 }
 
-void Stats::addedNALU(int type)
+void Stats::addedNALU(int type, size_t size)
 {
     boost::mutex::scoped_lock lock(mutex);
-    addedNALUs.push_back(TimeValueDatum<int>(type));
+	addedNALUs.push_back(TimeValueDatum<NALU>(NALU(type, size)));
 }
 
 void Stats::displayedCubemapFace(int face)

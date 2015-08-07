@@ -29,8 +29,8 @@ public:
 
     AVFrame* getNextFrame();
     
-    void setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type)>& callback);
-    void setOnAddedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type)>& callback);
+    void setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t, size_t)>& callback);
+    void setOnAddedNALU(std::function<void (H264RawPixelsSink*, u_int8_t, size_t)>& callback);
 
 protected:
 	H264RawPixelsSink(UsageEnvironment& env,
@@ -44,14 +44,14 @@ protected:
 
 	virtual Boolean continuePlaying();
 
-	static void afterGettingFrame(void*clientData,
+	static void afterGettingFrame(void*clientData, 
 		unsigned frameSize,
 		unsigned numTruncatedBytes,
 		timeval presentationTime,
 		unsigned durationInMicroseconds);
     
-    std::function<void (H264RawPixelsSink*, u_int8_t type)> onDroppedNALU;
-    std::function<void (H264RawPixelsSink*, u_int8_t type)> onAddedNALU;
+    std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> onDroppedNALU;
+    std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> onAddedNALU;
 
 private:
 	unsigned int bufferSize;

@@ -20,12 +20,12 @@ H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
 	return new H264RawPixelsSink(env, bufferSize, resolution, format);
 }
 
-void H264RawPixelsSink::setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type)>& callback)
+void H264RawPixelsSink::setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type, size_t)>& callback)
 {
     onDroppedNALU = callback;
 }
 
-void H264RawPixelsSink::setOnAddedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type)>& callback)
+void H264RawPixelsSink::setOnAddedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type, size_t)>& callback)
 {
     onAddedNALU = callback;
 }
@@ -135,7 +135,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
             pktBuffer.push(lastIFramePkt);
             lastIFramePkt = nullptr;
             gotFirstIFrame = true;
-            if (onDroppedNALU) onDroppedNALU(this, nal_unit_type);
+            if (onDroppedNALU) onDroppedNALU(this, nal_unit_type, frameSize);
         }
         else if (nal_unit_type != 7 && gotFirstIFrame)
         {
@@ -144,19 +144,19 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
             
             packageData(pkt, frameSize, presentationTime);
             pktBuffer.push(pkt);
-            if (onAddedNALU) onAddedNALU(this, nal_unit_type);
+			if (onAddedNALU) onAddedNALU(this, nal_unit_type, frameSize);
         }
         else if (nal_unit_type == 7)
         {
             packageData(pkt, frameSize, presentationTime);
             pktBuffer.push(pkt);
             gotFirstIFrame = true;
-            if (onAddedNALU) onAddedNALU(this, nal_unit_type);
+			if (onAddedNALU) onAddedNALU(this, nal_unit_type, frameSize);
         }
         else
         {
             pktPool.push(pkt);
-            if (onDroppedNALU) onDroppedNALU(this, nal_unit_type);
+			if (onDroppedNALU) onDroppedNALU(this, nal_unit_type, frameSize);
         }
     }
     else
@@ -181,7 +181,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
             // We can safely skip it.
         }
         
-        if (onDroppedNALU) onDroppedNALU(this, nal_unit_type);
+		if (onDroppedNALU) onDroppedNALU(this, nal_unit_type, frameSize);
     }
 
 	// Then try getting the next frame:

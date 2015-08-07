@@ -20,14 +20,14 @@ void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
     StereoCubemap::destroy(cubemap);
 }
 
-void onDroppedNALU(CubemapSource* source, int face, uint8_t type)
+void onDroppedNALU(CubemapSource* source, int face, uint8_t type, size_t size)
 {
-    stats.droppedNALU(type);
+    stats.droppedNALU(type, size);
 }
 
-void onAddedNALU(CubemapSource* source, int face, uint8_t type)
+void onAddedNALU(CubemapSource* source, int face, uint8_t type, size_t size)
 {
-    stats.addedNALU(type);
+    stats.addedNALU(type, size);
 }
 
 void onDisplayedCubemapFace(Renderer* renderer, int face)
@@ -75,9 +75,9 @@ int main(int argc, char* argv[])
 
     CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), 1024, AV_PIX_FMT_ARGB, interface);
     
-    std::function<void (CubemapSource*, int, uint8_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3);
+    std::function<void (CubemapSource*, int, uint8_t, size_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3, _4);
     cubemapSource->setOnDroppedNALU(callback);
-    callback = boost::bind(&onAddedNALU, _1, _2, _3);
+    callback = boost::bind(&onAddedNALU, _1, _2, _3, _4);
     cubemapSource->setOnAddedNALU(callback);
     
     stats.autoSummary(boost::chrono::seconds(10));
