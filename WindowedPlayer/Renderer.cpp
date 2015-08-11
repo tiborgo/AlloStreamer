@@ -20,10 +20,11 @@ Renderer::Renderer(CubemapSource* cubemapSource)
 		abort();
 	}
 
-	//Now create a window with title "Hello World" at 100, 100 on the screen with w:640 h:480 and show it
-	window = SDL_CreateWindow("Hello World!", 100, 100, 1000, 1000, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
-	//Make sure creating our window went ok
-	if (window == nullptr){
+	// Now create a window and show it
+	window = SDL_CreateWindow("AlloUnity - WindowedPlayer", 100, 100, 1000, 1000, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+	// Make sure creating our window went ok
+	if (window == nullptr)
+	{
 		std::cerr << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
 		abort();
 	}
@@ -76,7 +77,8 @@ void Renderer::createTextures(size_t number, size_t resolution)
 	//SDL_RENDERER_PRESENTVSYNC: We want the renderer's present function (update screen) to be
 	//synchornized with the monitor's refresh rate
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	if (renderer == nullptr){
+	if (renderer == nullptr)
+	{
 		SDL_DestroyWindow(window);
 		std::cerr << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
 		SDL_Quit();
@@ -86,7 +88,8 @@ void Renderer::createTextures(size_t number, size_t resolution)
 	for (int i = 0; i < number; i++)
 	{
 		SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA8888, SDL_TEXTUREACCESS_STREAMING, resolution, resolution);
-		if (texture == nullptr){
+		if (texture == nullptr)
+		{
 			SDL_DestroyRenderer(renderer);
 			SDL_DestroyWindow(window);
 			std::cerr << "SDL_CreateTextureFromSurface Error: " << SDL_GetError() << std::endl;
