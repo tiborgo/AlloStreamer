@@ -16,6 +16,7 @@ public:
     virtual void setOnAddedNALU  (std::function<void (CubemapSource*, int, uint8_t, size_t)>&   callback) = 0;
     
     static CubemapSource* createFromRTSP(const char* url,
+		                                 unsigned long bufferSize,
                                          int resolution,
                                          AVPixelFormat format,
                                          const char* interfaceAddress = "0.0.0.0");

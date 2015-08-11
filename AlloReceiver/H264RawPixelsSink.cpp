@@ -11,7 +11,7 @@
 namespace bc = boost::chrono;
 
 H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
-                                                unsigned int bufferSize,
+                                                unsigned long bufferSize,
                                                 int resolution,
                                                 AVPixelFormat format)
 {

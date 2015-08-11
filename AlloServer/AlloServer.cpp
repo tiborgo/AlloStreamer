@@ -344,7 +344,7 @@ int main(int argc, char* argv[])
         unityProcess.waitForBirth();
         std::cout << "Connected to Unity :)" << std::endl;
         startStreaming();
-		stats.autoSummary(boost::chrono::seconds(10));
+		stats.autoSummary(boost::chrono::seconds(1));
         unityProcess.join();
         std::cout << "Lost connection to Unity :(" << std::endl;
         stopStreaming();
