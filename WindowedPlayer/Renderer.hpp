@@ -1,17 +1,8 @@
 #pragma once
 
-/*extern "C"
-{
-    #include <libavcodec/avcodec.h>
-    #include <libavutil/opt.h>
-    #include <libavutil/frame.h>
-    #include <libavutil/imgutils.h>
-    #include <libavutil/time.h>
-    #include <libswscale/swscale.h>
-}*/
+
 #include <SDL.h>
 #undef main
-//#include <SDL_thread.h>
 #include <boost/thread.hpp>
 #include "AlloShared/concurrent_queue.h"
 #include "AlloReceiver/AlloReceiver.h"
@@ -35,7 +26,6 @@ private:
 	void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
 	void renderLoop();
 	void createTextures(size_t number, size_t resolution);
-	void destroyTextures();
 
 	boost::thread                    renderThread;
 	CubemapSource*                   cubemapSource;
@@ -43,7 +33,5 @@ private:
 	concurrent_queue<StereoCubemap*> cubemapPool;
 	SDL_Window*                      window;
 	SDL_Renderer*                    renderer;
-	SDL_Surface*                     bmp;
-	boost::mutex                     texturesMutex;
 	std::vector<SDL_Texture*>        textures;
 };
