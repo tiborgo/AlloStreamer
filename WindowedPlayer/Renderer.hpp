@@ -42,5 +42,5 @@ private:
 	SDL_Window*                      window;
 	SDL_Renderer*                    renderer;
 	SDL_Surface*                     bmp;
-	SDL_Texture*                     texture;
+	std::vector<SDL_Texture*>        textures;
 };

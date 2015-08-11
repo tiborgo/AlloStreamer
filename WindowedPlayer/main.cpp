@@ -7,6 +7,7 @@
 
 #include "AlloShared/Stats.hpp"
 #include "AlloReceiver/AlloReceiver.h"
+#include "AlloShared/to_human_readable_byte_count.hpp"
 
 const unsigned int DEFAULT_SINK_BUFFER_SIZE = 200000000;
 
@@ -55,8 +56,8 @@ int main(int argc, char* argv[])
 	desc.add_options()
 		("no-display", "")
 		("url", boost::program_options::value<std::string>(), "url")
-		("interface", boost::program_options::value<unsigned long>(), "interface")
-		("buffer-size", boost::program_options::value<std::string>(), "buffer-size");
+		("interface", boost::program_options::value<std::string>(), "interface")
+		("buffer-size", boost::program_options::value<unsigned long>(), "buffer-size");
     
     boost::program_options::positional_options_description p;
     p.add("url", -1);
@@ -86,7 +87,9 @@ int main(int argc, char* argv[])
 		bufferSize = DEFAULT_SINK_BUFFER_SIZE;
 	}
 
-	CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), bufferSize, 1024, AV_PIX_FMT_ARGB, interface);
+	std::cout << "Buffer size " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
+
+	CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), bufferSize,  1024, AV_PIX_FMT_ARGB, interface);
     
     std::function<void (CubemapSource*, int, uint8_t, size_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3, _4);
     cubemapSource->setOnDroppedNALU(callback);
