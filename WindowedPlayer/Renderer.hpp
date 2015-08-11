@@ -34,6 +34,8 @@ protected:
 private:
 	void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
 	void renderLoop();
+	void createTextures(size_t number, size_t resolution);
+	void destroyTextures();
 
 	boost::thread                    renderThread;
 	CubemapSource*                   cubemapSource;
@@ -42,5 +44,6 @@ private:
 	SDL_Window*                      window;
 	SDL_Renderer*                    renderer;
 	SDL_Surface*                     bmp;
+	boost::mutex                     texturesMutex;
 	std::vector<SDL_Texture*>        textures;
 };

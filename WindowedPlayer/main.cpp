@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
     callback = boost::bind(&onAddedNALU, _1, _2, _3, _4);
     cubemapSource->setOnAddedNALU(callback);
     
-    stats.autoSummary(boost::chrono::seconds(1));
+    stats.autoSummary(boost::chrono::seconds(10));
     
    
     Renderer renderer(cubemapSource);

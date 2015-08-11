@@ -2,7 +2,7 @@
 
 Renderer::Renderer(CubemapSource* cubemapSource)
     :
-	cubemapSource(cubemapSource)
+	cubemapSource(cubemapSource), renderer(nullptr)
 {
     std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&Renderer::onNextCubemap,
                                                                                 this,
@@ -39,18 +39,7 @@ Renderer::Renderer(CubemapSource* cubemapSource)
 		abort();
 	}
 
-	//Create a renderer that will draw to the window, -1 specifies that we want to load whichever
-	//video driver supports the flags we're passing
-	//Flags: SDL_RENDERER_ACCELERATED: We want to use hardware accelerated rendering
-	//SDL_RENDERER_PRESENTVSYNC: We want the renderer's present function (update screen) to be
-	//synchornized with the monitor's refresh rate
-	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	if (renderer == nullptr){
-		SDL_DestroyWindow(window);
-		std::cerr << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
-		SDL_Quit();
-		abort();
-	}
+	
 
 	//SDL 2.0 now uses textures to draw things but SDL_LoadBMP returns a surface
 	//this lets us choose when to upload or remove textures from the GPU
@@ -73,12 +62,8 @@ Renderer::~Renderer()
 	cubemapPool.close();
 	renderThread.join();
 
-	//Clean up our objects and quit
-	for (SDL_Texture* texture : textures)
-	{
-		SDL_DestroyTexture(texture);
-	}
-	SDL_DestroyRenderer(renderer);
+	destroyTextures();
+	
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 }
@@ -89,29 +74,6 @@ void Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 	if (!cubemapPool.wait_and_pop(dummy))
 	{
 		return;
-	}
-
-	if (textures.size() < cubemap->getEye(0)->getFacesCount())
-	{
-		for (int i = textures.size(); i < cubemap->getEye(0)->getFacesCount(); i++)
-		{
-			Frame* content = cubemap->getEye(0)->getFace(i)->getContent();
-
-			//To use a hardware accelerated texture for rendering we can create one from
-			//the surface we loaded
-			SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA8888, SDL_TEXTUREACCESS_STREAMING, content->getWidth(), content->getHeight());
-			//We no longer need the surface
-			//SDL_FreeSurface(bmp);
-			if (texture == nullptr){
-				SDL_DestroyRenderer(renderer);
-				SDL_DestroyWindow(window);
-				std::cerr << "SDL_CreateTextureFromSurface Error: " << SDL_GetError() << std::endl;
-				SDL_Quit();
-				abort();
-			}
-
-			textures.push_back(texture);
-		}
 	}
 
 	cubemapBuffer.push(cubemap);
@@ -127,6 +89,59 @@ void Renderer::setOnDisplayedCubemapFace(std::function<void (Renderer*, int)>& c
     onDisplayedCubemapFace = callback;
 }
 
+void Renderer::destroyTextures()
+{
+	boost::mutex::scoped_lock(texturesMutex);
+
+	//Clean up our objects and quit
+	for (SDL_Texture* texture : textures)
+	{
+		SDL_DestroyTexture(texture);
+	}
+	SDL_DestroyRenderer(renderer);
+	renderer == nullptr;
+	textures.clear();
+}
+
+void Renderer::createTextures(size_t number, size_t resolution)
+{
+	if (renderer == nullptr)
+	{
+		//Create a renderer that will draw to the window, -1 specifies that we want to load whichever
+		//video driver supports the flags we're passing
+		//Flags: SDL_RENDERER_ACCELERATED: We want to use hardware accelerated rendering
+		//SDL_RENDERER_PRESENTVSYNC: We want the renderer's present function (update screen) to be
+		//synchornized with the monitor's refresh rate
+		renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		if (renderer == nullptr){
+			SDL_DestroyWindow(window);
+			std::cerr << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
+			SDL_Quit();
+			abort();
+		}
+
+		std::cout << "create renderer" << std::endl;
+	}
+
+	for (int i = textures.size(); i < number; i++)
+	{
+		//To use a hardware accelerated texture for rendering we can create one from
+		//the surface we loaded
+		SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA8888, SDL_TEXTUREACCESS_STREAMING, resolution, resolution);
+		//We no longer need the surface
+		//SDL_FreeSurface(bmp);
+		if (texture == nullptr){
+			SDL_DestroyRenderer(renderer);
+			SDL_DestroyWindow(window);
+			std::cerr << "SDL_CreateTextureFromSurface Error: " << SDL_GetError() << std::endl;
+			SDL_Quit();
+			abort();
+		}
+
+		textures.push_back(texture);
+	}
+}
+
 void Renderer::start()
 {
 	renderThread = boost::thread(boost::bind(&Renderer::renderLoop, this));
@@ -138,6 +153,13 @@ void Renderer::start()
 		if (evt.type == SDL_QUIT)
 		{
 			return;
+		}
+		else if (evt.type == SDL_WINDOWEVENT)
+		{
+			if (evt.window.event == SDL_WINDOWEVENT_RESIZED)
+			{
+				//destroyTextures();
+			}
 		}
 	}
 }
@@ -155,93 +177,109 @@ void Renderer::renderLoop()
 			return;
 		}
 
-		//First clear the renderer
+		//if (counter == 0)
+		//{
+			//First clear the renderer
 		SDL_RenderClear(renderer);
+		//}
 
-		for (int i = 0; i < cubemap->getEye(0)->getFacesCount(); i++)
 		{
 
-			Frame* content = cubemap->getEye(0)->getFace(i)->getContent();
-			SDL_Texture* texture = textures[i];
+			boost::mutex::scoped_lock(texturesMutex);
 
-			// Show cubemap
-			//A sleepy rendering loop, wait for 3 seconds and render and present the screen each time
-			//for (int i = 0; i < 3; ++i){
-		
-			if (counter % 1 == 0)
+			createTextures(cubemap->getEye(0)->getFacesCount(), cubemap->getEye(0)->getFace(0)->getContent()->getWidth());
+
+			for (int i = 0; i < cubemap->getEye(0)->getFacesCount(); i++)
 			{
-				void* pixels;
-				int   pitch;
 
-				
+				Frame* content = cubemap->getEye(0)->getFace(i)->getContent();
+				SDL_Texture* texture = textures[i];
 
-				int width;
-				int height;
-				SDL_GetRendererOutputSize(renderer, &width, &height);
+				// Show cubemap
 
-				SDL_Rect dstrect;
-
-				dstrect.w = width / 4;
-				dstrect.h = height / 3;
-
-				switch (i)
+				if (counter % 1 == 0)
 				{
-				case 1: // negative X
-					dstrect.x = width * 0 / 4;
-					dstrect.y = height / 3;
-					break;
-				case 4: // negative Z
-					dstrect.x = width * 1 / 4;
-					dstrect.y = height / 3;
-					break;
-				case 2: // postive Y
-					dstrect.x = width * 1 / 4;
-					dstrect.y = 0;
-					break;
-				case 5: // negative Y
-					dstrect.x = width * 3 / 4;
-					dstrect.y = height / 3;
-					break;
-				case 3: // positive Z
-					dstrect.x = width * 1 / 4;
-					dstrect.y = height * 2 / 3;
-					break;
-				case 0: // positive X
-					dstrect.x = width * 2 / 4;
-					dstrect.y = height / 3;
-					break;
-				default:
-					dstrect.x = 0;
-					dstrect.y = 0;
-					dstrect.w = 0;
-					dstrect.h = 0;
-					break;
+					void* pixels;
+					int   pitch;
+
+
+
+					int width;
+					int height;
+					SDL_GetRendererOutputSize(renderer, &width, &height);
+
+					SDL_Rect dstrect;
+
+					dstrect.w = width / 4;
+					dstrect.h = height / 3;
+
+					switch (i)
+					{
+					case 1: // negative X
+						dstrect.x = width * 0 / 4;
+						dstrect.y = height / 3;
+						break;
+					case 4: // negative Z
+						dstrect.x = width * 1 / 4;
+						dstrect.y = height / 3;
+						break;
+					case 2: // postive Y
+						dstrect.x = width * 1 / 4;
+						dstrect.y = 0;
+						break;
+					case 5: // negative Y
+						dstrect.x = width * 3 / 4;
+						dstrect.y = height / 3;
+						break;
+					case 3: // positive Z
+						dstrect.x = width * 1 / 4;
+						dstrect.y = height * 2 / 3;
+						break;
+					case 0: // positive X
+						dstrect.x = width * 2 / 4;
+						dstrect.y = height / 3;
+						break;
+					default:
+						dstrect.x = 0;
+						dstrect.y = 0;
+						dstrect.w = 0;
+						dstrect.h = 0;
+						break;
+					}
+
+					if (SDL_LockTexture(texture, NULL, &pixels, &pitch) < 0)
+					{
+						SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
+						SDL_Quit();
+						abort();
+					}
+					memcpy(pixels, content->getPixels(), content->getHeight() * content->getWidth() * 4);
+					SDL_UnlockTexture(texture);
+
+					//if (counter % 6 == i)
+					//{
+						//Draw the texture
+						if (SDL_RenderCopy(renderer, texture, NULL, &dstrect) < 0)
+						{
+							SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
+						}
+					//}
+
+					//}
+
+					if (onDisplayedCubemapFace) onDisplayedCubemapFace(this, i);
+
 				}
-
-				if (SDL_LockTexture(texture, NULL, &pixels, &pitch) < 0)
-				{
-					SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
-					SDL_Quit();
-					abort();
-				}
-				memcpy(pixels, content->getPixels(), content->getHeight() * content->getWidth() * 4);
-				SDL_UnlockTexture(texture);
-				
-				//Draw the texture
-				SDL_RenderCopy(renderer, texture, NULL, &dstrect);
-				
-
-				//}
-
-				if (onDisplayedCubemapFace) onDisplayedCubemapFace(this, i);
-				
 			}
 		}
 
-		//Update the screen
-		SDL_RenderPresent(renderer);
-		//Take a quick break after all that hard work
-		//SDL_Delay(1000);
+		//if (counter == 0)
+		//{
+			//Update the screen
+			SDL_RenderPresent(renderer);
+			//Take a quick break after all that hard work
+			//SDL_Delay(1000);
+		//}
 		
 		if (onDisplayedFrame) onDisplayedFrame(this);
 
