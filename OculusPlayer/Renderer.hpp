@@ -16,6 +16,16 @@
 #include "AlloShared/concurrent_queue.h"
 #include "AlloReceiver/AlloReceiver.h"
 
+
+// Include DirectX
+#include "Win32_DirectXAppUtil.h" 
+
+// Include the Oculus SDK
+#define   OVR_D3D_VERSION 11
+#include "OVR_CAPI_D3D.h"
+
+
+
 class Renderer
 {
 public:
@@ -43,4 +53,23 @@ private:
 	SDL_Renderer*                    renderer;
 	SDL_Surface*                     bmp;
 	SDL_Texture*                     texture;
+
+
+	HINSTANCE hinst;
+	OculusTexture * pEyeRenderTexture[2];
+	ovrTexture*          mirrorTexture;
+	ovrHmd HMD;
+	Scene *scene;
+	Camera mainCam;
+	ovrEyeRenderDesc eyeRenderDesc[2];
+	DepthBuffer    * pEyeDepthBuffer[2];
+	ovrRecti         eyeRenderViewport[2];
+
+	void OculusRelease();
+	void OculusInit();
+	void OculusRenderLoop();
+
+
+	
+
 };

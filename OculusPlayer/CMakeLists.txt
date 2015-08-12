@@ -1,10 +1,12 @@
 set(SOURCES
     Renderer.cpp
-    main.cpp
+ #   main.cpp
+    main_2.cpp
 )
 	
 set(HEADERS
     Renderer.hpp
+    Win32_DirectXAppUtil.h
 )
 
 find_package(Boost
@@ -12,7 +14,7 @@ find_package(Boost
   REQUIRED              # Fail with error if Boost is not found
   COMPONENTS thread date_time system chrono filesystem program_options regex # Boost libraries by their canonical name
 )                     # e.g. "date_time" for "libboost_date_time"
-find_package(SDL REQUIRED)
+#find_package(SDL REQUIRED)
 find_package(FFmpeg REQUIRED)
 find_package(OculusSDK REQUIRED)
 
@@ -32,6 +34,8 @@ target_link_libraries(OculusPlayer
 	${SDL_LIBRARY}
 	${OCULUS_SDK_LIBRARIES}
     AlloReceiver
+    winmm.lib 
+    ws2_32.lib
 )
 
 set_target_properties(OculusPlayer
