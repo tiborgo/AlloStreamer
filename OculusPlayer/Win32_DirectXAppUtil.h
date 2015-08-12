@@ -268,21 +268,31 @@ struct Texture
     Texture(bool rendertarget, Sizei size, int autoFillData = 0, int sampleCount = 1) : Size(size)
     {
         int mipLevels = autoFillData ? 8 : 1;  // We make 8 if generating
-        D3D11_TEXTURE2D_DESC dsDesc;
-        dsDesc.Width = size.w;
+        D3D11_TEXTURE2D_DESC desc;
+		desc.Width = size.w;
+		desc.Height = size.h;
+		desc.MipLevels = desc.ArraySize = 1;
+		desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		desc.SampleDesc.Count = sampleCount;
+		desc.SampleDesc.Quality = 0;
+		desc.Usage = D3D11_USAGE_DYNAMIC;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		desc.MiscFlags = 0;
+		/* dsDesc.Width = size.w;
         dsDesc.Height = size.h;
         dsDesc.MipLevels = mipLevels;
         dsDesc.ArraySize = 1;
-        dsDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+		dsDesc.Format = DXGI_FORMAT_R8G8B8A8_UINT;
         dsDesc.SampleDesc.Count = sampleCount;
         dsDesc.SampleDesc.Quality = 0;
         dsDesc.Usage = D3D11_USAGE_DEFAULT;
         dsDesc.CPUAccessFlags = 0;
         dsDesc.MiscFlags = 0;
         dsDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        if (rendertarget) dsDesc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+        */if (rendertarget) desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 
-        DIRECTX.Device->CreateTexture2D(&dsDesc, NULL, &Tex);
+        DIRECTX.Device->CreateTexture2D(&desc, NULL, &Tex);
         DIRECTX.Device->CreateShaderResourceView(Tex, NULL, &TexSv);
         if (rendertarget) DIRECTX.Device->CreateRenderTargetView(Tex, NULL, &TexRtv);
 
@@ -310,7 +320,7 @@ struct Texture
         {
             DIRECTX.Context->UpdateSubresource(Tex, level, NULL, (unsigned char *)pix, size.w * 4, size.h * 4);
 
-            for (int j = 0; j < (size.h & ~1); j += 2)
+          /*  for (int j = 0; j < (size.h & ~1); j += 2)
             {
                 uint8_t* psrc = (unsigned char *)pix + (size.w * j * 4);
                 uint8_t* pdest = (unsigned char *)pix + (size.w * j);
@@ -323,12 +333,31 @@ struct Texture
                 }
             }
             size.w >>= 1;  size.h >>= 1;
-        }
+        */}
     }
 
 	void FillTexture(void* pixels, UINT width, UINT height){
 	
-		DIRECTX.Context->UpdateSubresource(Tex, 0, NULL, pixels, width , height);
+		int mipLevels = 1;
+
+		for (int level = 0; level < mipLevels; level++)
+		{
+			DIRECTX.Context->UpdateSubresource(Tex, level, NULL, (unsigned char *)pixels, width * 4, height * 4);
+
+			for (int j = 0; j < (height & ~1); j += 2)
+			{
+				uint8_t* psrc = (unsigned char *)pixels + (width * j * 4);
+				uint8_t* pdest = (unsigned char *)pixels + (width * j);
+				for (int i = 0; i < width >> 1; i++, psrc += 8, pdest += 4)
+				{
+					pdest[0] = (((int)psrc[0]) + psrc[4] + psrc[width * 4 + 0] + psrc[width * 4 + 4]) >> 2;
+					pdest[1] = (((int)psrc[1]) + psrc[5] + psrc[width * 4 + 1] + psrc[width * 4 + 5]) >> 2;
+					pdest[2] = (((int)psrc[2]) + psrc[6] + psrc[width * 4 + 2] + psrc[width * 4 + 6]) >> 2;
+					pdest[3] = (((int)psrc[3]) + psrc[7] + psrc[width * 4 + 3] + psrc[width * 4 + 7]) >> 2;
+				}
+			}
+			width >>= 1;  height >>= 1;
+		}
 	}
 };
 
@@ -540,21 +569,25 @@ struct Scene
     void Render(Matrix4f projView, float R, float G, float B, float A, bool standardUniforms)
     {      for (int i = 0; i < num_models; i++) Models[i]->Render(projView,R,G,B,A,standardUniforms);    }
 
-	void updateTextures(void* pixels[12], UINT w, UINT h){
+	void updateTextures(void *pixels[12], UINT w, UINT h){
 		for (int i = 0; i < 12; i++){
+			if (pixels[i] == NULL)
+				std::cout << "Pixels not assigned" << std::endl;
+			else
+				std::cout << "Pixels assigned" << std::endl;
 			Models[i]->Fill->Tex->FillTexture(pixels[i], w, h);
 		}
 	}
 
 	Scene(float focal_length = 10.0f) : num_models(0)
 	{ 
-		int width = 256, height = 256;
+		int width = 1024, height = 1024;
         TriangleSet left,right,front,back;
 		left.AddSolidColorBox(-focal_length, -focal_length, -focal_length, -focal_length, focal_length, focal_length, 0xff808080);  // Left Wall
 		right.AddSolidColorBox(focal_length, -focal_length, -focal_length, focal_length, focal_length, focal_length, 0xff808080);   // Right Wall
 		front.AddSolidColorBox(-focal_length, -focal_length, -focal_length, focal_length, focal_length, -focal_length, 0xff808080); // Front Wall
 		back.AddSolidColorBox(-focal_length, focal_length, focal_length, focal_length, -focal_length, focal_length, 0xff808080); // Back Wall
-		Texture *t = new Texture(false, Sizei(width, height), Texture::AUTO_WALL);
+		Texture *t = new Texture(false, Sizei(width, height));//, Texture::AUTO_WALL);
 		//t->FillTexture(pixels[0],width,height);
 		Add(new Model(&front, Vector3f(0, 0, 0), new Material(t)));
 		Add(new Model(&right, Vector3f(0, 0, 0), new Material(t)));

@@ -104,7 +104,7 @@ void Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 	}
 	cubemapBuffer.push(cubemap);
 
-	void* pixels[12];
+	void *pixels[12];
 	UINT w = cubemap->getEye(0)->getFace(0)->getContent()->getWidth(), h=cubemap->getEye(0)->getFace(0)->getContent()->getWidth();
 	for (int e = 0; e < 2; e++){
 		for (int i = 0; i < 6; i++){
@@ -112,7 +112,7 @@ void Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 		}
 	}
 	
-	//scene->updateTextures(pixels, w, h);
+	scene->updateTextures(pixels, w, h);
 	OculusRenderLoop();
 }
 
