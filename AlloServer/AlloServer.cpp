@@ -66,9 +66,9 @@ static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms, std:
     delete[] url;
 }
 
-void onSentNALU(RawPixelSource*, uint8_t type, size_t size)
+void onSentNALU(RawPixelSource*, uint8_t type, size_t size, int eye, int face)
 {
-	stats.sentNALU(type, size);
+	stats.sentNALU(type, size, eye * 6 + face);
 }
 
 void addFaceSubstreams0(void*)
@@ -101,7 +101,7 @@ void addFaceSubstreams0(void*)
 
 			std::function<void(RawPixelSource*,
 				uint8_t type,
-				size_t size)> callback(&onSentNALU);
+				size_t size)> callback(boost::bind(&onSentNALU, _1, _2, _3, j, i));
 			source->setOnSentNALU(callback);
 
 			state->source = H264VideoStreamDiscreteFramer::createNew(*env,

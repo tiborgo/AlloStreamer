@@ -25,12 +25,12 @@ void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 
 void onDroppedNALU(CubemapSource* source, int face, uint8_t type, size_t size)
 {
-    stats.droppedNALU(type, size);
+    stats.droppedNALU(type, size, face);
 }
 
 void onAddedNALU(CubemapSource* source, int face, uint8_t type, size_t size)
 {
-    stats.addedNALU(type, size);
+    stats.addedNALU(type, size, face);
 }
 
 void onDisplayedCubemapFace(Renderer* renderer, int face)
