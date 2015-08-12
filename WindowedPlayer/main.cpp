@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
 
 	std::cout << "Buffer size " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
 
-	CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), bufferSize,  1024, AV_PIX_FMT_ARGB, interface);
+	CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), bufferSize,  128, AV_PIX_FMT_ARGB, interface);
     
     std::function<void (CubemapSource*, int, uint8_t, size_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3, _4);
     cubemapSource->setOnDroppedNALU(callback);

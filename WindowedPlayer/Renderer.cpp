@@ -51,12 +51,13 @@ Renderer::~Renderer()
 void Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
 	StereoCubemap* dummy;
-	if (!cubemapPool.wait_and_pop(dummy))
+	StereoCubemap::destroy(cubemap);
+	/*if (!cubemapPool.wait_and_pop(dummy))
 	{
 		return;
 	}
 
-	cubemapBuffer.push(cubemap);
+	cubemapBuffer.push(cubemap);*/
 }
 
 void Renderer::setOnDisplayedFrame(std::function<void (Renderer*)>& callback)
