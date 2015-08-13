@@ -230,6 +230,8 @@ void H264RawPixelsSink::decodeFrameLoop()
 		int got_frame;
 		int len = avcodec_decode_video2(codecContext, frame, &got_frame, pkt);
 
+		pktPool.push(pkt);
+
         if (got_frame == 1)
 		{
             // We have decoded a frame :) ->
@@ -283,7 +285,6 @@ void H264RawPixelsSink::decodeFrameLoop()
 
 		counter++;
 		
-        pktPool.push(pkt);
 	}
 }
 

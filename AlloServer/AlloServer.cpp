@@ -73,6 +73,7 @@ void onSentNALU(RawPixelSource*, uint8_t type, size_t size, int eye, int face)
 
 void addFaceSubstreams0(void*)
 {
+	int portCounter = 0;
 	for (int j = 0; j < cubemap->getEyesCount(); j++)
 	{
 		Cubemap* eye = cubemap->getEye(j);
@@ -84,7 +85,8 @@ void addFaceSubstreams0(void*)
 
 			state->content = eye->getFace(i)->getContent();
 
-			Port rtpPort(FACE0_RTP_PORT_NUM + i);
+			Port rtpPort(FACE0_RTP_PORT_NUM + portCounter);
+			portCounter++;
 			Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, TTL);
 			//rtpGroupsock->multicastSendOnly(); // we're a SSM source
 

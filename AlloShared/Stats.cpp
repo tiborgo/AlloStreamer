@@ -333,8 +333,10 @@ std::string Stats::summary(bc::microseconds window)
     double fpsVal = fps(window, nowSinceEpoch);
     
     std::stringstream stream;
-    stream << "=================================================" << std::endl;
+    stream << "===============================================================================" << std::endl;
     stream << "Stats for last " << formatDuration(window) << ": " << std::endl;
+
+	stream << "-------------------------------------------------------------------------------" << std::endl;
 	stream << "received NALUs/s: " << receivedNALUsPSVal << "; " << to_human_readable_byte_count(receivedNALUsBitRateVal, true, false) << "/s;" << std::endl;
 	for (int j = 0; j < (std::min)(2, faceCount); j++)
 	{
@@ -345,6 +347,8 @@ std::string Stats::summary(bc::microseconds window)
 		}
 		stream << ";" << std::endl;
 	}
+
+	stream << "-------------------------------------------------------------------------------" << std::endl;
 	stream << "processed NALUs/s: " << processedNALUsPSVal << "; " << to_human_readable_byte_count(processedNALUsBitRateVal, true, false) << "/s;" << std::endl;
 	for (int j = 0; j < (std::min)(2, faceCount); j++)
 	{
@@ -355,6 +359,8 @@ std::string Stats::summary(bc::microseconds window)
 		}
 		stream << ";" << std::endl;
 	}
+
+	stream << "-------------------------------------------------------------------------------" << std::endl;
 	stream << "sent NALUs/s: " << sentNALUsPSVal << "; " << to_human_readable_byte_count(sentNALUsBitRateVal, true, false) << "/s;" << std::endl;
 	for (int j = 0; j < (std::min)(2, faceCount); j++)
 	{
@@ -365,6 +371,8 @@ std::string Stats::summary(bc::microseconds window)
 		}
 		stream << ";" << std::endl;
 	}
+
+	stream << "-------------------------------------------------------------------------------" << std::endl;
 	stream << "cubemap face 0-5 (left ) fps:";
 	for (int i = 0; i < 6; i++)
     {
