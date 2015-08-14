@@ -168,7 +168,7 @@ struct DirectX11
         scDesc.BufferCount = 2;
         scDesc.BufferDesc.Width = WinSize.w;
         scDesc.BufferDesc.Height = WinSize.h;
-        scDesc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+		scDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;// DXGI_FORMAT_B8G8R8A8_UNORM;
         scDesc.BufferDesc.RefreshRate.Numerator = 0;
         scDesc.BufferDesc.RefreshRate.Denominator = 1;
         scDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -275,9 +275,9 @@ struct Texture
 		desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		desc.SampleDesc.Count = sampleCount;
 		desc.SampleDesc.Quality = 0;
-		desc.Usage = D3D11_USAGE_DYNAMIC;
+		desc.Usage = D3D11_USAGE_DEFAULT;//D3D11_USAGE_DYNAMIC;
 		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		desc.CPUAccessFlags = 0;//D3D11_CPU_ACCESS_WRITE;
 		desc.MiscFlags = 0;
 		/* dsDesc.Width = size.w;
         dsDesc.Height = size.h;
@@ -296,18 +296,19 @@ struct Texture
         DIRECTX.Device->CreateShaderResourceView(Tex, NULL, &TexSv);
         if (rendertarget) DIRECTX.Device->CreateRenderTargetView(Tex, NULL, &TexRtv);
 
-        if (autoFillData) AutoFillTexture(autoFillData, mipLevels, size);
+		// AutoFillTexture(AUTO_WALL, mipLevels, size);
     }
 
     void AutoFillTexture(int autoFillData, int mipLevels, Sizei size)
     {
+		
         DWORD pix[256 * 256];
         for (int j = 0; j < 256; j++)
         for (int i = 0; i < 256; i++)
         {
             switch (autoFillData)
             {
-            case(AUTO_WALL) : pix[j * 256 + i] = (((j / 4 & 15) == 0) || (((i / 4 & 15) == 0) && ((((i / 4 & 31) == 0) ^ ((j / 4 >> 4) & 1)) == 0))) ?
+            case(AUTO_WALL) : pix[j * 256 + i] = (i<128 && j<128)?//(((j / 4 & 15) == 0) || (((i / 4 & 15) == 0) && ((((i / 4 & 31) == 0) ^ ((j / 4 >> 4) & 1)) == 0))) ?
                 0xff3c3c3c : 0xffb4b4b4; break;
             case(AUTO_FLOOR) : pix[j * 256 + i] = (((i >> 7) ^ (j >> 7)) & 1) ? 0xffb4b4b4 : 0xff505050; break;
             case(AUTO_CEILING) : pix[j * 256 + i] = (i / 4 == 0 || j / 4 == 0) ? 0xff505050 : 0xffb4b4b4; break;
@@ -320,7 +321,7 @@ struct Texture
         {
             DIRECTX.Context->UpdateSubresource(Tex, level, NULL, (unsigned char *)pix, size.w * 4, size.h * 4);
 
-          /*  for (int j = 0; j < (size.h & ~1); j += 2)
+            for (int j = 0; j < (size.h & ~1); j += 2)
             {
                 uint8_t* psrc = (unsigned char *)pix + (size.w * j * 4);
                 uint8_t* pdest = (unsigned char *)pix + (size.w * j);
@@ -333,16 +334,23 @@ struct Texture
                 }
             }
             size.w >>= 1;  size.h >>= 1;
-        */}
+        }
     }
 
 	void FillTexture(void* pixels, UINT width, UINT height){
-	
+		//std::cout << "FillTexture Called" << std::endl;
 		int mipLevels = 1;
-
+		/*
+		DWORD pix[256 * 256];
+		for (int j = 0; j < 256; j++)
+			for (int i = 0; i < 256; i++)
+			{
+				pix[j * 256 + i] = ((unsigned char *)pixels)[j * 256 + 4*i] << (8*3) + ((unsigned char *)pixels)[j * 256 + 4*i + 1] << (8*2) +((unsigned char *)pixels)[j * 256 + 4*i + 2] << 8 + ((unsigned char *)pixels)[j * 256 + 4*i+3];
+			}
+	*/
 		for (int level = 0; level < mipLevels; level++)
 		{
-			DIRECTX.Context->UpdateSubresource(Tex, level, NULL, (unsigned char *)pixels, width * 4, height * 4);
+			DIRECTX.Context->UpdateSubresource(Tex, level, NULL, (unsigned char *)pixels, width*4, height*4);
 
 			for (int j = 0; j < (height & ~1); j += 2)
 			{
@@ -416,7 +424,7 @@ struct Material
 
         // Create sampler state
         D3D11_SAMPLER_DESC ss; memset(&ss, 0, sizeof(ss));
-        ss.AddressU = ss.AddressV = ss.AddressW = flags & MAT_WRAP ? D3D11_TEXTURE_ADDRESS_WRAP : D3D11_TEXTURE_ADDRESS_BORDER;
+		ss.AddressU = ss.AddressV = ss.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;//D3D11_TEXTURE_ADDRESS_BORDER;//flags & MAT_WRAP ? D3D11_TEXTURE_ADDRESS_WRAP : D3D11_TEXTURE_ADDRESS_BORDER;
         ss.Filter = D3D11_FILTER_ANISOTROPIC;
         ss.MaxAnisotropy = 8;
         ss.MaxLOD = 15;
@@ -571,44 +579,41 @@ struct Scene
 
 	void updateTextures(void *pixels[12], UINT w, UINT h){
 		for (int i = 0; i < 12; i++){
-			if (pixels[i] == NULL)
-				std::cout << "Pixels not assigned" << std::endl;
-			else
-				std::cout << "Pixels assigned" << std::endl;
+			
 			Models[i]->Fill->Tex->FillTexture(pixels[i], w, h);
 		}
 	}
 
-	Scene(float focal_length = 10.0f) : num_models(0)
+	Scene(int width=256, int height=256,float focal_length = 10.0f) : num_models(0)
 	{ 
-		int width = 1024, height = 1024;
+		//int width = 1024, height = 1024;
         TriangleSet left,right,front,back;
 		left.AddSolidColorBox(-focal_length, -focal_length, -focal_length, -focal_length, focal_length, focal_length, 0xff808080);  // Left Wall
 		right.AddSolidColorBox(focal_length, -focal_length, -focal_length, focal_length, focal_length, focal_length, 0xff808080);   // Right Wall
 		front.AddSolidColorBox(-focal_length, -focal_length, -focal_length, focal_length, focal_length, -focal_length, 0xff808080); // Front Wall
 		back.AddSolidColorBox(-focal_length, focal_length, focal_length, focal_length, -focal_length, focal_length, 0xff808080); // Back Wall
-		Texture *t = new Texture(false, Sizei(width, height));//, Texture::AUTO_WALL);
+		//Texture *tf = new Texture(false, Sizei(width, height));//, Texture::AUTO_WALL);
 		//t->FillTexture(pixels[0],width,height);
-		Add(new Model(&front, Vector3f(0, 0, 0), new Material(t)));
-		Add(new Model(&right, Vector3f(0, 0, 0), new Material(t)));
-		Add(new Model(&back, Vector3f(0, 0, 0), new Material(t)));
-		Add(new Model(&left, Vector3f(0, 0, 0), new Material(t)));
+		Add(new Model(&front, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&right, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&back, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&left, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 
 		
         TriangleSet floor;
 		floor.AddSolidColorBox(focal_length, -focal_length, focal_length, -focal_length, -focal_length, -focal_length, 0xff808080); 
-		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(t)));  // Floor
+		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));  // Floor
 
         TriangleSet ceiling;
 		ceiling.AddSolidColorBox(-focal_length, focal_length, -focal_length, focal_length, focal_length, focal_length, 0xff808080);
-		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(t)));// Ceiling
+		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));// Ceiling
 		
-		Add(new Model(&front, Vector3f(0, 0, 0), new Material(t)));
-		Add(new Model(&right, Vector3f(0, 0, 0), new Material(t)));
-		Add(new Model(&back, Vector3f(0, 0, 0), new Material(t)));
-		Add(new Model(&left, Vector3f(0, 0, 0), new Material(t)));
-		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(t)));
-		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(t)));
+		Add(new Model(&front, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&right, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&back, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&left, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
     }
 };
 
