@@ -67,7 +67,7 @@ private:
 
 	void OculusRelease();
 	void OculusInit();
-	void OculusRender();
+	void OculusRenderLoop();
 
 
 	
