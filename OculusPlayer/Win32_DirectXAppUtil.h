@@ -350,6 +350,7 @@ struct Texture
 	*/
 		for (int level = 0; level < mipLevels; level++)
 		{
+			
 			DIRECTX.Context->UpdateSubresource(Tex, level, NULL, (unsigned char *)pixels, width*4, height*4);
 
 			for (int j = 0; j < (height & ~1); j += 2)
@@ -424,7 +425,7 @@ struct Material
 
         // Create sampler state
         D3D11_SAMPLER_DESC ss; memset(&ss, 0, sizeof(ss));
-		ss.AddressU = ss.AddressV = ss.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;//D3D11_TEXTURE_ADDRESS_BORDER;//flags & MAT_WRAP ? D3D11_TEXTURE_ADDRESS_WRAP : D3D11_TEXTURE_ADDRESS_BORDER;
+		ss.AddressU = ss.AddressV = ss.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;//D3D11_TEXTURE_ADDRESS_BORDER;//flags & MAT_WRAP ? D3D11_TEXTURE_ADDRESS_WRAP : D3D11_TEXTURE_ADDRESS_BORDER;
         ss.Filter = D3D11_FILTER_ANISOTROPIC;
         ss.MaxAnisotropy = 8;
         ss.MaxLOD = 15;
@@ -557,10 +558,10 @@ struct Model
     Model(Texture * sourceTexture, float minx, float miny, float maxx, float maxy)
     {   // 2D scenes, for latency tester and full screen copies, etc
         TriangleSet quad;
-        quad.AddQuad(Vertex(Vector3f(minx,miny,0),0xffffffff,0,1),
-                     Vertex(Vector3f(minx,maxy,0),0xffffffff,0,0),
-                     Vertex(Vector3f(maxx,miny,0),0xffffffff,1,1),
-                     Vertex(Vector3f(maxx,maxy,0),0xffffffff,1,0));
+        quad.AddQuad(Vertex(Vector3f(minx,miny,-10),0xffffffff,0,1),
+                     Vertex(Vector3f(minx,maxy,-10),0xffffffff,0,0),
+                     Vertex(Vector3f(maxx,miny,-10),0xffffffff,1,1),
+                     Vertex(Vector3f(maxx,maxy,-10),0xffffffff,1,0));
         *this = Model(&quad,Vector3f(0, 0, 0), new Material(sourceTexture));
     }
 };
@@ -578,20 +579,46 @@ struct Scene
     {      for (int i = 0; i < num_models; i++) Models[i]->Render(projView,R,G,B,A,standardUniforms);    }
 
 	void updateTextures(void *pixels[12], UINT w, UINT h){
-		for (int i = 0; i < 12; i++){
+		for (int i = 0; i < sizeof(Models) / sizeof(*Models); i++){
 			
 			Models[i]->Fill->Tex->FillTexture(pixels[i], w, h);
 		}
+		//Models[0]->Fill->Tex->FillTexture(pixels[0], w, h);
 	}
 
 	Scene(int width=256, int height=256,float focal_length = 10.0f) : num_models(0)
 	{ 
+		
 		//int width = 1024, height = 1024;
-        TriangleSet left,right,front,back;
-		left.AddSolidColorBox(-focal_length, -focal_length, -focal_length, -focal_length, focal_length, focal_length, 0xff808080);  // Left Wall
-		right.AddSolidColorBox(focal_length, -focal_length, -focal_length, focal_length, focal_length, focal_length, 0xff808080);   // Right Wall
-		front.AddSolidColorBox(-focal_length, -focal_length, -focal_length, focal_length, focal_length, -focal_length, 0xff808080); // Front Wall
-		back.AddSolidColorBox(-focal_length, focal_length, focal_length, focal_length, -focal_length, focal_length, 0xff808080); // Back Wall
+        TriangleSet left,right,front,back,floor,ceiling;
+		left.AddQuad(Vertex(Vector3f(-focal_length, -focal_length, focal_length), 0xffffffff, 0, 1),
+			Vertex(Vector3f(-focal_length, focal_length, focal_length), 0xffffffff, 0, 0),
+			Vertex(Vector3f(-focal_length, -focal_length, -focal_length), 0xffffffff, 1, 1),
+			Vertex(Vector3f(-focal_length, focal_length, -focal_length), 0xffffffff, 1, 0));
+		right.AddQuad(Vertex(Vector3f(focal_length, -focal_length, -focal_length), 0xffffffff, 0, 1),
+			Vertex(Vector3f(focal_length, focal_length, -focal_length), 0xffffffff, 0, 0),
+			Vertex(Vector3f(focal_length, -focal_length, focal_length), 0xffffffff, 1, 1),
+			Vertex(Vector3f(focal_length, focal_length, focal_length), 0xffffffff, 1, 0));
+		front.AddQuad(Vertex(Vector3f(-focal_length, -focal_length, -focal_length), 0xffffffff, 0, 1),
+			Vertex(Vector3f(-focal_length, focal_length, -focal_length), 0xffffffff, 0, 0),
+			Vertex(Vector3f(focal_length, -focal_length, -focal_length), 0xffffffff, 1, 1),
+			Vertex(Vector3f(focal_length, focal_length, -focal_length), 0xffffffff, 1, 0));
+		back.AddQuad(Vertex(Vector3f(focal_length, -focal_length, focal_length), 0xffffffff, 0, 1),
+			Vertex(Vector3f(focal_length, focal_length, focal_length), 0xffffffff, 0, 0),
+			Vertex(Vector3f(-focal_length, -focal_length, focal_length), 0xffffffff, 1, 1),
+			Vertex(Vector3f(-focal_length, focal_length, focal_length), 0xffffffff, 1, 0));
+		ceiling.AddQuad(Vertex(Vector3f(-focal_length, focal_length, -focal_length), 0xffffffff, 0, 1),
+			Vertex(Vector3f(-focal_length, focal_length, focal_length), 0xffffffff, 0, 0),
+			Vertex(Vector3f(focal_length, focal_length, -focal_length), 0xffffffff, 1, 1),
+			Vertex(Vector3f(focal_length, focal_length, focal_length), 0xffffffff, 1, 0));
+		floor.AddQuad(Vertex(Vector3f(-focal_length, -focal_length, focal_length), 0xffffffff, 0, 1),
+			Vertex(Vector3f(-focal_length, -focal_length, -focal_length), 0xffffffff, 0, 0),
+			Vertex(Vector3f(focal_length, -focal_length, focal_length), 0xffffffff, 1, 1),
+			Vertex(Vector3f(focal_length, -focal_length, -focal_length), 0xffffffff, 1, 0));
+		//left.AddSolidColorBox(-focal_length, -focal_length, -focal_length, -focal_length, focal_length, focal_length, 0xff808080);  // Left Wall
+		//right.AddSolidColorBox(focal_length, -focal_length, -focal_length, focal_length, focal_length, focal_length, 0xff808080);   // Right Wall
+		//front.AddSolidColorBox(-focal_length, -focal_length, -focal_length, focal_length, focal_length, -focal_length, 0xff808080); // Front Wall
+		//back.AddSolidColorBox(-focal_length, focal_length, focal_length, focal_length, -focal_length, focal_length, 0xff808080); // Back Wall
 		//Texture *tf = new Texture(false, Sizei(width, height));//, Texture::AUTO_WALL);
 		//t->FillTexture(pixels[0],width,height);
 		Add(new Model(&front, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
@@ -600,21 +627,23 @@ struct Scene
 		Add(new Model(&left, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 
 		
-        TriangleSet floor;
-		floor.AddSolidColorBox(focal_length, -focal_length, focal_length, -focal_length, -focal_length, -focal_length, 0xff808080); 
-		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));  // Floor
 
-        TriangleSet ceiling;
-		ceiling.AddSolidColorBox(-focal_length, focal_length, -focal_length, focal_length, focal_length, focal_length, 0xff808080);
-		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));// Ceiling
+		//floor.AddSolidColorBox(focal_length, -focal_length, focal_length, -focal_length, -focal_length, -focal_length, 0xff808080); 
+		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));  // Floor
+
+
+		//ceiling.AddSolidColorBox(-focal_length, focal_length, -focal_length, focal_length, focal_length, focal_length, 0xff808080);
+		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));// Ceiling
 		
 		Add(new Model(&front, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 		Add(new Model(&right, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 		Add(new Model(&back, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 		Add(new Model(&left, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
-		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
-    }
+		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		
+		//Add(new Model(new Texture(false, Sizei(width, height)),-10,-10,10,10));
+	}
 };
 
 //-----------------------------------------------------------

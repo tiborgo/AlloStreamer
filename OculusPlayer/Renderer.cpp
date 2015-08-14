@@ -157,7 +157,7 @@ void Renderer::OculusInit(){
 	mirrorTexture = nullptr;
 	D3D11_TEXTURE2D_DESC td = {};
 	td.ArraySize = 1;
-	td.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	td.Width = DIRECTX.WinSize.w;
 	td.Height = DIRECTX.WinSize.h;
 	td.Usage = D3D11_USAGE_DEFAULT;
@@ -313,6 +313,9 @@ void Renderer::renderLoop()
 
 		scene->updateTextures(pixels, w, h);
 		OculusRender();
+
+
+
 		/*
 		if (!texture)
 		{
