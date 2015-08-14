@@ -104,16 +104,7 @@ void Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 	}
 	cubemapBuffer.push(cubemap);
 
-	void *pixels[12];
-	UINT w = cubemap->getEye(0)->getFace(0)->getContent()->getWidth(), h=cubemap->getEye(0)->getFace(0)->getContent()->getWidth();
-	for (int e = 0; e < 2; e++){
-		for (int i = 0; i < 6; i++){
-			pixels[i + 6 * e] = cubemap->getEye(0)->getFace(i)->getContent()->getPixels();	//Draws left eye for both eyes
-		}
-	}
 	
-	scene->updateTextures(pixels, w, h);
-	OculusRenderLoop();
 }
 
 void Renderer::setOnDisplayedFrame(std::function<void (Renderer*)>& callback)
@@ -175,7 +166,7 @@ void Renderer::OculusInit(){
 	ovrHmd_CreateMirrorTextureD3D11(HMD, DIRECTX.Device, &td, &mirrorTexture);
 
 	// Create the room model
-	scene=new Scene();
+	scene = new Scene(1024,1024,100);
 
 	// Create camera
 	mainCam=Camera(Vector3f(0.0f, 0.0f, 0.0f), Matrix4f::RotationY(0.0f));
@@ -189,7 +180,7 @@ void Renderer::OculusInit(){
 
 }
 
-void Renderer::OculusRenderLoop(){
+void Renderer::OculusRender(){
 	// Keyboard inputs to adjust player orientation, unaffected by speed
 	static float Yaw = 3.141f;
 
@@ -310,8 +301,19 @@ void Renderer::renderLoop()
 			return;
 		}
 
-		Frame* content = cubemap->getEye(0)->getFace(0)->getContent();
+		//Frame* content = cubemap->getEye(0)->getFace(0)->getContent();
 
+		void *pixels[12];
+		UINT w = cubemap->getEye(0)->getFace(0)->getContent()->getWidth(), h = cubemap->getEye(0)->getFace(0)->getContent()->getWidth();
+		for (int e = 0; e < 2; e++){
+			for (int i = 0; i < 6; i++){
+				pixels[i + 6 * e] = cubemap->getEye(0)->getFace(i)->getContent()->getPixels();	//Draws left eye for both eyes
+			}
+		}
+
+		scene->updateTextures(pixels, w, h);
+		OculusRender();
+		/*
 		if (!texture)
 		{
 			//To use a hardware accelerated texture for rendering we can create one from
@@ -365,7 +367,7 @@ void Renderer::renderLoop()
 			if (onDisplayedFrame) onDisplayedFrame(this);
 		}
 
-
+		*/
 		
 
 		StereoCubemap::destroy(cubemap);
