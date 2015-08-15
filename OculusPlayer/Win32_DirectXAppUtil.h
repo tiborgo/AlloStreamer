@@ -279,24 +279,14 @@ struct Texture
 		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 		desc.CPUAccessFlags = 0;//D3D11_CPU_ACCESS_WRITE;
 		desc.MiscFlags = 0;
-		/* dsDesc.Width = size.w;
-        dsDesc.Height = size.h;
-        dsDesc.MipLevels = mipLevels;
-        dsDesc.ArraySize = 1;
-		dsDesc.Format = DXGI_FORMAT_R8G8B8A8_UINT;
-        dsDesc.SampleDesc.Count = sampleCount;
-        dsDesc.SampleDesc.Quality = 0;
-        dsDesc.Usage = D3D11_USAGE_DEFAULT;
-        dsDesc.CPUAccessFlags = 0;
-        dsDesc.MiscFlags = 0;
-        dsDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        */if (rendertarget) desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+		
+		if (rendertarget) desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 
         DIRECTX.Device->CreateTexture2D(&desc, NULL, &Tex);
         DIRECTX.Device->CreateShaderResourceView(Tex, NULL, &TexSv);
         if (rendertarget) DIRECTX.Device->CreateRenderTargetView(Tex, NULL, &TexRtv);
 
-		// AutoFillTexture(AUTO_WALL, mipLevels, size);
+		if (autoFillData) AutoFillTexture(autoFillData, mipLevels, size);
     }
 
     void AutoFillTexture(int autoFillData, int mipLevels, Sizei size)
@@ -338,16 +328,8 @@ struct Texture
     }
 
 	void FillTexture(void* pixels, UINT width, UINT height){
-		//std::cout << "FillTexture Called" << std::endl;
 		int mipLevels = 1;
-		/*
-		DWORD pix[256 * 256];
-		for (int j = 0; j < 256; j++)
-			for (int i = 0; i < 256; i++)
-			{
-				pix[j * 256 + i] = ((unsigned char *)pixels)[j * 256 + 4*i] << (8*3) + ((unsigned char *)pixels)[j * 256 + 4*i + 1] << (8*2) +((unsigned char *)pixels)[j * 256 + 4*i + 2] << 8 + ((unsigned char *)pixels)[j * 256 + 4*i+3];
-			}
-	*/
+		
 		for (int level = 0; level < mipLevels; level++)
 		{
 			
@@ -575,21 +557,25 @@ struct Scene
     void    Add(Model * n)
     {    Models[num_models++] = n; }    
 
-    void Render(Matrix4f projView, float R, float G, float B, float A, bool standardUniforms)
-    {      for (int i = 0; i < num_models; i++) Models[i]->Render(projView,R,G,B,A,standardUniforms);    }
+    void Render(int eye,Matrix4f projView, float R, float G, float B, float A, bool standardUniforms)
+	{
+		for (int i = 0 + num_models / 2 * eye; i < num_models / 2 + num_models / 2 * eye; i++) Models[i]->Render(projView, R, G, B, A, standardUniforms);
+	}
 
 	void updateTextures(void *pixels[12], UINT w, UINT h){
-		for (int i = 0; i < sizeof(Models) / sizeof(*Models); i++){
+		for (int i = 0; i < num_models; i++){
 			
 			Models[i]->Fill->Tex->FillTexture(pixels[i], w, h);
 		}
-		//Models[0]->Fill->Tex->FillTexture(pixels[0], w, h);
+		/*for (int i = num_models / 2; i < num_models; i++){
+
+			Models[i]->Fill->Tex->AutoFillTexture(Texture::AUTO_WALL, 1, Sizei(256, 256));
+		}*/
 	}
 
 	Scene(int width=256, int height=256,float focal_length = 10.0f) : num_models(0)
 	{ 
 		
-		//int width = 1024, height = 1024;
         TriangleSet left,right,front,back,floor,ceiling;
 		left.AddQuad(Vertex(Vector3f(-focal_length, -focal_length, focal_length), 0xffffffff, 0, 1),
 			Vertex(Vector3f(-focal_length, focal_length, focal_length), 0xffffffff, 0, 0),
@@ -615,25 +601,6 @@ struct Scene
 			Vertex(Vector3f(-focal_length, -focal_length, -focal_length), 0xffffffff, 0, 0),
 			Vertex(Vector3f(focal_length, -focal_length, focal_length), 0xffffffff, 1, 1),
 			Vertex(Vector3f(focal_length, -focal_length, -focal_length), 0xffffffff, 1, 0));
-		//left.AddSolidColorBox(-focal_length, -focal_length, -focal_length, -focal_length, focal_length, focal_length, 0xff808080);  // Left Wall
-		//right.AddSolidColorBox(focal_length, -focal_length, -focal_length, focal_length, focal_length, focal_length, 0xff808080);   // Right Wall
-		//front.AddSolidColorBox(-focal_length, -focal_length, -focal_length, focal_length, focal_length, -focal_length, 0xff808080); // Front Wall
-		//back.AddSolidColorBox(-focal_length, focal_length, focal_length, focal_length, -focal_length, focal_length, 0xff808080); // Back Wall
-		//Texture *tf = new Texture(false, Sizei(width, height));//, Texture::AUTO_WALL);
-		//t->FillTexture(pixels[0],width,height);
-		Add(new Model(&front, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
-		Add(new Model(&right, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
-		Add(new Model(&back, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
-		Add(new Model(&left, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
-
-		
-
-		//floor.AddSolidColorBox(focal_length, -focal_length, focal_length, -focal_length, -focal_length, -focal_length, 0xff808080); 
-		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));  // Floor
-
-
-		//ceiling.AddSolidColorBox(-focal_length, focal_length, -focal_length, focal_length, focal_length, focal_length, 0xff808080);
-		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));// Ceiling
 		
 		Add(new Model(&front, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 		Add(new Model(&right, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
@@ -642,7 +609,13 @@ struct Scene
 		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 		
-		//Add(new Model(new Texture(false, Sizei(width, height)),-10,-10,10,10));
+		Add(new Model(&front, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&right, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&back, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&left, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+
 	}
 };
 
