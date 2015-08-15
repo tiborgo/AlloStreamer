@@ -345,6 +345,7 @@ int main(int argc, char* argv[])
 	
 
     Process unityProcess(CUBEMAPEXTRACTIONPLUGIN_ID, false);
+	Process thisProcess(ALLOSERVER_ID, true);
 
     while (true)
     {
