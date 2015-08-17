@@ -102,17 +102,17 @@ public:
         switch(flags.pixel_format) {
             case kPixelFormat_RGB24: avpf = AV_PIX_FMT_RGB24; break;
         }
-        source_ = CubemapSource::createFromRTSP(url, flags.resolution, avpf);
+        source_ = CubemapSource::createFromRTSP(url, flags.buffer_size, flags.resolution, avpf);
         cached_frame_ = 0;
         
-        std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&CubemapVideoSource::onNextCubemap,
-                                                                                    this,
-                                                                                    _1,
-                                                                                    _2);
+		std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)> callback = boost::bind(&CubemapVideoSource::onNextCubemap,
+                                                                                              this,
+                                                                                              _1,
+                                                                                              _2);
         source_->setOnNextCubemap(callback);
     }
 
-    void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
+	StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
     {
         CubemapStereoFrame* new_frame_ = new CubemapStereoFrame(cubemap);
         
@@ -120,6 +120,7 @@ public:
         if(cached_frame_) delete cached_frame_;
         cached_frame_ = new_frame_;
         unlockFrame();
+		return nullptr;
     }
     
     virtual Frame* getCurrentFrame() {

@@ -44,10 +44,12 @@ public:
         int resolution;
         PixelFormat pixel_format;
         FrameType frame_type;
+		unsigned long buffer_size;
         CreateFlags() {
             resolution = 2048;
             pixel_format = kPixelFormat_RGB24;
             frame_type = kFrameType_Cubemap;
+			buffer_size = 200000000;
         }
     };
 

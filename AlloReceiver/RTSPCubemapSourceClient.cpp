@@ -1,3 +1,6 @@
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string_regex.hpp>
+
 #include "RTSPCubemapSourceClient.hpp"
 
 void RTSPCubemapSourceClient::shutdown(int exitCode)
@@ -25,45 +28,45 @@ void RTSPCubemapSourceClient::subsessionAfterPlaying(void* clientData)
 
 void RTSPCubemapSourceClient::checkForPacketArrival(void* self_)
 {
-    RTSPCubemapSourceClient* self = (RTSPCubemapSourceClient*)self_;
-    
-	// Check each subsession, to see whether it has received data packets:
-	unsigned numSubsessionsChecked = 0;
-	unsigned numSubsessionsWithReceivedData = 0;
-	unsigned numSubsessionsThatHaveBeenSynced = 0;
+ //   RTSPCubemapSourceClient* self = (RTSPCubemapSourceClient*)self_;
+ //   
+	//// Check each subsession, to see whether it has received data packets:
+	//unsigned numSubsessionsChecked = 0;
+	//unsigned numSubsessionsWithReceivedData = 0;
+	//unsigned numSubsessionsThatHaveBeenSynced = 0;
 
-	MediaSubsessionIterator iter(*self->session);
-	MediaSubsession* subsession;
-	while ((subsession = iter.next()) != NULL)
-	{
-		RTPSource* src = subsession->rtpSource();
-		if (src == NULL) continue;
-		++numSubsessionsChecked;
+	//MediaSubsessionIterator iter(*self->session);
+	//MediaSubsession* subsession;
+	//while ((subsession = iter.next()) != NULL)
+	//{
+	//	RTPSource* src = subsession->rtpSource();
+	//	if (src == NULL) continue;
+	//	++numSubsessionsChecked;
 
-		if (src->receptionStatsDB().numActiveSourcesSinceLastReset() > 0)
-		{
-			// At least one data packet has arrived
-			++numSubsessionsWithReceivedData;
-		}
-		if (src->hasBeenSynchronizedUsingRTCP())
-		{
-			++numSubsessionsThatHaveBeenSynced;
-		}
-	}
+	//	if (src->receptionStatsDB().numActiveSourcesSinceLastReset() > 0)
+	//	{
+	//		// At least one data packet has arrived
+	//		++numSubsessionsWithReceivedData;
+	//	}
+	//	if (src->hasBeenSynchronizedUsingRTCP())
+	//	{
+	//		++numSubsessionsThatHaveBeenSynced;
+	//	}
+	//}
 
-	unsigned numSubsessionsToCheck = numSubsessionsChecked;
+	//unsigned numSubsessionsToCheck = numSubsessionsChecked;
 
-		struct timeval timeNow;
-		gettimeofday(&timeNow, NULL);
-		char timestampStr[100];
-		sprintf(timestampStr, "%ld%03ld", timeNow.tv_sec, (long)(timeNow.tv_usec / 1000));
-		self->envir() << "Data packets have begun arriving [" << timestampStr << "]\007\n";
-		return;
+	//	struct timeval timeNow;
+	//	gettimeofday(&timeNow, NULL);
+	//	char timestampStr[100];
+	//	sprintf(timestampStr, "%ld%03ld", timeNow.tv_sec, (long)(timeNow.tv_usec / 1000));
+	//	self->envir() << "Data packets have begun arriving [" << timestampStr << "]\007\n";
+	//	return;
 
-	// No luck, so reschedule this check again, after a delay:
-	int uSecsToDelay = 100000; // 100 ms
-	TaskToken arrivalCheckTimerTask = self->envir().taskScheduler().scheduleDelayedTask(uSecsToDelay,
-		(TaskFunc*)checkForPacketArrival, self);
+	//// No luck, so reschedule this check again, after a delay:
+	//int uSecsToDelay = 100000; // 100 ms
+	//TaskToken arrivalCheckTimerTask = self->session->envir().taskScheduler().scheduleDelayedTask(uSecsToDelay,
+	//	(TaskFunc*)checkForPacketArrival, self);
 }
 
 void RTSPCubemapSourceClient::continueAfterDESCRIBE2(RTSPClient* self_, int resultCode, char* resultString)
@@ -130,12 +133,12 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
 	char outFileName[1000];
 
 	// Create and start "FileSink"s for each subsession:
-
-	MediaSubsessionIterator iter(*session);
-    MediaSubsession* subsession;
-    std::vector<MediaSubsession*> subsessions;
-	while ((subsession = iter.next()) != NULL)
+    
+    /*std::vector<MediaSubsession*> subsessions;
+	for (MediaSession* session : sessions)
 	{
+		MediaSubsessionIterator iter(*session);
+		MediaSubsession* subsession = iter.next();
 		if (subsession->readSource() == NULL) continue; // was not initiated
 
 		// Create an output file for each desired stream:
@@ -146,19 +149,17 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
 			subsession->codecName(), ++streamCounter, periodicFilenameSuffix);
         
         subsessions.push_back(subsession);
-    }
+    }*/
     
     if (onGetSinksForSubsessions)
     {
         std::vector<MediaSink*> sinks = onGetSinksForSubsessions(this, subsessions);
         assert(sinks.size() == subsessions.size());
         
-        int i = 0;
-        iter.reset();
-        while ((subsession = iter.next()) != NULL)
-        {
-            subsession->sink = sinks[i];
-            i++;
+
+		for (int i = 0; i < subsessions.size(); i++)
+		{
+			subsessions[i]->sink = sinks[i];
         }
     }
     
@@ -167,13 +168,12 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
         onDidIdentifyStreams(this);
     }
     
-    iter.reset();
-    while ((subsession = iter.next()) != NULL)
+    for (MediaSubsession* subsession : subsessions)
     {
 		if (subsession->sink == NULL)
 		{
 			envir() << "Failed to create FileSink for \"" << outFileName
-				<< "\": " << envir().getResultMsg() << "\n";
+				<< "\": " << subsession->parentSession().envir().getResultMsg() << "\n";
 		}
 		else
 		{
@@ -197,48 +197,64 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
 
 void RTSPCubemapSourceClient::setupStreams()
 {
-	static MediaSubsessionIterator* setupIter = NULL;
-	if (setupIter == NULL) setupIter = new MediaSubsessionIterator(*session);
-	while ((subsession = setupIter->next()) != NULL)
-	{
+	//static MediaSubsessionIterator* setupIter = NULL;
+	static std::vector<MediaSubsession*>::iterator setupIter = subsessions.begin();
+	//if (setupIter == NULL) setupIter = new MediaSubsessionIterator(*session);
+
+	//for (MediaSubsession* subsession : subsessions)
+//	{
+		while (setupIter != subsessions.end())
+		{
+			subsession = *setupIter;
 		// We have another subsession left to set up:
 		if (subsession->clientPortNum() == 0) continue; // port # was not set
 
+		//this->subsession = subsession;
 		sendSetupCommand(*subsession, continueAfterSETUP);
+			
+		setupIter++;
 
-		return;
-	}
+			return;
+		}
 
-	// We're done setting up subsessions.
-	delete setupIter;
+		// We're done setting up subsessions.
+		//delete setupIter;
 
-	// Create output files:
-	createOutputFiles("");
+//	}
 
-	// Finally, start playing each subsession, to start the data flow:
-    double initialSeekTime = 0.0f;
-	double duration = session->playEndTime() - initialSeekTime; // use SDP end time
+			// Create output files:
+			createOutputFiles("");
 
-    double endTime;
-	endTime = initialSeekTime;
-	endTime = -1.0f;
+			for (MediaSubsession* subsession : subsessions)
+			{
+				// Finally, start playing each subsession, to start the data flow:
+				double initialSeekTime = 0.0f;
+				double duration = subsession->parentSession().playEndTime() - initialSeekTime; // use SDP end time
 
-    char* initialAbsoluteSeekTime = NULL;
-	char const* absStartTime = initialAbsoluteSeekTime != NULL ? initialAbsoluteSeekTime : session->absStartTime();
-	if (absStartTime != NULL)
-	{
-		// Either we or the server have specified that seeking should be done by 'absolute' time:
-		sendPlayCommand(*session, continueAfterPLAY, absStartTime, session->absEndTime(), 1.0);
-	}
-	else
-	{
-		// Normal case: Seek by relative time (NPT):
-		sendPlayCommand(*session, continueAfterPLAY, initialSeekTime, endTime, 1.0);
-	}
+				double endTime;
+				endTime = initialSeekTime;
+				endTime = -1.0f;
+
+				char* initialAbsoluteSeekTime = NULL;
+				char const* absStartTime = initialAbsoluteSeekTime != NULL ? initialAbsoluteSeekTime : subsession->parentSession().absStartTime();
+				if (absStartTime != NULL)
+				{
+					// Either we or the server have specified that seeking should be done by 'absolute' time:
+					sendPlayCommand(subsession->parentSession(), continueAfterPLAY, absStartTime, subsession->parentSession().absEndTime(), 1.0);
+				}
+				else
+				{
+					// Normal case: Seek by relative time (NPT):
+					sendPlayCommand(subsession->parentSession(), continueAfterPLAY, initialSeekTime, endTime, 1.0);
+				}
+			}
 }
 
 void RTSPCubemapSourceClient::continueAfterSETUP(RTSPClient* self_, int resultCode, char* resultString)
 {
+	static int setups = 0;
+	setups++;
+
     RTSPCubemapSourceClient* self = (RTSPCubemapSourceClient*)self_;
     
 	if (resultCode == 0)
@@ -264,7 +280,7 @@ void RTSPCubemapSourceClient::continueAfterSETUP(RTSPClient* self_, int resultCo
 			<< "\" subsession: " << resultString << "\n";
 	}
 	delete[] resultString;
-
+	
 	// Set up the next subsession, if any:
 	self->setupStreams();
 }
@@ -283,93 +299,118 @@ void RTSPCubemapSourceClient::continueAfterDESCRIBE(RTSPClient* self_, int resul
 	char* sdpDescription = resultString;
 	self->envir() << "Opened URL \"" << self->url() << "\", returning a SDP description:\n" << sdpDescription << "\n";
 
-	// Create a media session object from this SDP description:
-	self->session = MediaSession::createNew(self->envir(), sdpDescription);
+	// Parse SDP description and extract subsession information
+	std::vector<std::string> sdpLines;
+	boost::algorithm::split_regex(sdpLines, sdpDescription, boost::regex("\nm="));
+	std::string header = sdpLines[0];
+	sdpLines.erase(sdpLines.begin());
+	std::transform(sdpLines.begin(), sdpLines.end(), sdpLines.begin(), [](std::string &subsession){ return "m=" + subsession + "\n"; });
 	delete[] sdpDescription;
-	if (self->session == NULL)
-	{
-		self->envir() << "Failed to create a MediaSession object from the SDP description: "
-            << self->envir().getResultMsg() << "\n";
-		self->shutdown();
-	}
-	else if (!self->session->hasSubsessions())
-	{
-		self->envir() << "This session has no media subsessions (i.e., no \"m=\" lines)\n";
-		self->shutdown();
-	}
 
-	// Then, setup the "RTPSource"s for the session:
-	MediaSubsessionIterator iter(*self->session);
-	MediaSubsession *subsession;
-	Boolean madeProgress = False;
-	while ((subsession = iter.next()) != NULL)
+	for (int i = 0; i < sdpLines.size(); i++)
 	{
 
-		if (!subsession->initiate())
+		// Create a media session object from this SDP description:
+		TaskScheduler* scheduler = BasicTaskScheduler::createNew();
+		BasicUsageEnvironment* env = BasicUsageEnvironment::createNew(*scheduler);
+		self->envs.push_back(env);
+		MediaSession* session = MediaSession::createNew(*env, (header + sdpLines[i]).c_str());
+
+		std::cout << "created session" << std::endl;
+		
+		if (session == NULL)
 		{
-			self->envir() << "Unable to create receiver for \"" << subsession->mediumName()
-				<< "/" << subsession->codecName()
-				<< "\" subsession: " << self->envir().getResultMsg() << "\n";
+			self->envir() << "Failed to create a MediaSession object from the SDP description: "
+				<< env->getResultMsg() << "\n";
+			self->shutdown();
 		}
-		else
+		else if (!session->hasSubsessions())
 		{
-			self->envir() << "Created receiver for \"" << subsession->mediumName()
-				<< "/" << subsession->codecName() << "\" subsession (";
-			if (subsession->rtcpIsMuxed())
+			self->envir() << "This session has no media subsessions (i.e., no \"m=\" lines)\n";
+			self->shutdown();
+		}
+
+		// Then, setup the "RTPSource"s for the session:
+		MediaSubsessionIterator iter(*session);
+		MediaSubsession *subsession;
+		Boolean madeProgress = False;
+		while ((subsession = iter.next()) != NULL)
+		{
+			self->subsessions.push_back(subsession);
+
+			if (!subsession->initiate())
 			{
-				self->envir() << "client port " << subsession->clientPortNum();
+				self->envir() << "Unable to create receiver for \"" << subsession->mediumName()
+					<< "/" << subsession->codecName()
+					<< "\" subsession: " << env->getResultMsg() << "\n";
 			}
 			else
 			{
-				self->envir() << "client ports " << subsession->clientPortNum()
-					<< "-" << subsession->clientPortNum() + 1;
-			}
-			self->envir() << ")\n";
-			madeProgress = True;
+				self->envir() << "Created receiver for \"" << subsession->mediumName()
+					<< "/" << subsession->codecName() << "\" subsession (";
+				if (subsession->rtcpIsMuxed())
+				{
+					self->envir() << "client port " << subsession->clientPortNum();
+				}
+				else
+				{
+					self->envir() << "client ports " << subsession->clientPortNum()
+						<< "-" << subsession->clientPortNum() + 1;
+				}
+				self->envir() << ")\n";
+				madeProgress = True;
 
 			
 
-			if (subsession->rtpSource() != NULL)
-			{
-				// Because we're saving the incoming data, rather than playing
-				// it in real time, allow an especially large time threshold
-				// (1 second) for reordering misordered incoming packets:
-				unsigned const thresh = 1; // 1 second
-				subsession->rtpSource()->setPacketReorderingThresholdTime(thresh);
-
-				// Set the RTP source's OS socket buffer size as appropriate - either if we were explicitly asked (using -B),
-				// or if the desired FileSink buffer size happens to be larger than the current OS socket buffer size.
-				// (The latter case is a heuristic, on the assumption that if the user asked for a large FileSink buffer size,
-				// then the input data rate may be large enough to justify increasing the OS socket buffer size also.)
-				int socketNum = subsession->rtpSource()->RTPgs()->socketNum();
-				unsigned curBufferSize = getReceiveBufferSize(self->envir(), socketNum);
-				if (self->sinkBufferSize > curBufferSize)
+				if (subsession->rtpSource() != NULL)
 				{
-					unsigned newBufferSize = self->sinkBufferSize;
-					newBufferSize = setReceiveBufferTo(self->envir(), socketNum, newBufferSize);
+					// Because we're saving the incoming data, rather than playing
+					// it in real time, allow an especially large time threshold
+					// (1 second) for reordering misordered incoming packets:
+					unsigned const thresh = 1; // 1 second
+					subsession->rtpSource()->setPacketReorderingThresholdTime(thresh);
+
+					// Set the RTP source's OS socket buffer size as appropriate - either if we were explicitly asked (using -B),
+					// or if the desired FileSink buffer size happens to be larger than the current OS socket buffer size.
+					// (The latter case is a heuristic, on the assumption that if the user asked for a large FileSink buffer size,
+					// then the input data rate may be large enough to justify increasing the OS socket buffer size also.)
+					int socketNum = subsession->rtpSource()->RTPgs()->socketNum();
+					unsigned curBufferSize = getReceiveBufferSize(*env, socketNum);
+					if (self->sinkBufferSize > curBufferSize)
+					{
+						unsigned newBufferSize = self->sinkBufferSize;
+						newBufferSize = setReceiveBufferTo(*env, socketNum, newBufferSize);
+					}
 				}
+				//		}
+				//	}
+				//	else
+				//	{
+				//		if (subsession->clientPortNum() == 0)
+				//		{
+				//			*env << "No client port was specified for the \""
+				//				<< subsession->mediumName()
+				//				<< "/" << subsession->codecName()
+				//				<< "\" subsession.  (Try adding the \"-p <portNum>\" option.)\n";
+				//		}
+				//		else
+				//		{
+				//			madeProgress = True;
+				//		}
 			}
-			//		}
-			//	}
-			//	else
-			//	{
-			//		if (subsession->clientPortNum() == 0)
-			//		{
-			//			*env << "No client port was specified for the \""
-			//				<< subsession->mediumName()
-			//				<< "/" << subsession->codecName()
-			//				<< "\" subsession.  (Try adding the \"-p <portNum>\" option.)\n";
-			//		}
-			//		else
-			//		{
-			//			madeProgress = True;
-			//		}
 		}
+		//if (!madeProgress) shutdown();
+
 	}
-	//if (!madeProgress) shutdown();
 
 	// Perform additional 'setup' on each subsession, before playing them:
 	self->setupStreams();
+
+	for (int i = 0; i < self->envs.size(); i++)
+	{
+		boost::thread* abc = new boost::thread(boost::bind(&TaskScheduler::doEventLoop, &self->envs[i]->taskScheduler(), nullptr));
+		self->sessionThreads.push_back(boost::shared_ptr<boost::thread>(abc));
+	}
 }
 
 void RTSPCubemapSourceClient::continueAfterOPTIONS(RTSPClient* self_, int resultCode, char* resultString)
