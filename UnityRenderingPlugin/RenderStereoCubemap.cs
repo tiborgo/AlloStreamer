@@ -27,6 +27,10 @@ public class RenderStereoCubemap : MonoBehaviour
     public int faceCount = 6;
     public bool extract = true;
 
+
+    public float fovAdjustValue=0.5f;
+    private float preFOVAdjustValue = 0.5f;
+
     private GameObject[] planes;
     //Plane1L,Plane2L,Plane3L,Plane4L,Plane1R,Plane2R,Plane3R,Plane4R,Plane5,Plane6;
 
@@ -176,7 +180,7 @@ public class RenderStereoCubemap : MonoBehaviour
 
             if (adjustFOV)
             {
-                float newAperture = (float) (180.0/Math.PI * 2.0 * Math.Atan(resolution / (resolution - 3.0)));
+                float newAperture = (float) (180.0/Math.PI * 2.0 * Math.Atan(resolution / (resolution - fovAdjustValue)));
                 aperture = newAperture;
             }
             
@@ -377,6 +381,12 @@ public class RenderStereoCubemap : MonoBehaviour
     {
         if (printFPS)
             print(1.0f / Time.deltaTime);
+        if (preFOVAdjustValue != fovAdjustValue)
+        {
+            CameraProjectionInit();
+            preFOVAdjustValue = fovAdjustValue;
+        }
+            
     }
     //For static update
     void UpdateCubeTexture()
