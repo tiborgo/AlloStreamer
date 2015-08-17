@@ -14,9 +14,9 @@ public:
 	  
 
     // events
-    void droppedNALU(int type, size_t size, int face);
-    void addedNALU(int type, size_t size, int face);
-	void sentNALU(int type, size_t size, int face);
+    void droppedNALU(int type, size_t size);
+    void addedNALU(int type, size_t size);
+	void sentNALU(int type, size_t size);
 	/*void decodedNALU(int type);
     void failedToDecodeNALU(int type);*/
     void displayedCubemapFace(int face);
@@ -25,19 +25,16 @@ public:
     // statistical values
     double naluDropRate(boost::chrono::microseconds window,
                         boost::chrono::microseconds nowSinceEpoch);
-    double facesPS(int face,
-                   boost::chrono::microseconds window,
-				   boost::chrono::microseconds nowSinceEpoch);
+    double cubemapFaceFramesPS(int face,
+                               boost::chrono::microseconds window,
+							   boost::chrono::microseconds nowSinceEpoch);
     double fps(boost::chrono::microseconds window,
 		       boost::chrono::microseconds nowSinceEpoch);
-    double receivedNALUsPS(int face,
-		                   boost::chrono::microseconds window,
+    double receivedNALUsPS(boost::chrono::microseconds window,
 		                   boost::chrono::microseconds nowSinceEpoch);
-	double processedNALUsPS(int face,
-	                        boost::chrono::microseconds window,
+    double processedNALUsPS(boost::chrono::microseconds window,
 		                    boost::chrono::microseconds nowSinceEpoch);
-	double sentNALUsPS(int face,
-		               boost::chrono::microseconds window,
+	double sentNALUsPS(boost::chrono::microseconds window,
 		               boost::chrono::microseconds nowSinceEpoch);
 	double receivedNALUsBitRate(boost::chrono::microseconds window,
 		                        boost::chrono::microseconds nowSinceEpoch);
@@ -65,10 +62,9 @@ private:
 	class NALU
 	{
 	public:
-		NALU(int type, size_t size, int face);
+		NALU(int type, size_t size);
 		int type;
 		size_t size;
-		int face;
 	};
     
 	std::vector<TimeValueDatum<NALU> > droppedNALUs;
@@ -87,8 +83,6 @@ private:
     boost::function<bool (TimeValueDatum<ValueType>)> timeFilter(
         boost::chrono::microseconds window,
         boost::chrono::microseconds nowSinceEpoch);
-
-	boost::function<bool(TimeValueDatum<NALU>)> faceFilter(int face);
     
     boost::chrono::microseconds nowSinceEpoch();
     

@@ -59,10 +59,8 @@ protected:
     void setupStreams           ();
     
 private:
-	std::vector<BasicUsageEnvironment*> envs;
-	std::vector<boost::shared_ptr<boost::thread>> sessionThreads;
     boost::thread networkThread;
-	std::vector<MediaSubsession*> subsessions;
+    MediaSession* session;
     MediaSubsession* subsession;
     unsigned int sinkBufferSize;
 };

@@ -8,8 +8,6 @@
 #include "AlloShared/Stats.hpp"
 #include "AlloReceiver/AlloReceiver.h"
 
-const unsigned int DEFAULT_SINK_BUFFER_SIZE = 200000000;
-
 Stats stats;
 
 void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
@@ -24,12 +22,12 @@ void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 
 void onDroppedNALU(CubemapSource* source, int face, uint8_t type, size_t size)
 {
-    stats.droppedNALU(type, size, face);
+    stats.droppedNALU(type, size);
 }
 
 void onAddedNALU(CubemapSource* source, int face, uint8_t type, size_t size)
 {
-    stats.addedNALU(type, size, face);
+    stats.addedNALU(type, size);
 }
 
 void onDisplayedCubemapFace(Renderer* renderer, int face)
@@ -75,7 +73,7 @@ int main(int argc, char* argv[])
         _interface = "0.0.0.0";
     }
 
-	CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), DEFAULT_SINK_BUFFER_SIZE, 1024, AV_PIX_FMT_RGBA, _interface);
+    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), 1024, AV_PIX_FMT_RGBA, _interface);
     
     std::function<void (CubemapSource*, int, uint8_t, size_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3, _4);
     cubemapSource->setOnDroppedNALU(callback);

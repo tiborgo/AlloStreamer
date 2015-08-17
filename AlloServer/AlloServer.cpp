@@ -44,7 +44,6 @@ static boost::uint16_t rtspPort;
 static int avgBitRate;
 
 // Cubemap related
-static StereoCubemap*                cubemap;
 static ServerMediaSession*           cubemapSMS;
 static EventTriggerId                addFaceSubstreamsTriggerId;
 static EventTriggerId                removeFaceSubstreamsTriggerId;
@@ -66,54 +65,47 @@ static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms, std:
     delete[] url;
 }
 
-void onSentNALU(RawPixelSource*, uint8_t type, size_t size, int eye, int face)
+void onSentNALU(RawPixelSource*, uint8_t type, size_t size)
 {
-	stats.sentNALU(type, size, eye * 6 + face);
+	stats.sentNALU(type, size);
 }
 
 void addFaceSubstreams0(void*)
 {
-	int portCounter = 0;
-	for (int j = 0; j < cubemap->getEyesCount(); j++)
-	{
-		Cubemap* eye = cubemap->getEye(j);
+    for (int i = 0; i < cubemap->getFacesCount(); i++)
+    {
+        faceStreams.push_back(FrameStreamState());
+        FrameStreamState* state = &faceStreams.back();
+        
+        state->content = cubemap->getFace(i)->getContent();
 
-		for (int i = 0; i < eye->getFacesCount(); i++)
-		{
-			faceStreams.push_back(FrameStreamState());
-			FrameStreamState* state = &faceStreams.back();
+        Port rtpPort(FACE0_RTP_PORT_NUM + i);
+        Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, TTL);
+        //rtpGroupsock->multicastSendOnly(); // we're a SSM source
 
-			state->content = eye->getFace(i)->getContent();
+        // Create a 'H264 Video RTP' sink from the RTP 'groupsock':
+        state->sink = H264VideoRTPSink::createNew(*env, rtpGroupsock, 96);
 
-			Port rtpPort(FACE0_RTP_PORT_NUM + portCounter);
-			portCounter++;
-			Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, TTL);
-			//rtpGroupsock->multicastSendOnly(); // we're a SSM source
+        ServerMediaSubsession* subsession = PassiveServerMediaSubsession::createNew(*state->sink);
 
-			// Create a 'H264 Video RTP' sink from the RTP 'groupsock':
-			state->sink = H264VideoRTPSink::createNew(*env, rtpGroupsock, 96);
+        cubemapSMS->addSubsession(subsession);
 
-			ServerMediaSubsession* subsession = PassiveServerMediaSubsession::createNew(*state->sink);
+		RawPixelSource* source = RawPixelSource::createNew(*env,
+			                                               state->content,
+			                                               avgBitRate);
 
-			cubemapSMS->addSubsession(subsession);
+		std::function<void(RawPixelSource*,
+			uint8_t type,
+			size_t size)> callback(&onSentNALU);
+		source->setOnSentNALU(callback);
 
-			RawPixelSource* source = RawPixelSource::createNew(*env,
-				state->content,
-				avgBitRate);
+		state->source = H264VideoStreamDiscreteFramer::createNew(*env,
+			                                                     source);
 
-			std::function<void(RawPixelSource*,
-				uint8_t type,
-				size_t size)> callback(boost::bind(&onSentNALU, _1, _2, _3, j, i));
-			source->setOnSentNALU(callback);
+        state->sink->startPlaying(*state->source, NULL, NULL);
 
-			state->source = H264VideoStreamDiscreteFramer::createNew(*env,
-				source);
-
-			state->sink->startPlaying(*state->source, NULL, NULL);
-
-			std::cout << "Streaming face " << i << " (" << ((j == 0) ? "left" : "right") << ") ..." << std::endl;
-		}
-	}
+        std::cout << "Streaming face " << i << " ..." << std::endl;
+    }
     
     announceStream(rtspServer, cubemapSMS, cubemapStreamName);
 }
@@ -243,7 +235,7 @@ void startStreaming()
     shm = new boost::interprocess::managed_shared_memory(boost::interprocess::open_only,
                                                          SHM_NAME);
 
-    auto cubemapPair = shm->find<StereoCubemap::Ptr>("Cubemap");
+    auto cubemapPair = shm->find<Cubemap::Ptr>("Cubemap");
     if (cubemapPair.first)
     {
         cubemap = cubemapPair.first->get();
@@ -345,7 +337,6 @@ int main(int argc, char* argv[])
 	
 
     Process unityProcess(CUBEMAPEXTRACTIONPLUGIN_ID, false);
-	Process thisProcess(ALLOSERVER_ID, true);
 
     while (true)
     {

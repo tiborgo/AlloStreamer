@@ -7,9 +7,6 @@
 
 #include "AlloShared/Stats.hpp"
 #include "AlloReceiver/AlloReceiver.h"
-#include "AlloShared/to_human_readable_byte_count.hpp"
-
-const unsigned int DEFAULT_SINK_BUFFER_SIZE = 200000000;
 
 Stats stats;
 
@@ -25,12 +22,12 @@ void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 
 void onDroppedNALU(CubemapSource* source, int face, uint8_t type, size_t size)
 {
-    stats.droppedNALU(type, size, face);
+    stats.droppedNALU(type, size);
 }
 
 void onAddedNALU(CubemapSource* source, int face, uint8_t type, size_t size)
 {
-    stats.addedNALU(type, size, face);
+    stats.addedNALU(type, size);
 }
 
 void onDisplayedCubemapFace(Renderer* renderer, int face)
@@ -53,11 +50,10 @@ int main(int argc, char* argv[])
     }
     
     boost::program_options::options_description desc("");
-	desc.add_options()
-		("no-display", "")
-		("url", boost::program_options::value<std::string>(), "url")
-		("interface", boost::program_options::value<std::string>(), "interface")
-		("buffer-size", boost::program_options::value<unsigned long>(), "buffer-size");
+    desc.add_options()
+        ("no-display", "")
+        ("url", boost::program_options::value<std::string>(), "url")
+        ("interface", boost::program_options::value<std::string>(), "interface");
     
     boost::program_options::positional_options_description p;
     p.add("url", -1);
@@ -77,19 +73,7 @@ int main(int argc, char* argv[])
         interface = "0.0.0.0";
     }
 
-	unsigned long bufferSize;
-	if (vm.count("buffer-size"))
-	{
-		bufferSize = vm["buffer-size"].as<unsigned long>();
-	}
-	else
-	{
-		bufferSize = DEFAULT_SINK_BUFFER_SIZE;
-	}
-
-	std::cout << "Buffer size " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
-
-	CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), bufferSize,  2048, AV_PIX_FMT_ARGB, interface);
+    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), 1024, AV_PIX_FMT_ARGB, interface);
     
     std::function<void (CubemapSource*, int, uint8_t, size_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3, _4);
     cubemapSource->setOnDroppedNALU(callback);

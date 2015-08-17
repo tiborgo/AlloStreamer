@@ -1,5 +1,7 @@
 #include "Cubemap.hpp"
 
+boost::interprocess::offset_ptr<Cubemap> cubemap;
+
 CubemapFace::CubemapFace(Frame* content,
                          int index,
                          Allocator& allocator)

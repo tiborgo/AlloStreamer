@@ -15,7 +15,6 @@ static Process* thisProcess = nullptr;
 static Process alloServerProcess(ALLOSERVER_ID, false);
 static boost::chrono::system_clock::time_point presentationTime;
 
-
 boost::interprocess::managed_shared_memory shm;
 
 void allocateSHM(int facesCount, int resolution)

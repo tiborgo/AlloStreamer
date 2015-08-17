@@ -12,7 +12,6 @@ public class RenderCubemap : MonoBehaviour {
 	public int resolution = 1024;
 	public int faceCount  = 6;
 	public bool extract   = true;
-    public int fps        = -1;
 	
 	[DllImport("CubemapExtractionPlugin")]
 	private static extern void ConfigureCubemapFromUnity(System.IntPtr[] texturePtrs, int cubemapFacesCount, int resolution);
@@ -48,16 +47,9 @@ public class RenderCubemap : MonoBehaviour {
 		new Vector3(  0,   0, 0),
 		new Vector3(  0, 180, 0)
 	};
-
+	
 	// Use this for initialization
 	IEnumerator Start() {
-
-        if (fps != -1)
-        {
-            QualitySettings.vSyncCount = 0;  // VSync must be disabled
-            Application.targetFrameRate = fps;
-        }
-        
 		
 		// Setup the cameras for cubemap
 		Camera thisCam = GetComponent<Camera>();

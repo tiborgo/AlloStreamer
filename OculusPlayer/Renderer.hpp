@@ -42,7 +42,7 @@ protected:
     std::function<void (Renderer*, int)> onDisplayedCubemapFace;
 
 private:
-	StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
+	void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
 	void renderLoop();
 
 	boost::thread                    renderThread;

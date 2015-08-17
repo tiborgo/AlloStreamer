@@ -11,7 +11,7 @@
 namespace bc = boost::chrono;
 
 H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
-                                                unsigned long bufferSize,
+                                                unsigned int bufferSize,
                                                 int resolution,
                                                 AVPixelFormat format)
 {
@@ -40,7 +40,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
     resolution(resolution), format(format),
     counter(0), sumRelativePresentationTimeMicroSec(0), maxRelativePresentationTimeMicroSec(0)
 {
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 1; i++)
 	{
         AVPacket* pkt = new AVPacket;
         pktPool.push(pkt);
@@ -49,7 +49,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 		if (!frame)
 		{
 			fprintf(stderr, "Could not allocate video frame\n");
-			abort();
+			exit(1);
 		}
 		framePool.push(frame);
         
@@ -57,7 +57,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
         if (!resizedFrame)
         {
             fprintf(stderr, "Could not allocate video frame\n");
-			abort();
+            exit(-1);
         }
         resizedFrame->format = format;
         resizedFrame->width = resolution;
@@ -77,7 +77,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 	if (!codec)
 	{
 		fprintf(stderr, "Codec not found\n");
-		abort();
+		return;
 	}
 
 	codecContext = avcodec_alloc_context3(codec);
@@ -85,14 +85,14 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 	if (!codecContext)
 	{
 		fprintf(stderr, "could not allocate video codec context\n");
-		abort();
+		return;
 	}
 
 	/* open it */
 	if (avcodec_open2(codecContext, codec, NULL) < 0)
 	{
 		fprintf(stderr, "could not open codec\n");
-		abort();
+		return;
 	}
 
 	decodeFrameThread  = boost::thread(boost::bind(&H264RawPixelsSink::decodeFrameLoop,  this));
@@ -230,8 +230,6 @@ void H264RawPixelsSink::decodeFrameLoop()
 		int got_frame;
 		int len = avcodec_decode_video2(codecContext, frame, &got_frame, pkt);
 
-		pktPool.push(pkt);
-
         if (got_frame == 1)
 		{
             // We have decoded a frame :) ->
@@ -285,6 +283,7 @@ void H264RawPixelsSink::decodeFrameLoop()
 
 		counter++;
 		
+        pktPool.push(pkt);
 	}
 }
 
@@ -327,29 +326,22 @@ void H264RawPixelsSink::convertFrameLoop()
         
         // make frame available
         resizedFrameBuffer.push(resizedFrame);
-		//resizedFramePool.push(resizedFrame);
     }
 }
 
-AVFrame* H264RawPixelsSink::getNextFrame(AVFrame* oldFrame)
+AVFrame* H264RawPixelsSink::getNextFrame()
 {
     AVFrame* frame;
     
     if (resizedFrameBuffer.wait_and_pop(frame))
     {
-        //AVFrame* clone = av_frame_clone(frame);
+        AVFrame* clone = av_frame_clone(frame);
         // av_frame_clone only copies properties and still references the sources data.
         // Make full copy instead
-        //av_frame_copy(clone, frame);
-		
-		if (oldFrame)
-		{
-			resizedFramePool.push(oldFrame);
-		}
-		
-		//return clone;
-		return frame;
-	}
+        av_frame_copy(clone, frame);
+        resizedFramePool.push(frame);
+        return clone;
+    }
     else
     {
         return NULL;

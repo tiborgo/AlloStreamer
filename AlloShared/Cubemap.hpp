@@ -86,3 +86,5 @@ protected:
 private:
     std::array<Cubemap::Ptr, MAX_EYES_COUNT> eyes;
 };
+
+extern boost::interprocess::offset_ptr<Cubemap> cubemap;

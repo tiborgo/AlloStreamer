@@ -23,11 +23,11 @@ class ALLORECEIVER_API H264RawPixelsSink : public MediaSink
 {
 public:
 	static H264RawPixelsSink* createNew(UsageEnvironment& env,
-                                        unsigned long bufferSize,
+                                        unsigned int bufferSize,
                                         int resolution,
                                         AVPixelFormat format);
 
-	AVFrame* getNextFrame(AVFrame* oldFrame);
+    AVFrame* getNextFrame();
     
     void setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t, size_t)>& callback);
     void setOnAddedNALU(std::function<void (H264RawPixelsSink*, u_int8_t, size_t)>& callback);
@@ -54,7 +54,7 @@ protected:
     std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> onAddedNALU;
 
 private:
-	unsigned long bufferSize;
+	unsigned int bufferSize;
 	unsigned char* buffer;
 	AVCodecContext* codecContext;
     concurrent_queue<AVPacket*> pktBuffer;

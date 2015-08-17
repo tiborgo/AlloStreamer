@@ -17,10 +17,10 @@ Renderer::Renderer(CubemapSource* cubemapSource)
 	OculusInit();
 
 
-	std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)> callback = boost::bind(&Renderer::onNextCubemap,
-                                                                                          this,
-                                                                                          _1,
-                                                                                          _2);
+    std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&Renderer::onNextCubemap,
+                                                                                this,
+                                                                                _1,
+                                                                                _2);
     cubemapSource->setOnNextCubemap(callback);
 
 	for (int i = 0; i < 1; i++)
@@ -96,7 +96,7 @@ Renderer::~Renderer()
 	OculusRelease();
 }
 
-StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
+void Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
 	
 	/*StereoCubemap* dummy;
@@ -106,7 +106,7 @@ StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cub
 	}*/
 	cubemapBuffer.push(cubemap);
 
-	return nullptr;
+	
 }
 
 void Renderer::setOnDisplayedFrame(std::function<void (Renderer*)>& callback)
