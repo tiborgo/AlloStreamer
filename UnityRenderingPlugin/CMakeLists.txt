@@ -1,7 +1,6 @@
 set(SOURCES
 	RenderCubemap.cs
 	RenderBinoculars.cs
-	RenderStereoCubemap.cs
 )
 
 add_custom_target(UnityRenderingPlugin	
