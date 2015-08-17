@@ -8,8 +8,6 @@
 #include "OVR_CAPI_D3D.h"
 using namespace OVR;
 
-
-
 Renderer::Renderer(CubemapSource* cubemapSource)
     :
 	cubemapSource(cubemapSource), texture(nullptr)
@@ -44,7 +42,7 @@ Renderer::Renderer(CubemapSource* cubemapSource)
 		fprintf(stderr, "SDL: could not open window - exiting\n");
 		abort;
 	}*/
-	/*
+
 	//Now create a window with title "Hello World" at 100, 100 on the screen with w:640 h:480 and show it
 	window = SDL_CreateWindow("Hello World!", 100, 100, 500, 500, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 	//Make sure creating our window went ok
@@ -99,11 +97,11 @@ Renderer::~Renderer()
 void Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
 	
-	/*StereoCubemap* dummy;
+	StereoCubemap* dummy;
 	if (!cubemapPool.wait_and_pop(dummy))
 	{
 		return;
-	}*/
+	}
 	cubemapBuffer.push(cubemap);
 
 	
@@ -133,7 +131,7 @@ void Renderer::OculusInit(){
 	// Setup Window and Graphics
 	// Note: the mirror window can be any size, for this sample we use 1/2 the HMD resolution
 	ovrSizei winSize = { HMD->Resolution.w / 2, HMD->Resolution.h / 2 };
-	bool initialized = DIRECTX.InitWindowAndDevice(hinst, Recti(Vector2i(0), winSize), L"OculusPlayer (DX11)");
+	bool initialized = DIRECTX.InitWindowAndDevice(hinst, Recti(Vector2i(0), winSize), L"Oculus Room Tiny (DX11)");
 	VALIDATE(initialized, "Unable to initialize window and D3D11 device.");
 
 	ovrHmd_SetEnabledCaps(HMD, ovrHmdCap_LowPersistence | ovrHmdCap_DynamicPrediction);
@@ -168,7 +166,7 @@ void Renderer::OculusInit(){
 	ovrHmd_CreateMirrorTextureD3D11(HMD, DIRECTX.Device, &td, &mirrorTexture);
 
 	// Create the room model
-	scene = new Scene();
+	scene = new Scene(1024,1024,100);
 
 	// Create camera
 	mainCam=Camera(Vector3f(0.0f, 0.0f, 0.0f), Matrix4f::RotationY(0.0f));
@@ -228,7 +226,7 @@ void Renderer::OculusRender(){
 			Matrix4f proj = ovrMatrix4f_Projection(eyeRenderDesc[eye].Fov, 0.2f, 1000.0f, ovrProjection_RightHanded);
 
 			// Render the scene
-			scene->Render(eye,proj*view, 1, 1, 1, 1, true);
+			scene->Render(proj*view, 1, 1, 1, 1, true);
 		}
 	
 
@@ -274,6 +272,9 @@ void Renderer::OculusRelease(){
 void Renderer::start()
 {
 
+	
+
+	//--------------------------------------------------------------------
 	renderThread = boost::thread(boost::bind(&Renderer::renderLoop, this));
 
 	SDL_Event evt;
@@ -306,7 +307,7 @@ void Renderer::renderLoop()
 		UINT w = cubemap->getEye(0)->getFace(0)->getContent()->getWidth(), h = cubemap->getEye(0)->getFace(0)->getContent()->getWidth();
 		for (int e = 0; e < 2; e++){
 			for (int i = 0; i < 6; i++){
-				pixels[i + 6 * e] = cubemap->getEye(0)->getFace(i)->getContent()->getPixels();	//Draws left eye scene for both eyes
+				pixels[i + 6 * e] = cubemap->getEye(0)->getFace(i)->getContent()->getPixels();	//Draws left eye for both eyes
 			}
 		}
 

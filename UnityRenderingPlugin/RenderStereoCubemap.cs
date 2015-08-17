@@ -297,17 +297,15 @@ public class RenderStereoCubemap : MonoBehaviour
         int resolution = resWidth;
 
         System.IntPtr[] texturePtrs = new System.IntPtr[faceCount];
-        int j = 0;
-        for (int i = 0; i < Math.Min(faceCount,12); i++)
+
+        for (int i = 0; i < Math.Min(faceCount,4); i++)
         {
-            texturePtrs[i] = renderTextures[j].GetNativeTexturePtr();
-            j++;
-            if (j == 4)
-                j = 8;
-            else if (j == 10)
-                j = 4;
+            texturePtrs[i] = renderTextures[i].GetNativeTexturePtr();
         }
-        
+        if (faceCount >= 5) {
+            texturePtrs[4] = renderTextures[8].GetNativeTexturePtr();
+            texturePtrs[5] = renderTextures[9].GetNativeTexturePtr();
+        }
        
 
 
