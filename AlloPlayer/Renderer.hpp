@@ -36,7 +36,7 @@ public:
     virtual void onAnimate(al_sec dt);
     virtual void onMessage(al::osc::Message& m);
     virtual bool onKeyDown(const al::Keyboard& k);
-    void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
+    StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
     
     void setOnDisplayedFrame(std::function<void (Renderer*)>& callback);
     void setOnDisplayedCubemapFace(std::function<void (Renderer*, int)>& callback);

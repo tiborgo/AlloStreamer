@@ -35,10 +35,10 @@ Renderer::Renderer(CubemapSource* cubemapSource)
     
     
     
-    std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&Renderer::onNextCubemap,
-                                                                                this,
-                                                                                _1,
-                                                                                _2);
+    std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)> callback = boost::bind(&Renderer::onNextCubemap,
+                                                                                          this,
+                                                                                          _1,
+                                                                                          _2);
     cubemapSource->setOnNextCubemap(callback);
 }
 
@@ -66,15 +66,13 @@ bool Renderer::onFrame()
     return result;
 }
 
-void Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
+StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
     boost::mutex::scoped_lock lock(nextCubemapMutex);
-    if (this->cubemap)
-    {
-        StereoCubemap::destroy(this->cubemap);
-    }
+    StereoCubemap* oldCubemap = this->cubemap;
     this->cubemap = cubemap;
     newCubemap = true;
+    return oldCubemap;
 }
 
 void Renderer::onDraw(al::Graphics& gl)
@@ -115,7 +113,7 @@ void Renderer::onDraw(al::Graphics& gl)
                 // draw the background
                 glDrawPixels(face->getContent()->getWidth(),
                              face->getContent()->getHeight(),
-                             GL_RGB,
+                             GL_RGBA,
                              GL_UNSIGNED_BYTE,
                              (GLvoid*)face->getContent()->getPixels());
                 
