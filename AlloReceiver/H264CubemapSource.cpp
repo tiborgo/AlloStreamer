@@ -39,24 +39,29 @@ void H264CubemapSource::getNextCubemapLoop()
 		StereoCubemap* cubemap;
 		if (!oldCubemap)
 		{
-			std::vector<CubemapFace*> faces;
-			for (int i = 0; i < sinks.size(); i++)
+			std::vector<Cubemap*> eyes;
+			for (int j = 0, faceIndex = 0; j < StereoCubemap::MAX_EYES_COUNT && faceIndex < sinks.size(); j++)
 			{
-				Frame* content = Frame::create(resolution,
-					resolution,
-					format,
-					boost::chrono::system_clock::time_point(),
-					heapAllocator);
+				std::vector<CubemapFace*> faces;
+				for (int i = 0; i < Cubemap::MAX_FACES_COUNT && faceIndex < sinks.size(); i++, faceIndex++)
+				{
+					Frame* content = Frame::create(resolution,
+						                           resolution,
+						                           format,
+						                           boost::chrono::system_clock::time_point(),
+						                           heapAllocator);
 
-				CubemapFace* face = CubemapFace::create(content,
-					i,
-					heapAllocator);
+					CubemapFace* face = CubemapFace::create(content,
+						                                    i,
+						                                    heapAllocator);
 
-				faces.push_back(face);
+					faces.push_back(face);
+				}
+
+				
+				eyes.push_back(Cubemap::create(faces, heapAllocator));
 			}
 
-			std::vector<Cubemap*> eyes;
-			eyes.push_back(Cubemap::create(faces, heapAllocator));
 			cubemap = StereoCubemap::create(eyes, heapAllocator);
 		}
 		else
@@ -64,42 +69,45 @@ void H264CubemapSource::getNextCubemapLoop()
 			cubemap = oldCubemap;
 		}
         
-        
-        for (int i = 0; i < sinks.size(); i++)
-        {
-			CubemapFace* face = cubemap->getEye(0)->getFace(i);
-            
-            
-            AVFrame* nextFrame = frames[i];
-            if (nextFrame)
-            {
-                // read pixels from frame
-                /*if (avpicture_layout((AVPicture*)nextFrame, (AVPixelFormat)nextFrame->format,
-                                     nextFrame->width, nextFrame->height,
-                                      (unsigned char*)face->getContent()->getPixels(), nextFrame->width * nextFrame->height * 4) < 0)
-                {
-                    fprintf(stderr, "Could not read pixels from frame\n");
+		for (int j = 0, frameIndex = 0; j < cubemap->getEyesCount(); j++)
+		{
+			Cubemap* eye = cubemap->getEye(j);
+
+			for (int i = 0; i < eye->getFacesCount(); i++, frameIndex++)
+			{
+				CubemapFace* face = eye->getFace(i);
+
+
+				AVFrame* nextFrame = frames[frameIndex];
+				if (nextFrame)
+				{
+					// read pixels from frame
+					/*if (avpicture_layout((AVPicture*)nextFrame, (AVPixelFormat)nextFrame->format,
+										 nextFrame->width, nextFrame->height,
+										 (unsigned char*)face->getContent()->getPixels(), nextFrame->width * nextFrame->height * 4) < 0)
+										 {
+										 fprintf(stderr, "Could not read pixels from frame\n");
+										 abort();
+										 }*/
+					memcpy(face->getContent()->getPixels(), nextFrame->data[0], nextFrame->width * nextFrame->height * 4);
+
+					// delete nextFrame
+					//av_freep(&nextFrame->data[0]);
+				}
+				else
+				{
+					// error
+					std::cerr << "Cannot get next cubemap" << std::endl;
 					abort();
-                }*/
-				memcpy(face->getContent()->getPixels(), nextFrame->data[0], nextFrame->width * nextFrame->height * 4);
-                
-                // delete nextFrame
-                //av_freep(&nextFrame->data[0]);
-            }
-            else
-            {
-                // error
-                std::cerr << "Cannot get next cubemap" << std::endl;
-				abort();
-            }
-    //
-    //        /*AVRational microSecBase = { 1, 1000000 };
-    //        boost::chrono::microseconds presentationTimeSinceEpoch =
-    //        boost::chrono::microseconds(av_rescale_q(nextFrame->pts, codecContext->time_base, microSecBase));*/
-            
-            
-            
-            
+				}
+				//
+				//        /*AVRational microSecBase = { 1, 1000000 };
+				//        boost::chrono::microseconds presentationTimeSinceEpoch =
+				//        boost::chrono::microseconds(av_rescale_q(nextFrame->pts, codecContext->time_base, microSecBase));*/
+
+
+
+			}
             
         }
 
