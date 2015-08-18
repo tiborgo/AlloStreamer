@@ -99,14 +99,16 @@ Renderer::~Renderer()
 StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
 	
-	/*StereoCubemap* dummy;
-	if (!cubemapPool.wait_and_pop(dummy))
+	StereoCubemap* oldCubemap;
+	//StereoCubemap::destroy(cubemap);
+	if (!cubemapPool.wait_and_pop(oldCubemap))
 	{
-		return;
-	}*/
-	cubemapBuffer.push(cubemap);
+		return nullptr;
+	}
 
-	return nullptr;
+	cubemapBuffer.push(cubemap);
+	return oldCubemap;
+	//if (onDisplayedFrame) onDisplayedFrame(this);
 }
 
 void Renderer::setOnDisplayedFrame(std::function<void (Renderer*)>& callback)
@@ -168,7 +170,7 @@ void Renderer::OculusInit(){
 	ovrHmd_CreateMirrorTextureD3D11(HMD, DIRECTX.Device, &td, &mirrorTexture);
 
 	// Create the room model
-	scene = new Scene();
+	scene = new Scene(1024,1024,10);
 
 	// Create camera
 	mainCam=Camera(Vector3f(0.0f, 0.0f, 0.0f), Matrix4f::RotationY(0.0f));
@@ -303,9 +305,11 @@ void Renderer::renderLoop()
 		//Frame* content = cubemap->getEye(0)->getFace(0)->getContent();
 
 		void *pixels[12];
+		for (int i = 0; i < 12; i++)
+			pixels[i] = NULL;
 		UINT w = cubemap->getEye(0)->getFace(0)->getContent()->getWidth(), h = cubemap->getEye(0)->getFace(0)->getContent()->getWidth();
-		for (int e = 0; e < 2; e++){
-			for (int i = 0; i < 6; i++){
+		for (int e = 0; e < cubemap->getEyesCount(); e++){
+			for (int i = 0; i < cubemap->getEye(e)->getFacesCount(); i++){
 				pixels[i + 6 * e] = cubemap->getEye(0)->getFace(i)->getContent()->getPixels();	//Draws left eye scene for both eyes
 			}
 		}
@@ -372,8 +376,8 @@ void Renderer::renderLoop()
 		*/
 		
 
-		StereoCubemap::destroy(cubemap);
-		cubemapPool.push(nullptr);
+		
+		cubemapPool.push(cubemap);
 		counter++;
 	}
 }
