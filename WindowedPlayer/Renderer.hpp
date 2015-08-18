@@ -23,7 +23,7 @@ protected:
     std::function<void (Renderer*, int)> onDisplayedCubemapFace;
 
 private:
-	void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
+	StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
 	void renderLoop();
 	void createTextures(size_t number, size_t resolution);
 

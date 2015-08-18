@@ -2,7 +2,7 @@
 
 #include "H264CubemapSource.h"
 
-void H264CubemapSource::setOnNextCubemap(std::function<void (CubemapSource*, StereoCubemap*)>& callback)
+void H264CubemapSource::setOnNextCubemap(std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)>& callback)
 {
     onNextCubemap = callback;
 }
@@ -35,18 +35,39 @@ void H264CubemapSource::getNextCubemapLoop()
 
 			frames[i] = sinks[i]->getNextFrame(frames[i]);
         }
+
+		StereoCubemap* cubemap;
+		if (!oldCubemap)
+		{
+			std::vector<CubemapFace*> faces;
+			for (int i = 0; i < sinks.size(); i++)
+			{
+				Frame* content = Frame::create(resolution,
+					resolution,
+					format,
+					boost::chrono::system_clock::time_point(),
+					heapAllocator);
+
+				CubemapFace* face = CubemapFace::create(content,
+					i,
+					heapAllocator);
+
+				faces.push_back(face);
+			}
+
+			std::vector<Cubemap*> eyes;
+			eyes.push_back(Cubemap::create(faces, heapAllocator));
+			cubemap = StereoCubemap::create(eyes, heapAllocator);
+		}
+		else
+		{
+			cubemap = oldCubemap;
+		}
         
-        std::vector<CubemapFace*> faces;
+        
         for (int i = 0; i < sinks.size(); i++)
         {
-            Frame* content = Frame::create(resolution,
-                                           resolution,
-                                           format,
-                                           boost::chrono::system_clock::time_point(),
-                                           heapAllocator);
-            CubemapFace* face = CubemapFace::create(content,
-                                                    i,
-                                                    heapAllocator);
+			CubemapFace* face = cubemap->getEye(0)->getFace(i);
             
             
             AVFrame* nextFrame = frames[i];
@@ -79,23 +100,21 @@ void H264CubemapSource::getNextCubemapLoop()
             
             
             
-            faces.push_back(face);
+            
         }
 
-        std::vector<Cubemap*> eyes;
-        eyes.push_back(Cubemap::create(faces, heapAllocator));
-        StereoCubemap* cubemap = StereoCubemap::create(eyes, heapAllocator);
+        
         
         if (onNextCubemap)
         {
-            onNextCubemap(this, cubemap);
+            oldCubemap = onNextCubemap(this, cubemap);
 		}
     }
 }
 
 H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks, int resolution, AVPixelFormat format)
     :
-    sinks(sinks), resolution(resolution), format(format)
+	sinks(sinks), resolution(resolution), format(format), oldCubemap(nullptr)
 {
     av_log_set_level(AV_LOG_WARNING);
     for (H264RawPixelsSink* sink : sinks)

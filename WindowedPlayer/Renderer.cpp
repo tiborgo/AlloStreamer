@@ -4,10 +4,10 @@ Renderer::Renderer(CubemapSource* cubemapSource)
     :
 	cubemapSource(cubemapSource), renderer(nullptr)
 {
-    std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&Renderer::onNextCubemap,
-                                                                                this,
-                                                                                _1,
-                                                                                _2);
+	std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)> callback = boost::bind(&Renderer::onNextCubemap,
+                                                                                          this,
+                                                                                          _1,
+                                                                                          _2);
 
 	for (int i = 0; i < 1; i++)
 	{
@@ -48,16 +48,17 @@ Renderer::~Renderer()
 	SDL_Quit();
 }
 
-void Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
+StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
-	StereoCubemap* dummy;
+	StereoCubemap* oldCubemap;
 	//StereoCubemap::destroy(cubemap);
-	if (!cubemapPool.wait_and_pop(dummy))
+	if (!cubemapPool.wait_and_pop(oldCubemap))
 	{
-		return;
+		return nullptr;
 	}
 
 	cubemapBuffer.push(cubemap);
+	return oldCubemap;
 	//if (onDisplayedFrame) onDisplayedFrame(this);
 }
 
@@ -196,14 +197,14 @@ void Renderer::renderLoop()
 					break;
 				}
 
-				if (SDL_LockTexture(texture, NULL, &pixels, &pitch) < 0)
+				/*if (SDL_LockTexture(texture, NULL, &pixels, &pitch) < 0)
 				{
 					SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
 					SDL_Quit();
 					abort();
 				}
 				memcpy(pixels, content->getPixels(), content->getHeight() * content->getWidth() * 4);
-				SDL_UnlockTexture(texture);
+				SDL_UnlockTexture(texture);*/
 
 				//Draw the texture
 				if (SDL_RenderCopy(renderer, texture, NULL, &dstrect) < 0)
@@ -221,8 +222,7 @@ void Renderer::renderLoop()
 
 		if (onDisplayedFrame) onDisplayedFrame(this);
 
-		StereoCubemap::destroy(cubemap);
-		cubemapPool.push(nullptr);
+		cubemapPool.push(cubemap);
 		counter++;
 	}
 }
