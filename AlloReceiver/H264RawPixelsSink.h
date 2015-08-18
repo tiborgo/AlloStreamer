@@ -27,7 +27,7 @@ public:
                                         int resolution,
                                         AVPixelFormat format);
 
-    AVFrame* getNextFrame();
+	AVFrame* getNextFrame(AVFrame* oldFrame);
     
     void setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t, size_t)>& callback);
     void setOnAddedNALU(std::function<void (H264RawPixelsSink*, u_int8_t, size_t)>& callback);

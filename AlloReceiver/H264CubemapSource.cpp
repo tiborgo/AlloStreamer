@@ -1,3 +1,5 @@
+#include <vector>
+
 #include "H264CubemapSource.h"
 
 void H264CubemapSource::setOnNextCubemap(std::function<void (CubemapSource*, StereoCubemap*)>& callback)
@@ -17,14 +19,21 @@ void H264CubemapSource::setOnAddedNALU(std::function<void (CubemapSource*, int f
 
 void H264CubemapSource::getNextCubemapLoop()
 {
+	std::vector<AVFrame*> frames;
+
     while (true)
     {
         // Get all the decoded frames
-        std::vector<AVFrame*> nextFrames;
-        nextFrames.reserve(sinks.size());
+        //std::vector<AVFrame*> nextFrames;
+        //nextFrames.reserve(sinks.size());
         for (int i = 0; i < sinks.size(); i++)
         {
-            nextFrames.push_back(sinks[i]->getNextFrame());
+			while (frames.size() < i + 1)
+			{
+				frames.push_back(nullptr);
+			}
+
+			frames[i] = sinks[i]->getNextFrame(frames[i]);
         }
         
         std::vector<CubemapFace*> faces;
@@ -40,26 +49,27 @@ void H264CubemapSource::getNextCubemapLoop()
                                                     heapAllocator);
             
             
-            AVFrame* nextFrame = nextFrames[i];
+            AVFrame* nextFrame = frames[i];
             if (nextFrame)
             {
                 // read pixels from frame
-                if (avpicture_layout((AVPicture*)nextFrame, (AVPixelFormat)nextFrame->format,
+                /*if (avpicture_layout((AVPicture*)nextFrame, (AVPixelFormat)nextFrame->format,
                                      nextFrame->width, nextFrame->height,
-                                     (unsigned char*)face->getContent()->getPixels(), nextFrame->width * nextFrame->height * 4) < 0)
+                                      (unsigned char*)face->getContent()->getPixels(), nextFrame->width * nextFrame->height * 4) < 0)
                 {
                     fprintf(stderr, "Could not read pixels from frame\n");
-                    exit(0);
-                }
+					abort();
+                }*/
+				memcpy(face->getContent()->getPixels(), nextFrame->data[0], nextFrame->width * nextFrame->height * 4);
                 
                 // delete nextFrame
-                av_freep(&nextFrame->data[0]);
+                //av_freep(&nextFrame->data[0]);
             }
             else
             {
                 // error
                 std::cerr << "Cannot get next cubemap" << std::endl;
-                exit(-1);
+				abort();
             }
     //
     //        /*AVRational microSecBase = { 1, 1000000 };
@@ -79,7 +89,7 @@ void H264CubemapSource::getNextCubemapLoop()
         if (onNextCubemap)
         {
             onNextCubemap(this, cubemap);
-        }
+		}
     }
 }
 
