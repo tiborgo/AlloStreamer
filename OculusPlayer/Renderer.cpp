@@ -1,3 +1,5 @@
+
+
 #include "Renderer.hpp"
 
 // Include DirectX
@@ -21,19 +23,20 @@ Renderer::Renderer(CubemapSource* cubemapSource)
                                                                                           this,
                                                                                           _1,
                                                                                           _2);
-    cubemapSource->setOnNextCubemap(callback);
+    
 
 	for (int i = 0; i < 1; i++)
 	{
 		cubemapPool.push(nullptr);
 	}
 
-	if (SDL_Init(SDL_INIT_VIDEO/* | SDL_INIT_TIMER*/))
+	cubemapSource->setOnNextCubemap(callback);
+	/*if (SDL_Init(SDL_INIT_VIDEO))
 	{
 		fprintf(stderr, "Could not initialize SDL - %s\n", SDL_GetError());
 		abort();
 	}
-
+	*/
 	/*screen = SDL_CreateWindow("Windowed Player",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
@@ -87,11 +90,13 @@ Renderer::~Renderer()
 	renderThread.join();
 
 	//Clean up our objects and quit
-	SDL_DestroyTexture(texture);
+	//for (SDL_Texture* texture : textures)
+	//{
+		SDL_DestroyTexture(texture);
+	//}
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
-
 
 	OculusRelease();
 }
@@ -374,10 +379,11 @@ void Renderer::renderLoop()
 		}
 
 		*/
-		
-
-		
+		if (counter % 1 == 0)
+			if (onDisplayedFrame) 
+				onDisplayedFrame(this);
 		cubemapPool.push(cubemap);
 		counter++;
+		
 	}
 }
