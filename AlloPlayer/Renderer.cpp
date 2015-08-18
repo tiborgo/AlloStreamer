@@ -78,14 +78,15 @@ StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cub
 void Renderer::onDraw(al::Graphics& gl)
 {
     int faceIndex = mOmni.face();
+    int eyeIndex = (mOmni.eye() <= 0.0f) ? 0 : 1;
     
     {
         
         
         // render cubemap
-        if (cubemap && cubemap->getEyesCount() > 0)
+        if (cubemap && cubemap->getEyesCount() > eyeIndex)
         {
-            Cubemap* eye = cubemap->getEye(0);
+            Cubemap* eye = cubemap->getEye(eyeIndex);
             if (eye->getFacesCount() > faceIndex)
             {
                 // Choose right face for flipping
@@ -123,7 +124,7 @@ void Renderer::onDraw(al::Graphics& gl)
                 
                 if(newCubemap)
                 {
-                    if (onDisplayedCubemapFace) onDisplayedCubemapFace(this, faceIndex);
+                    if (onDisplayedCubemapFace) onDisplayedCubemapFace(this, faceIndex + eyeIndex * Cubemap::MAX_FACES_COUNT);
                 }
             }
         }
