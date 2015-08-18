@@ -6,6 +6,7 @@
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/offset_ptr.hpp>
 #include <vector>
+#include <algorithm>
 
 #include "CubemapExtractionPlugin.h"
 #include "FrameD3D9.hpp"
@@ -28,6 +29,7 @@ static boost::chrono::system_clock::time_point presentationTime;
 static boost::mutex d3D11DeviceContextMutex;
 static boost::interprocess::managed_shared_memory shm;
 static Binoculars* binoculars = nullptr;
+static StereoCubemap::Ptr cubemap;
 
 struct CubemapConfig
 {
@@ -59,21 +61,34 @@ static void DebugLog (const char* str)
 
 void allocateCubemap(CubemapConfig* cubemapConfig)
 {
-    shm.destroy<Cubemap::Ptr>("Cubemap");
+    shm.destroy<StereoCubemap::Ptr>("Cubemap");
     
     if (cubemapConfig)
     {
-        std::vector<CubemapFace*> faces;
-        for (int i = 0; i < cubemapConfig->facesCount; i++)
+        std::vector<CubemapFace*> leftFaces;
+        for (int i = 0; i < (std::min)(6, cubemapConfig->facesCount); i++)
         {
             CubemapFace* face = CubemapFace::create(getFrameFromTexture(cubemapConfig->texturePtrs[i]),
                                                     i,
                                                     *shmAllocator);
-            faces.push_back(face);
+			leftFaces.push_back(face);
         }
+
+		std::vector<CubemapFace*> rightFaces;
+		for (int i = 6; i < cubemapConfig->facesCount; i++)
+		{
+			CubemapFace* face = CubemapFace::create(getFrameFromTexture(cubemapConfig->texturePtrs[i]),
+				i,
+				*shmAllocator);
+			rightFaces.push_back(face);
+		}
         
-        cubemap = Cubemap::create(faces, *shmAllocator);
-        Cubemap::Ptr cubemapPtr = *shm.construct<Cubemap::Ptr>("Cubemap")(cubemap.get());
+		std::vector<Cubemap*> eyes;
+		eyes.push_back(Cubemap::create(leftFaces, *shmAllocator));
+		eyes.push_back(Cubemap::create(rightFaces, *shmAllocator));
+
+		cubemap = StereoCubemap::create(eyes, *shmAllocator);
+        StereoCubemap::Ptr cubemapPtr = *shm.construct<StereoCubemap::Ptr>("Cubemap")(cubemap.get());
     }
     else
     {
@@ -395,10 +410,14 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
         std::vector<Frame*> frames;
         if (cubemap)
         {
-            for (int i = 0; i < cubemap->getFacesCount(); i++)
-            {
-                frames.push_back(cubemap->getFace(i)->getContent());
-            }
+			for (int j = 0; j < cubemap->getEyesCount(); j++)
+			{
+				Cubemap* eye = cubemap->getEye(j);
+				for (int i = 0; i < eye->getFacesCount(); i++)
+				{
+					frames.push_back(eye->getFace(i)->getContent());
+				}
+			}
         }
         
         if (binoculars)

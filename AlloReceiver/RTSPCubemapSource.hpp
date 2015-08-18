@@ -13,6 +13,7 @@ class ALLORECEIVER_API RTSPCubemapSource : public CubemapSource
 {
 public:
     static RTSPCubemapSource* create(const char* url,
+		                             unsigned long bufferSize,
                                      int resolution,
                                      AVPixelFormat format,
                                      const char* interfaceAddress = "0.0.0.0");
