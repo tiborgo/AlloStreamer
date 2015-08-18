@@ -14,41 +14,36 @@ struct RTSPHelper
     std::vector<MediaSink*> onGetSinksForSubsessions(RTSPCubemapSourceClient* client,
                                                      std::vector<MediaSubsession*>& subsessions)
     {
-        if (subsessions.size() <= Cubemap::MAX_FACES_COUNT)
+		bool isH264 = true;
+		for (MediaSubsession* subsession : subsessions)
+		{
+			if (strcmp(subsession->mediumName(), "video") != 0 ||
+				strcmp(subsession->codecName(), "H264") != 0)
+			{
+				isH264 = false;
+			}
+		}
+
+		if (!isH264)
+		{
+			abort();
+		}
+
+        std::vector<H264RawPixelsSink*> h264Sinks;
+        std::vector<MediaSink*> sinks;
+        for (int i = 0; i < (std::min)(subsessions.size(), StereoCubemap::MAX_EYES_COUNT * Cubemap::MAX_FACES_COUNT); i++)
         {
-            bool isH264 = true;
-            for (MediaSubsession* subsession : subsessions)
-            {
-                if (strcmp(subsession->mediumName(), "video") != 0 ||
-                    strcmp(subsession->codecName(), "H264") != 0)
-                {
-                    isH264 = false;
-                }
-            }
-            
-            if (isH264)
-            {
-                std::vector<H264RawPixelsSink*> h264Sinks;
-                std::vector<MediaSink*> sinks;
-                for (int i = 0; i < subsessions.size(); i++)
-                {
-                    H264RawPixelsSink* sink = H264RawPixelsSink::createNew(client->envir(),
-						                                                   bufferSize,
-                                                                           resolution,
-                                                                           format);
-                    h264Sinks.push_back(sink);
-                    sinks.push_back(sink);
-                }
-                
-                cubemapSource = new H264CubemapSource(h264Sinks, resolution, format);
-                didCreateCubemapSource.wait();
-                return sinks;
-            }
+            H264RawPixelsSink* sink = H264RawPixelsSink::createNew(client->envir(),
+						                                           bufferSize,
+                                                                   resolution,
+                                                                   format);
+            h264Sinks.push_back(sink);
+            sinks.push_back(sink);
         }
-        
-        cubemapSource = nullptr;
+                
+        cubemapSource = new H264CubemapSource(h264Sinks, resolution, format);
         didCreateCubemapSource.wait();
-        return std::vector<MediaSink*>();
+        return sinks;
     }
 };
 

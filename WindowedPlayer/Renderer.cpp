@@ -52,9 +52,16 @@ StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cub
 {
 	StereoCubemap* oldCubemap;
 	//StereoCubemap::destroy(cubemap);
-	if (!cubemapPool.wait_and_pop(oldCubemap))
+	if (!cubemapPool.try_pop(oldCubemap))
 	{
-		return nullptr;
+		if (cubemapPool.closed())
+		{
+			return nullptr;
+		}
+		else
+		{
+			return cubemap;
+		}
 	}
 
 	cubemapBuffer.push(cubemap);
@@ -72,7 +79,7 @@ void Renderer::setOnDisplayedCubemapFace(std::function<void (Renderer*, int)>& c
     onDisplayedCubemapFace = callback;
 }
 
-void Renderer::createTextures(size_t number, size_t resolution)
+void Renderer::createTextures(StereoCubemap* cubemap)
 {
 	//Create a renderer that will draw to the window, -1 specifies that we want to load whichever
 	//video driver supports the flags we're passing
@@ -88,19 +95,24 @@ void Renderer::createTextures(size_t number, size_t resolution)
 		abort();
 	}
 
-	for (int i = 0; i < number; i++)
+	for (int j = 0; j < cubemap->getEyesCount(); j++)
 	{
-		SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA8888, SDL_TEXTUREACCESS_STREAMING, resolution, resolution);
-		if (texture == nullptr)
+		Cubemap* eye = cubemap->getEye(j);
+		for (int i = 0; i < eye->getFacesCount(); i++)
 		{
-			SDL_DestroyRenderer(renderer);
-			SDL_DestroyWindow(window);
-			std::cerr << "SDL_CreateTextureFromSurface Error: " << SDL_GetError() << std::endl;
-			SDL_Quit();
-			abort();
-		}
+			CubemapFace* face = eye->getFace(i);
+			SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA8888, SDL_TEXTUREACCESS_STREAMING, face->getContent()->getWidth(), face->getContent()->getHeight());
+			if (texture == nullptr)
+			{
+				SDL_DestroyRenderer(renderer);
+				SDL_DestroyWindow(window);
+				std::cerr << "SDL_CreateTextureFromSurface Error: " << SDL_GetError() << std::endl;
+				SDL_Quit();
+				abort();
+			}
 
-		textures.push_back(texture);
+			textures.push_back(texture);
+		}
 	}
 }
 
@@ -135,92 +147,108 @@ void Renderer::renderLoop()
 		if (!renderer)
 		{
 			// Renderer and textures must be created on the thread where they are used
-			createTextures(cubemap->getEye(0)->getFacesCount(), cubemap->getEye(0)->getFace(0)->getContent()->getWidth());
+			createTextures(cubemap);
 		}
 
-		//First clear the renderer
-		SDL_RenderClear(renderer);
-
-		for (int i = 0; i < cubemap->getEye(0)->getFacesCount(); i++)
+		if (counter % 1 == 0)
 		{
 
-			Frame* content = cubemap->getEye(0)->getFace(i)->getContent();
-			SDL_Texture* texture = textures[i];
+			//First clear the renderer
+			SDL_RenderClear(renderer);
 
-			// Show cubemap
-
-			if (counter % 1 == 0)
+			for (int j = 0, textureIndex = 0; j < cubemap->getEyesCount(); j++)
 			{
-				void* pixels;
-				int   pitch;
-
-				int width;
-				int height;
-				SDL_GetRendererOutputSize(renderer, &width, &height);
-
-				SDL_Rect dstrect;
-
-				dstrect.w = width / 4;
-				dstrect.h = height / 3;
-
-				switch (i)
+				Cubemap* eye = cubemap->getEye(j);
+				for (int i = 0; i < eye->getFacesCount(); i++, textureIndex++)
 				{
-				case 1: // negative X
-					dstrect.x = width * 0 / 4;
-					dstrect.y = height / 3;
-					break;
-				case 4: // negative Z
-					dstrect.x = width * 1 / 4;
-					dstrect.y = height / 3;
-					break;
-				case 2: // postive Y
-					dstrect.x = width * 1 / 4;
-					dstrect.y = 0;
-					break;
-				case 5: // negative Y
-					dstrect.x = width * 3 / 4;
-					dstrect.y = height / 3;
-					break;
-				case 3: // positive Z
-					dstrect.x = width * 1 / 4;
-					dstrect.y = height * 2 / 3;
-					break;
-				case 0: // positive X
-					dstrect.x = width * 2 / 4;
-					dstrect.y = height / 3;
-					break;
-				default:
-					dstrect.x = 0;
-					dstrect.y = 0;
-					dstrect.w = 0;
-					dstrect.h = 0;
-					break;
+
+					Frame* content = eye->getFace(i)->getContent();
+					SDL_Texture* texture = textures[textureIndex];
+
+					// Show cubemap
+
+				
+					void* pixels;
+					int   pitch;
+
+					int width;
+					int height;
+					SDL_GetRendererOutputSize(renderer, &width, &height);
+
+					SDL_Rect dstrect;
+
+					dstrect.w = width / 4;
+					dstrect.h = height / 6;
+
+					switch (i)
+					{
+					case 1: // negative X
+						dstrect.x = width * 0 / 4;
+						dstrect.y = height / 3;
+						break;
+					case 4: // negative Z
+						dstrect.x = width * 1 / 4;
+						dstrect.y = height / 3;
+						break;
+					case 2: // postive Y
+						dstrect.x = width * 1 / 4;
+						dstrect.y = 0;
+						break;
+					case 5: // negative Y
+						dstrect.x = width * 3 / 4;
+						dstrect.y = height / 3;
+						break;
+					case 3: // positive Z
+						dstrect.x = width * 1 / 4;
+						dstrect.y = height * 2 / 3;
+						break;
+					case 0: // positive X
+						dstrect.x = width * 2 / 4;
+						dstrect.y = height / 3;
+						break;
+					default:
+						dstrect.x = 0;
+						dstrect.y = 0;
+						dstrect.w = 0;
+						dstrect.h = 0;
+						break;
+					}
+
+					switch (j)
+					{
+					case 0:
+						dstrect.y /= 2;
+						break;
+					case 1:
+						dstrect.y /= 2;
+						dstrect.y += height / 2;
+					}
+
+					if (SDL_LockTexture(texture, NULL, &pixels, &pitch) < 0)
+					{
+						SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
+						SDL_Quit();
+						abort();
+					}
+					memcpy(pixels, content->getPixels(), content->getHeight() * content->getWidth() * 4);
+					SDL_UnlockTexture(texture);
+
+					//Draw the texture
+					if (SDL_RenderCopy(renderer, texture, NULL, &dstrect) < 0)
+					{
+						SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
+						abort();
+					}
+
+					if (onDisplayedCubemapFace) onDisplayedCubemapFace(this, i + j * Cubemap::MAX_FACES_COUNT);
+
 				}
-
-				/*if (SDL_LockTexture(texture, NULL, &pixels, &pitch) < 0)
-				{
-					SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
-					SDL_Quit();
-					abort();
-				}
-				memcpy(pixels, content->getPixels(), content->getHeight() * content->getWidth() * 4);
-				SDL_UnlockTexture(texture);*/
-
-				//Draw the texture
-				if (SDL_RenderCopy(renderer, texture, NULL, &dstrect) < 0)
-				{
-					SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
-					abort();
-				}
-
-				if (onDisplayedCubemapFace) onDisplayedCubemapFace(this, i);
-
 			}
+
+			SDL_RenderPresent(renderer);
+
+			if (onDisplayedFrame) onDisplayedFrame(this);
 		}
-
-		SDL_RenderPresent(renderer);
-
-		if (onDisplayedFrame) onDisplayedFrame(this);
 
 		cubemapPool.push(cubemap);
 		counter++;

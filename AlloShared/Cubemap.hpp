@@ -45,7 +45,7 @@ class Cubemap
 {
 public:
     typedef boost::interprocess::offset_ptr<Cubemap> Ptr;
-    static const int MAX_FACES_COUNT = 12;
+    static const size_t MAX_FACES_COUNT = 6;
     
     CubemapFace* getFace(int index);
     int getFacesCount();
@@ -69,7 +69,7 @@ class StereoCubemap
 {
 public:
     typedef boost::interprocess::offset_ptr<StereoCubemap> Ptr;
-    static const int MAX_EYES_COUNT = 2;
+    static const size_t MAX_EYES_COUNT = 2;
     
     Cubemap* getEye(int index);
     int getEyesCount();

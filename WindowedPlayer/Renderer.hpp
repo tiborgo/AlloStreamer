@@ -25,7 +25,7 @@ protected:
 private:
 	StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
 	void renderLoop();
-	void createTextures(size_t number, size_t resolution);
+	void createTextures(StereoCubemap* cubemap);
 
 	boost::thread                    renderThread;
 	CubemapSource*                   cubemapSource;
