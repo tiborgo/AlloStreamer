@@ -34,7 +34,7 @@ static StereoCubemap::Ptr cubemap;
 struct CubemapConfig
 {
     void** texturePtrs;
-    int facesCount;
+    size_t facesCount;
     int resolution;
 };
 static CubemapConfig* cubemapConfig = nullptr;
