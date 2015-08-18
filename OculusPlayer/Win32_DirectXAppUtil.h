@@ -335,7 +335,7 @@ struct Texture
 			
 			DIRECTX.Context->UpdateSubresource(Tex, level, NULL, (unsigned char *)pixels, width*4, height*4);
 
-			for (int j = 0; j < (height & ~1); j += 2)
+			/*for (int j = 0; j < (height & ~1); j += 2)
 			{
 				uint8_t* psrc = (unsigned char *)pixels + (width * j * 4);
 				uint8_t* pdest = (unsigned char *)pixels + (width * j);
@@ -348,6 +348,7 @@ struct Texture
 				}
 			}
 			width >>= 1;  height >>= 1;
+		*/
 		}
 	}
 };
@@ -564,7 +565,7 @@ struct Scene
 
 	void updateTextures(void *pixels[12], UINT w, UINT h){
 		for (int i = 0; i < num_models; i++){
-			
+			if (pixels[i]!=NULL)
 			Models[i]->Fill->Tex->FillTexture(pixels[i], w, h);
 		}
 		/*for (int i = num_models / 2; i < num_models; i++){

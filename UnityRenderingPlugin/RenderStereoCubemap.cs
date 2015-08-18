@@ -17,15 +17,19 @@ public class RenderStereoCubemap : MonoBehaviour
 
     public float eyeSep = 0.064f, near = 0.1f, far = 10000f, focal_length = 10f, aperture = 90f;
 
-    public int resWidth = 1920, resHeight = 1920;
+    public int resolution =1920;
 
     public float moveSpeed = 1;
 
-    public bool printFPS = false;
+    public bool printFPS = false, adjustFOV = false;
 
 
     public int faceCount = 6;
     public bool extract = true;
+
+
+    public float fovAdjustValue=0.5f;
+    private float preFOVAdjustValue = 0.5f;
 
     private GameObject[] planes;
     //Plane1L,Plane2L,Plane3L,Plane4L,Plane1R,Plane2R,Plane3R,Plane4R,Plane5,Plane6;
@@ -49,12 +53,12 @@ public class RenderStereoCubemap : MonoBehaviour
         screenShot = new Texture2D[10];
         for (int i = 0; i < screenShot.Length; i++)
         {
-            screenShot[i] = new Texture2D(resWidth, resHeight, TextureFormat.RGB24, false);
+            screenShot[i] = new Texture2D(resolution, resolution, TextureFormat.RGB24, false);
         }
         renderTextures = new RenderTexture[10];
         for (int i = 0; i < renderTextures.Length; i++)
         {
-            renderTextures[i] = new RenderTexture(resWidth, resHeight, 24);
+            renderTextures[i] = new RenderTexture(resolution, resolution, 24);
             renderTextures[i].Create();
         }
 
@@ -168,13 +172,21 @@ public class RenderStereoCubemap : MonoBehaviour
             Camera cR = CameraR[i].GetComponent<Camera>();
 
             cL.aspect = 1;
-            cL.fieldOfView = 90;
             cL.nearClipPlane = near;
             cL.farClipPlane = far;
             cR.aspect = 1;
-            cR.fieldOfView = 90;
             cR.nearClipPlane = near;
             cR.farClipPlane = far;
+
+            if (adjustFOV)
+            {
+                float newAperture = (float) (180.0/Math.PI * 2.0 * Math.Atan(resolution / (resolution - fovAdjustValue)));
+                aperture = newAperture;
+            }
+            
+            cL.fieldOfView = aperture;
+            cR.fieldOfView = aperture;
+            
 
 
             cL.cullingMask = 0x00001fff;
@@ -294,7 +306,6 @@ public class RenderStereoCubemap : MonoBehaviour
     {
         PlaneInit();
         CameraInit();
-        int resolution = resWidth;
 
         System.IntPtr[] texturePtrs = new System.IntPtr[faceCount];
         int j = 0;
@@ -370,6 +381,12 @@ public class RenderStereoCubemap : MonoBehaviour
     {
         if (printFPS)
             print(1.0f / Time.deltaTime);
+        if (preFOVAdjustValue != fovAdjustValue)
+        {
+            CameraProjectionInit();
+            preFOVAdjustValue = fovAdjustValue;
+        }
+            
     }
     //For static update
     void UpdateCubeTexture()
@@ -396,11 +413,11 @@ public class RenderStereoCubemap : MonoBehaviour
             {
                 c = go[i].GetComponent<Camera>();
                 //take screenshot for horizontal surrounding
-                //Texture2D screenShot = new Texture2D(resWidth, resHeight, TextureFormat.RGB24, false);
+                //Texture2D screenShot = new Texture2D(resolution, resolution, TextureFormat.RGB24, false);
 
                 c.Render();
                 /*RenderTexture.active = c.targetTexture;
-                screenShot[i+4*e].ReadPixels(new Rect(0, 0, resWidth, resHeight), 0, 0);
+                screenShot[i+4*e].ReadPixels(new Rect(0, 0, resolution, resolution), 0, 0);
                 screenShot[i+4*e].Apply();
                 RenderTexture.active = null; // JC: added to avoid errors
                 //Transform plane=transform.Find("Plane"+i+planeType);
@@ -418,11 +435,11 @@ public class RenderStereoCubemap : MonoBehaviour
         {
             c = go[i - 5].GetComponent<Camera>();
             //take screenshot for top and bottom
-            //Texture2D screenShot = new Texture2D(resWidth, resHeight, TextureFormat.RGB24, false);
+            //Texture2D screenShot = new Texture2D(resolution, resolution, TextureFormat.RGB24, false);
 
             c.Render();
             /*RenderTexture.active = c.targetTexture;
-            screenShot[i+3].ReadPixels(new Rect(0, 0, resWidth, resHeight), 0, 0);
+            screenShot[i+3].ReadPixels(new Rect(0, 0, resolution, resolution), 0, 0);
             screenShot[i+3].Apply();
             RenderTexture.active = null; // JC: added to avoid errors
             //Transform plane=transform.Find("Plane"+i);
