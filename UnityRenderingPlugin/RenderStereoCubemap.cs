@@ -306,17 +306,17 @@ public class RenderStereoCubemap : MonoBehaviour
     {
         PlaneInit();
         CameraInit();
-
+        int[] map = {1,3,8,9,0,2,5,7,8,9,4,6};
         System.IntPtr[] texturePtrs = new System.IntPtr[faceCount];
         int j = 0;
         for (int i = 0; i < Math.Min(faceCount,12); i++)
         {
-            texturePtrs[i] = renderTextures[j].GetNativeTexturePtr();
-            j++;
+            texturePtrs[i] = renderTextures[map[i]].GetNativeTexturePtr();
+            /*j++;
             if (j == 4)
                 j = 8;
             else if (j == 10)
-                j = 4;
+                j = 4;*/
         }
         
        
