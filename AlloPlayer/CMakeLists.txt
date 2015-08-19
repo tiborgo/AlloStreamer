@@ -1,10 +1,12 @@
 set(SOURCES
     Renderer.cpp
     main.cpp
+    Stats.cpp
 )
 	
 set(HEADERS
     Renderer.hpp
+    Stats.h
 )
 
 set(RESOURCES

@@ -9,8 +9,6 @@ find_path(SDL_INCLUDE_DIR
 	SDL.h
 	PATHS
 	${SDL_ROOT}/include
-	PATH_SUFFIXES
-	SDL2
 )
 
 

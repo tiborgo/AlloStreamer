@@ -40,8 +40,6 @@ void CubemapFace::destroy(CubemapFace* cubemapFace)
     cubemapFace->allocator.deallocate(cubemapFace, sizeof(CubemapFace));
 }
 
-const size_t Cubemap::MAX_FACES_COUNT;
-
 Cubemap::Cubemap(std::vector<CubemapFace*>& faces,
                  Allocator& allocator)
     :
@@ -89,8 +87,6 @@ void Cubemap::destroy(Cubemap* cubemap)
     cubemap->~Cubemap();
     cubemap->allocator.deallocate(cubemap, sizeof(Cubemap));
 }
-
-const size_t StereoCubemap::MAX_EYES_COUNT;
 
 StereoCubemap::StereoCubemap(std::vector<Cubemap*>& eyes,
                              Allocator& allocator)
