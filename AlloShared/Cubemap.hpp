@@ -16,6 +16,9 @@
 #include "Allocator.h"
 #include "Frame.hpp"
 
+#define CUBEMAP_MAX_FACES_COUNT 6
+#define STEREOCUBEMAP_MAX_EYES_COUNT 2
+
 class CubemapFace
 {
 
@@ -45,7 +48,9 @@ class Cubemap
 {
 public:
     typedef boost::interprocess::offset_ptr<Cubemap> Ptr;
-    static const size_t MAX_FACES_COUNT = 6;
+    //static const size_t MAX_FACES_COUNT;
+
+	static enum { MAX_FACES_COUNT = 6 };
     
     CubemapFace* getFace(int index);
     int getFacesCount();
@@ -61,7 +66,7 @@ protected:
     Allocator& allocator;
     
 private:
-    std::array<CubemapFace::Ptr, MAX_FACES_COUNT> faces;
+	std::array<CubemapFace::Ptr, MAX_FACES_COUNT> faces;
     boost::interprocess::interprocess_mutex mutex;
 };
 
@@ -69,8 +74,10 @@ class StereoCubemap
 {
 public:
     typedef boost::interprocess::offset_ptr<StereoCubemap> Ptr;
-    static const size_t MAX_EYES_COUNT = 2;
+    //static const size_t MAX_EYES_COUNT;
     
+	static enum { MAX_EYES_COUNT = 2 };
+
     Cubemap* getEye(int index);
     int getEyesCount();
     
@@ -84,5 +91,5 @@ protected:
     Allocator& allocator;
     
 private:
-    std::array<Cubemap::Ptr, MAX_EYES_COUNT> eyes;
+	std::array<Cubemap::Ptr, MAX_EYES_COUNT> eyes;
 };
