@@ -5,8 +5,7 @@
 
 Renderer::Renderer(CubemapSource* cubemapSource)
     :
-    al::OmniApp("AlloPlayer", false, 2048), resizeCtx(nullptr), cubemapSource(cubemapSource),
-    cubemap(nullptr), newCubemap(false)
+    al::OmniApp("AlloPlayer", false, 2048), resizeCtx(nullptr), cubemapSource(cubemapSource), newCubemap(false), currentCubemap(nullptr)
 {
     nav().smooth(0.8);
     
@@ -33,7 +32,10 @@ Renderer::Renderer(CubemapSource* cubemapSource)
     light.ambient(al::Color(0.4, 0.4, 0.4, 1.0));
     light.pos(5, 5, 5);
     
-    
+    for (int i = 0; i < 1; i++)
+    {
+        cubemapPool.push(nullptr);
+    }
     
     std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)> callback = boost::bind(&Renderer::onNextCubemap,
                                                                                           this,
@@ -58,7 +60,6 @@ bool Renderer::onFrame()
     
     bool result;
     {
-        boost::mutex::scoped_lock lock(nextCubemapMutex);
         result = OmniApp::onFrame();
         newCubemap = false;
     }
@@ -68,10 +69,20 @@ bool Renderer::onFrame()
 
 StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
-    boost::mutex::scoped_lock lock(nextCubemapMutex);
-    StereoCubemap* oldCubemap = this->cubemap;
-    this->cubemap = cubemap;
-    newCubemap = true;
+    StereoCubemap* oldCubemap;
+    if (!cubemapPool.try_pop(oldCubemap))
+    {
+        if (cubemapPool.closed())
+        {
+            return nullptr;
+        }
+        else
+        {
+            return cubemap;
+        }
+    }
+    
+    cubemapBuffer.push(cubemap);
     return oldCubemap;
 }
 
@@ -81,7 +92,20 @@ void Renderer::onDraw(al::Graphics& gl)
     int eyeIndex = (mOmni.eye() <= 0.0f) ? 0 : 1;
     
     {
+        StereoCubemap* cubemap;
+        if (!cubemapBuffer.try_pop(cubemap))
+        {
+            if (cubemapBuffer.closed())
+            {
+                return;
+            }
+            else
+            {
+                cubemap = currentCubemap;
+            }
+        }
         
+        currentCubemap = cubemap;
         
         // render cubemap
         if (cubemap && cubemap->getEyesCount() > eyeIndex)
@@ -128,6 +152,8 @@ void Renderer::onDraw(al::Graphics& gl)
                 }
             }
         }
+        
+        cubemapPool.push(cubemap);
     }
     
     light();

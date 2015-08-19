@@ -12,6 +12,7 @@ extern "C"
     #include <x264.h>
 }
 #include <boost/thread.hpp>
+#include "AlloShared/concurrent_queue.h"
 #include "AlloReceiver/AlloReceiver.h"
 
 class Renderer : public al::OmniApp
@@ -23,8 +24,6 @@ public:
     std::vector<AVFrame*> currentFrames;
     SwsContext* resizeCtx;
     CubemapSource* cubemapSource;
-    StereoCubemap* cubemap;
-    boost::mutex nextCubemapMutex;
     bool newCubemap;
 
     Renderer(CubemapSource* cubemapSource);
@@ -44,4 +43,9 @@ public:
 protected:
     std::function<void (Renderer*)> onDisplayedFrame;
     std::function<void (Renderer*, int)> onDisplayedCubemapFace;
+    
+private:
+    StereoCubemap*                   currentCubemap;
+    concurrent_queue<StereoCubemap*> cubemapBuffer;
+    concurrent_queue<StereoCubemap*> cubemapPool;
 };
