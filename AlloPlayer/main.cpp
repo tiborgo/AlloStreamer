@@ -5,12 +5,15 @@
 #include <boost/program_options.hpp>
 #include <boost/ref.hpp>
 
-#include "Stats.h"
+#include "AlloShared/Stats.hpp"
+#include "AlloShared/to_human_readable_byte_count.hpp"
 #include "AlloReceiver/AlloReceiver.h"
+
+const unsigned int DEFAULT_SINK_BUFFER_SIZE = 2000000000;
 
 Stats stats;
 
-void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
+StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
     for (int i = 0; i < cubemap->getEye(0)->getFacesCount(); i++)
     {
@@ -18,16 +21,17 @@ void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
     }
     stats.displayedFrame();
     StereoCubemap::destroy(cubemap);
+    return nullptr;
 }
 
-void onDroppedNALU(CubemapSource* source, int face, u_int8_t type)
+void onDroppedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
 {
-    stats.droppedNALU(type);
+    stats.droppedNALU(type, size, face);
 }
 
-void onAddedNALU(CubemapSource* source, int face, u_int8_t type)
+void onAddedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
 {
-    stats.addedNALU(type);
+    stats.addedNALU(type, size, face);
 }
 
 void onDisplayedCubemapFace(Renderer* renderer, int face)
@@ -54,7 +58,8 @@ int main(int argc, char* argv[])
     desc.add_options()
         ("no-display", "")
         ("url", boost::program_options::value<std::string>(), "url")
-        ("interface", boost::program_options::value<std::string>(), "interface");
+        ("interface", boost::program_options::value<std::string>(), "interface")
+        ("buffer-size", boost::program_options::value<unsigned long>(), "buffer-size");
     
     boost::program_options::positional_options_description p;
     p.add("url", -1);
@@ -73,12 +78,24 @@ int main(int argc, char* argv[])
     {
         interface = "0.0.0.0";
     }
-
-    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), 2048, AV_PIX_FMT_RGB24, interface);
     
-    std::function<void (CubemapSource*, int, u_int8_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3);
+    unsigned long bufferSize;
+    if (vm.count("buffer-size"))
+    {
+        bufferSize = vm["buffer-size"].as<unsigned long>();
+    }
+    else
+    {
+        bufferSize = DEFAULT_SINK_BUFFER_SIZE;
+    }
+    
+    std::cout << "Buffer size " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
+
+    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), bufferSize, 2048, AV_PIX_FMT_RGBA, interface);
+    
+    std::function<void (CubemapSource*, int, u_int8_t, size_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3, _4);
     cubemapSource->setOnDroppedNALU(callback);
-    callback = boost::bind(&onAddedNALU, _1, _2, _3);
+    callback = boost::bind(&onAddedNALU, _1, _2, _3, _4);
     cubemapSource->setOnAddedNALU(callback);
     
     stats.autoSummary(boost::chrono::seconds(10));
@@ -86,7 +103,7 @@ int main(int argc, char* argv[])
     if (vm.count("no-display"))
     {
         std::cout << "network only" << std::endl;
-        std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&onNextCubemap, _1, _2);
+        std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)> callback = boost::bind(&onNextCubemap, _1, _2);
         cubemapSource->setOnNextCubemap(callback);
         while(true)
         {
