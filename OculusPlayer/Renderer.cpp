@@ -98,17 +98,21 @@ Renderer::~Renderer()
 
 StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
-	
 	StereoCubemap* oldCubemap;
-	//StereoCubemap::destroy(cubemap);
-	if (!cubemapPool.wait_and_pop(oldCubemap))
+	if (!cubemapPool.try_pop(oldCubemap))
 	{
-		return nullptr;
+		if (cubemapPool.closed())
+		{
+			return nullptr;
+		}
+		else
+		{
+			return cubemap;
+		}
 	}
 
 	cubemapBuffer.push(cubemap);
 	return oldCubemap;
-	//if (onDisplayedFrame) onDisplayedFrame(this);
 }
 
 void Renderer::setOnDisplayedFrame(std::function<void (Renderer*)>& callback)
