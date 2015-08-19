@@ -35,10 +35,10 @@ Renderer::Renderer(CubemapSource* cubemapSource)
     
     
     
-    std::function<void (CubemapSource*, StereoCubemap*)> callback = boost::bind(&Renderer::onNextCubemap,
-                                                                                this,
-                                                                                _1,
-                                                                                _2);
+    std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)> callback = boost::bind(&Renderer::onNextCubemap,
+                                                                                          this,
+                                                                                          _1,
+                                                                                          _2);
     cubemapSource->setOnNextCubemap(callback);
 }
 
@@ -66,28 +66,27 @@ bool Renderer::onFrame()
     return result;
 }
 
-void Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
+StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
     boost::mutex::scoped_lock lock(nextCubemapMutex);
-    if (this->cubemap)
-    {
-        StereoCubemap::destroy(this->cubemap);
-    }
+    StereoCubemap* oldCubemap = this->cubemap;
     this->cubemap = cubemap;
     newCubemap = true;
+    return oldCubemap;
 }
 
 void Renderer::onDraw(al::Graphics& gl)
 {
     int faceIndex = mOmni.face();
+    int eyeIndex = (mOmni.eye() <= 0.0f) ? 0 : 1;
     
     {
         
         
         // render cubemap
-        if (cubemap && cubemap->getEyesCount() > 0)
+        if (cubemap && cubemap->getEyesCount() > eyeIndex)
         {
-            Cubemap* eye = cubemap->getEye(0);
+            Cubemap* eye = cubemap->getEye(eyeIndex);
             if (eye->getFacesCount() > faceIndex)
             {
                 // Choose right face for flipping
@@ -115,7 +114,7 @@ void Renderer::onDraw(al::Graphics& gl)
                 // draw the background
                 glDrawPixels(face->getContent()->getWidth(),
                              face->getContent()->getHeight(),
-                             GL_RGB,
+                             GL_RGBA,
                              GL_UNSIGNED_BYTE,
                              (GLvoid*)face->getContent()->getPixels());
                 
@@ -125,7 +124,7 @@ void Renderer::onDraw(al::Graphics& gl)
                 
                 if(newCubemap)
                 {
-                    if (onDisplayedCubemapFace) onDisplayedCubemapFace(this, faceIndex);
+                    if (onDisplayedCubemapFace) onDisplayedCubemapFace(this, faceIndex + eyeIndex * Cubemap::MAX_FACES_COUNT);
                 }
             }
         }
