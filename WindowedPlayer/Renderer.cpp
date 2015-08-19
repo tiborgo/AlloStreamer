@@ -52,9 +52,16 @@ StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cub
 {
 	StereoCubemap* oldCubemap;
 	//StereoCubemap::destroy(cubemap);
-	if (!cubemapPool.wait_and_pop(oldCubemap))
+	if (!cubemapPool.try_pop(oldCubemap))
 	{
-		return nullptr;
+		if (cubemapPool.closed())
+		{
+			return nullptr;
+		}
+		else
+		{
+			return cubemap;
+		}
 	}
 
 	cubemapBuffer.push(cubemap);
@@ -143,22 +150,24 @@ void Renderer::renderLoop()
 			createTextures(cubemap);
 		}
 
-		//First clear the renderer
-		SDL_RenderClear(renderer);
-
-		for (int j = 0, textureIndex = 0; j < cubemap->getEyesCount(); j++)
+		if (counter % 1 == 0)
 		{
-			Cubemap* eye = cubemap->getEye(j);
-			for (int i = 0; i < eye->getFacesCount(); i++, textureIndex++)
+
+			//First clear the renderer
+			SDL_RenderClear(renderer);
+
+			for (int j = 0, textureIndex = 0; j < cubemap->getEyesCount(); j++)
 			{
-
-				Frame* content = eye->getFace(i)->getContent();
-				SDL_Texture* texture = textures[textureIndex];
-
-				// Show cubemap
-
-				if (counter % 1 == 0)
+				Cubemap* eye = cubemap->getEye(j);
+				for (int i = 0; i < eye->getFacesCount(); i++, textureIndex++)
 				{
+
+					Frame* content = eye->getFace(i)->getContent();
+					SDL_Texture* texture = textures[textureIndex];
+
+					// Show cubemap
+
+				
 					void* pixels;
 					int   pitch;
 
@@ -235,11 +244,11 @@ void Renderer::renderLoop()
 
 				}
 			}
+
+			SDL_RenderPresent(renderer);
+
+			if (onDisplayedFrame) onDisplayedFrame(this);
 		}
-
-		SDL_RenderPresent(renderer);
-
-		if (onDisplayedFrame) onDisplayedFrame(this);
 
 		cubemapPool.push(cubemap);
 		counter++;
