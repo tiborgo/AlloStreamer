@@ -66,7 +66,7 @@ void allocateCubemap(CubemapConfig* cubemapConfig)
     if (cubemapConfig)
     {
         std::vector<CubemapFace*> leftFaces;
-        for (int i = 0; i < (std::min)(Cubemap::MAX_FACES_COUNT, cubemapConfig->facesCount); i++)
+        for (int i = 0; i < (std::min)((size_t)Cubemap::MAX_FACES_COUNT, cubemapConfig->facesCount); i++)
         {
             CubemapFace* face = CubemapFace::create(getFrameFromTexture(cubemapConfig->texturePtrs[i]),
                                                     i,

@@ -213,7 +213,7 @@ void setupRTSP()
     // "ServerMediaSubsession" objects for each audio/video substream.
 
 
-    OutPacketBuffer::maxSize = 400000000;
+    OutPacketBuffer::maxSize = 40000000;
     
     cubemapSMS = ServerMediaSession::createNew(*env,
                                                cubemapStreamName.c_str(),

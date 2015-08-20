@@ -46,23 +46,80 @@ public class RenderStereoCubemap : MonoBehaviour
     [DllImport("CubemapExtractionPlugin")]
     private static extern void StopFromUnity();
 
+    private static System.String[] cubemapFaceNames = {
+		"LeftEye/PositiveX",
+		"LeftEye/NegativeX",
+		"LeftEye/PositiveY",
+		"LeftEye/NegativeY",
+		"LeftEye/PositiveZ",
+		"LeftEye/NegativeZ",
+		"RightEye/PositiveX",
+		"RightEye/NegativeX",
+		"RightEye/PositiveY",
+		"RightEye/NegativeY",
+		"RightEye/PositiveZ",
+		"RightEye/NegativeZ"
+	};
 
+    private static Vector3[] cubemapFaceRotations = {
+		new Vector3(90, -90, 0),
+		new Vector3(90, 90, 0),
+		new Vector3(0, 0, 180),
+		new Vector3(0, 180, 0),
+		new Vector3(90, 180, 0),
+		new Vector3(90, 0, 0),
+        new Vector3(90, -90, 0),
+		new Vector3(90, 90, 0),
+		new Vector3(0, 0, 180),
+		new Vector3(0, 180, 0),
+		new Vector3(90, 180, 0),
+		new Vector3(90, 0, 0),
+	};
+
+    private static Vector3[] cubemapCamRotations = {
+		new Vector3(  0,  90, 0),
+		new Vector3(  0, 270, 0),
+		new Vector3(270,   0, 0),
+		new Vector3( 90,   0, 0),
+		new Vector3(  0,   0, 0),
+		new Vector3(  0, 180, 0),
+        new Vector3(  0,  90, 0),
+		new Vector3(  0, 270, 0),
+		new Vector3(270,   0, 0),
+		new Vector3( 90,   0, 0),
+		new Vector3(  0,   0, 0),
+		new Vector3(  0, 180, 0)
+	};
 
     void PlaneInit()
     {
-        screenShot = new Texture2D[10];
+        Vector3[] cubemapFacePositions = {
+            new Vector3(focal_length, 0, 0),
+            new Vector3(-focal_length, 0, 0),
+            new Vector3(0, focal_length, 0),
+            new Vector3(0, -focal_length, 0),
+            new Vector3(0, 0, focal_length),
+            new Vector3(0, 0, -focal_length),
+            new Vector3(focal_length, 0, 0),
+            new Vector3(-focal_length, 0, 0),
+            new Vector3(0, focal_length, 0),
+            new Vector3(0, -focal_length, 0),
+            new Vector3(0, 0, focal_length),
+            new Vector3(0, 0, -focal_length)                                                        
+        };
+        screenShot = new Texture2D[12];
         for (int i = 0; i < screenShot.Length; i++)
         {
             screenShot[i] = new Texture2D(resolution, resolution, TextureFormat.RGB24, false);
         }
-        renderTextures = new RenderTexture[10];
+        renderTextures = new RenderTexture[12];
         for (int i = 0; i < renderTextures.Length; i++)
         {
             renderTextures[i] = new RenderTexture(resolution, resolution, 24);
             renderTextures[i].Create();
         }
 
-        planes = new GameObject[10];
+        planes = new GameObject[12];
         for (int i = 0; i < planes.Length; i++)
         {
             planes[i] = GameObject.CreatePrimitive(PrimitiveType.Plane);
@@ -77,7 +134,15 @@ public class RenderStereoCubemap : MonoBehaviour
             r.material.shader = Shader.Find("Unlit/Texture");
             r.material.mainTexture = renderTextures[i];
 
-            string name;
+            if(i<6)
+                planes[i].layer = 14;
+            else
+                planes[i].layer = 15;
+
+            planes[i].name = cubemapFaceNames[i];
+            planes[i].transform.localPosition = cubemapFacePositions[i];
+            planes[i].transform.eulerAngles = cubemapFaceRotations[i];
+            /*string name;
             if (i < 4)
             {
                 name = "L";
@@ -136,23 +201,40 @@ public class RenderStereoCubemap : MonoBehaviour
                     planes[i].transform.eulerAngles = new Vector3(0, 180, 0);
                     break;
             }
+            */
         }
     }
 
     void CameraInit()
     {
-        CameraL = new GameObject[4];
-        CameraR = new GameObject[4];
-        CameraC = new GameObject[2];
 
-        int angle = 0;
-        for (int i = 0; i < 4; i++)
+        Vector3[] cubemapCamPositions = {
+            new Vector3(0, 0, eyeSep),
+            new Vector3(0, 0, -eyeSep),
+            new Vector3(0, 0, 0),
+            new Vector3(0, 0, 0),
+            new Vector3(-eyeSep, 0, 0),
+            new Vector3(eyeSep, 0, 0),
+            new Vector3(0, 0, -eyeSep),
+            new Vector3(0, 0, eyeSep),
+            new Vector3(0, 0, 0),
+            new Vector3(0, 0, 0),
+            new Vector3(eyeSep, 0, 0),
+            new Vector3(-eyeSep, 0, 0)                                                     
+        };
+
+        CameraL = new GameObject[6];
+        CameraR = new GameObject[6];
+        //CameraC = new GameObject[2];
+
+        //int angle = 0;
+        for (int i = 0; i < 6; i++)
         {
             CameraL[i] = new GameObject();
             CameraR[i] = new GameObject();
 
-            CameraL[i].name = "CameraL" + (i + 1);
-            CameraR[i].name = "CameraR" + (i + 1);
+            CameraL[i].name = "Camera_" + cubemapFaceNames[i];
+            CameraR[i].name = "Camera_" + cubemapFaceNames[i+6];
 
             CameraL[i].AddComponent<Camera>();
             CameraR[i].AddComponent<Camera>();
@@ -162,11 +244,16 @@ public class RenderStereoCubemap : MonoBehaviour
             CameraR[i].transform.parent = transform;
             CameraL[i].transform.position = transform.position;
             CameraR[i].transform.position = transform.position;
-            CameraL[i].transform.Translate(-eyeSep / 2, 0, 0, transform);
-            CameraR[i].transform.Translate(eyeSep / 2, 0, 0, transform);
-
-            CameraL[i].transform.RotateAround(transform.position, new Vector3(0, 1, 0), angle);
-            CameraR[i].transform.RotateAround(transform.position, new Vector3(0, 1, 0), angle);
+            CameraL[i].transform.eulerAngles = cubemapCamRotations[i];
+            CameraR[i].transform.eulerAngles = cubemapCamRotations[i];
+            
+            if(i<2 || i>3){
+                CameraL[i].transform.Translate(cubemapCamPositions[i], transform);
+                CameraR[i].transform.Translate(cubemapCamPositions[i+6], transform);
+            }
+            
+            //CameraL[i].transform.RotateAround(transform.position, new Vector3(0, 1, 0), angle);
+            //CameraR[i].transform.RotateAround(transform.position, new Vector3(0, 1, 0), angle);
 
             Camera cL = CameraL[i].GetComponent<Camera>();
             Camera cR = CameraR[i].GetComponent<Camera>();
@@ -196,11 +283,11 @@ public class RenderStereoCubemap : MonoBehaviour
             cR.enabled = true;
 
             cL.targetTexture = renderTextures[i];
-            cR.targetTexture = renderTextures[i + 4];
+            cR.targetTexture = renderTextures[i + 6];
 
-            angle += 90;
+            //angle += 90;
         }
-        angle = -90;
+        /*angle = -90;
         for (int i = 0; i < 2; i++)
         {
             CameraC[i] = new GameObject();
@@ -230,7 +317,7 @@ public class RenderStereoCubemap : MonoBehaviour
 
             angle += 180;
         }
-
+        */
 
         if ((OVRPlayer = transform.Find("OVRPlayerController")) != null)
         {
@@ -306,12 +393,12 @@ public class RenderStereoCubemap : MonoBehaviour
     {
         PlaneInit();
         CameraInit();
-        int[] map = {1,3,8,9,0,2,5,7,8,9,4,6};
+        //int[] map = {1,3,8,9,0,2,5,7,8,9,4,6};
         System.IntPtr[] texturePtrs = new System.IntPtr[faceCount];
-        int j = 0;
+        //int j = 0;
         for (int i = 0; i < Math.Min(faceCount,12); i++)
         {
-            texturePtrs[i] = renderTextures[map[i]].GetNativeTexturePtr();
+            texturePtrs[i] = renderTextures[i].GetNativeTexturePtr();
             /*j++;
             if (j == 4)
                 j = 8;
