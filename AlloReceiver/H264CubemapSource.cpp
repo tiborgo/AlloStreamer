@@ -45,8 +45,8 @@ void H264CubemapSource::getNextCubemapLoop()
 				std::vector<CubemapFace*> faces;
 				for (int i = 0; i < Cubemap::MAX_FACES_COUNT && faceIndex < sinks.size(); i++, faceIndex++)
 				{
-					Frame* content = Frame::create(resolution,
-						                           resolution,
+                    Frame* content = Frame::create(frames[i + j * Cubemap::MAX_FACES_COUNT]->width,
+						                           frames[i + j * Cubemap::MAX_FACES_COUNT]->height,
 						                           format,
 						                           boost::chrono::system_clock::time_point(),
 						                           heapAllocator);
@@ -120,9 +120,9 @@ void H264CubemapSource::getNextCubemapLoop()
     }
 }
 
-H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks, int resolution, AVPixelFormat format)
+H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks, AVPixelFormat format)
     :
-	sinks(sinks), resolution(resolution), format(format), oldCubemap(nullptr)
+	sinks(sinks), format(format), oldCubemap(nullptr)
 {
     av_log_set_level(AV_LOG_WARNING);
     for (H264RawPixelsSink* sink : sinks)

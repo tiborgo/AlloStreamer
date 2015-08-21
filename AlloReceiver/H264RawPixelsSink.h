@@ -24,7 +24,6 @@ class ALLORECEIVER_API H264RawPixelsSink : public MediaSink
 public:
 	static H264RawPixelsSink* createNew(UsageEnvironment& env,
                                         unsigned long bufferSize,
-                                        int resolution,
                                         AVPixelFormat format);
 
 	AVFrame* getNextFrame(AVFrame* oldFrame);
@@ -35,7 +34,6 @@ public:
 protected:
 	H264RawPixelsSink(UsageEnvironment& env,
                       unsigned int bufferSize,
-                      int resolution,
                       AVPixelFormat format);
 
 	virtual void afterGettingFrame(unsigned frameSize,
@@ -68,7 +66,6 @@ private:
 
     AVPacket* lastIFramePkt;
     bool gotFirstIFrame;
-    int resolution;
     AVPixelFormat format;
     
 	void decodeFrameLoop();

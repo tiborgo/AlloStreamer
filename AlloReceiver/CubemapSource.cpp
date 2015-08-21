@@ -3,11 +3,10 @@
 
 CubemapSource* CubemapSource::createFromRTSP(const char* url,
 	                                         unsigned long bufferSize,
-                                             int resolution,
                                              AVPixelFormat format,
                                              const char* interfaceAddress)
 {
-	return RTSPCubemapSource::create(url, bufferSize, resolution, format, interfaceAddress);
+	return RTSPCubemapSource::create(url, bufferSize, format, interfaceAddress);
 }
 
 void CubemapSource::destroy(CubemapSource *cubemapSource)

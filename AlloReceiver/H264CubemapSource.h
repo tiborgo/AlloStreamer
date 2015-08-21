@@ -17,7 +17,8 @@ public:
     virtual void setOnDroppedNALU(std::function<void (CubemapSource*, int, u_int8_t, size_t)>&    callback);
     virtual void setOnAddedNALU  (std::function<void (CubemapSource*, int, u_int8_t, size_t)>&    callback);
     
-    H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks, int resolution, AVPixelFormat format);
+    H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
+                      AVPixelFormat format);
 
 protected:
 	std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)> onNextCubemap;
@@ -30,7 +31,6 @@ private:
     void sinkOnAddedNALU(H264RawPixelsSink* sink, u_int8_t type, size_t size);
     
     std::vector<H264RawPixelsSink*> sinks;
-    int                             resolution;
     AVPixelFormat                   format;
     HeapAllocator                   heapAllocator;
     boost::thread                   getNextCubemapThread;

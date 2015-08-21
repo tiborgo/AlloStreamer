@@ -99,7 +99,7 @@ void Renderer::createTextures(StereoCubemap* cubemap)
 		for (int i = 0; i < eye->getFacesCount(); i++)
 		{
 			CubemapFace* face = eye->getFace(i);
-			SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA8888, SDL_TEXTUREACCESS_STREAMING, face->getContent()->getWidth(), face->getContent()->getHeight());
+			SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, face->getContent()->getWidth(), face->getContent()->getHeight());
 			if (texture == nullptr)
 			{
 				SDL_DestroyRenderer(renderer);

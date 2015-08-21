@@ -4,7 +4,6 @@
 struct RTSPHelper
 {
     RTSPCubemapSource* cubemapSource;
-    int                resolution;
     AVPixelFormat      format;
     boost::barrier     didCreateCubemapSource;
 	unsigned long      bufferSize;
@@ -35,13 +34,12 @@ struct RTSPHelper
         {
             H264RawPixelsSink* sink = H264RawPixelsSink::createNew(client->envir(),
 						                                           bufferSize,
-                                                                   resolution,
                                                                    format);
             h264Sinks.push_back(sink);
             sinks.push_back(sink);
         }
                 
-        cubemapSource = new H264CubemapSource(h264Sinks, resolution, format);
+        cubemapSource = new H264CubemapSource(h264Sinks, format);
         didCreateCubemapSource.wait();
         return sinks;
     }
@@ -49,7 +47,6 @@ struct RTSPHelper
 
 RTSPCubemapSource* RTSPCubemapSource::create(const char* url,
 	                                         unsigned long bufferSize,
-                                             int resolution,
                                              AVPixelFormat format,
                                              const char* interfaceAddress)
 {
@@ -63,7 +60,6 @@ RTSPCubemapSource* RTSPCubemapSource::create(const char* url,
 
     RTSPCubemapSourceClient* client = RTSPCubemapSourceClient::createNew(url, bufferSize);
     RTSPHelper helper;
-    helper.resolution = resolution;
     helper.format = format;
 	helper.bufferSize = bufferSize;
     client->onGetSinksForSubsessions = boost::bind(&RTSPHelper::onGetSinksForSubsessions, &helper, _1, _2);

@@ -12,12 +12,11 @@ namespace bc = boost::chrono;
 
 H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
                                                 unsigned long bufferSize,
-                                                int resolution,
                                                 AVPixelFormat format)
 {
     avcodec_register_all();
     avformat_network_init();
-	return new H264RawPixelsSink(env, bufferSize, resolution, format);
+	return new H264RawPixelsSink(env, bufferSize, format);
 }
 
 void H264RawPixelsSink::setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type, size_t)>& callback)
@@ -32,12 +31,10 @@ void H264RawPixelsSink::setOnAddedNALU(std::function<void (H264RawPixelsSink*, u
 
 H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
                                      unsigned int bufferSize,
-                                     int resolution,
                                      AVPixelFormat format)
     :
     MediaSink(env), bufferSize(bufferSize), buffer(new unsigned char[bufferSize]),
-    imageConvertCtx(NULL), lastIFramePkt(nullptr), gotFirstIFrame(false),
-    resolution(resolution), format(format),
+    imageConvertCtx(NULL), lastIFramePkt(nullptr), gotFirstIFrame(false), format(format),
     counter(0), sumRelativePresentationTimeMicroSec(0), maxRelativePresentationTimeMicroSec(0)
 {
 	for (int i = 0; i < 3; i++)
@@ -60,14 +57,6 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 			abort();
         }
         resizedFrame->format = format;
-        resizedFrame->width = resolution;
-        resizedFrame->height = resolution;
-        if (av_image_alloc(resizedFrame->data, resizedFrame->linesize, resizedFrame->width, resizedFrame->height,
-                           (AVPixelFormat)resizedFrame->format, 32) < 0)
-        {
-            fprintf(stderr, "Could not allocate raw picture buffer\n");
-            abort();
-        }
         resizedFramePool.push(resizedFrame);
 	}
 
@@ -307,12 +296,24 @@ void H264RawPixelsSink::convertFrameLoop()
             return;
         }
         
+        if (!resizedFrame->data[0])
+        {
+            resizedFrame->width = frame->width;
+            resizedFrame->height = frame->height;
+            if (av_image_alloc(resizedFrame->data, resizedFrame->linesize, resizedFrame->width, resizedFrame->height,
+                               (AVPixelFormat)resizedFrame->format, 32) < 0)
+            {
+                fprintf(stderr, "Could not allocate raw picture buffer\n");
+                abort();
+            }
+        }
+        
         
         if (!imageConvertCtx)
         {
             // setup resizer for received frames
             imageConvertCtx = sws_getContext(frame->width, frame->height, (AVPixelFormat)frame->format,
-                                             resolution, resolution, format,
+                                             resizedFrame->width, resizedFrame->height, format,
                                              SWS_BICUBIC, NULL, NULL, NULL);
         }
         

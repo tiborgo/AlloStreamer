@@ -17,7 +17,6 @@ public:
     
     static CubemapSource* createFromRTSP(const char* url,
 		                                 unsigned long bufferSize,
-                                         int resolution,
                                          AVPixelFormat format,
                                          const char* interfaceAddress = "0.0.0.0");
     static void destroy(CubemapSource* cubemapSource);
