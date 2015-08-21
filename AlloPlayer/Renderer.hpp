@@ -24,7 +24,6 @@ public:
     std::vector<AVFrame*> currentFrames;
     SwsContext* resizeCtx;
     CubemapSource* cubemapSource;
-    bool newCubemap;
 
     Renderer(CubemapSource* cubemapSource);
     
@@ -45,7 +44,7 @@ protected:
     std::function<void (Renderer*, int)> onDisplayedCubemapFace;
     
 private:
-    StereoCubemap*                   currentCubemap;
     concurrent_queue<StereoCubemap*> cubemapBuffer;
     concurrent_queue<StereoCubemap*> cubemapPool;
+    std::vector<al::Texture*>        textures;
 };
