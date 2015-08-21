@@ -129,43 +129,41 @@ void Renderer::onDraw(al::Graphics& gl)
 //        }
 //    }
 
-    int width = 512, height = 512;
     
-    static al::Texture tex(width, height, al::Graphics::RGBA, al::Graphics::UBYTE);
     
-    {
-        // The default magnification filter is linear
-        //tex.filterMag(Texture::NEAREST);
-        
-        // Get a pointer to the (client-side) pixel buffer.
-        // When we make a read access to the pixels, they are flagged as dirty
-        // and get sent to the GPU the next time the texture bound.
-        unsigned char * pixels = tex.data<unsigned char>();
-        
-        // Loop through the pixels to generate an image
-        int Nx = tex.width();
-        int Ny = tex.height();
-        for(int j=0; j<Ny; ++j)
-        {
-            for(int i=0; i<Nx; ++i)
-            {
-                int idx = j*Nx + i;
-                int stride = tex.numComponents();
-                if ((j / (height / 4)) % 2 ^ (i / (width / 4)) % 2)
-                {
-                    pixels[idx*stride + 0] = 255;
-                    pixels[idx*stride + 1] = 0;
-                    pixels[idx*stride + 2] = 0;
-                }
-                else
-                {
-                    pixels[idx*stride + 0] = 0;
-                    pixels[idx*stride + 1] = 255;
-                    pixels[idx*stride + 2] = 0;
-                }
-            }
-        }
-    }
+//    {
+//        // The default magnification filter is linear
+//        //tex.filterMag(Texture::NEAREST);
+//        
+//        // Get a pointer to the (client-side) pixel buffer.
+//        // When we make a read access to the pixels, they are flagged as dirty
+//        // and get sent to the GPU the next time the texture bound.
+//        unsigned char * pixels = tex.data<unsigned char>();
+//        
+//        // Loop through the pixels to generate an image
+//        int Nx = tex.width();
+//        int Ny = tex.height();
+//        for(int j=0; j<Ny; ++j)
+//        {
+//            for(int i=0; i<Nx; ++i)
+//            {
+//                int idx = j*Nx + i;
+//                int stride = tex.numComponents();
+//                if ((j / (height / 4)) % 2 ^ (i / (width / 4)) % 2)
+//                {
+//                    pixels[idx*stride + 0] = 255;
+//                    pixels[idx*stride + 1] = 0;
+//                    pixels[idx*stride + 2] = 0;
+//                }
+//                else
+//                {
+//                    pixels[idx*stride + 0] = 0;
+//                    pixels[idx*stride + 1] = 255;
+//                    pixels[idx*stride + 2] = 0;
+//                }
+//            }
+//        }
+//    }
     
     {
         StereoCubemap* cubemap;
@@ -203,7 +201,7 @@ void Renderer::onDraw(al::Graphics& gl)
                 {
                     face = eye->getFace(faceIndex);
                 }
-//                
+//
 //                glUseProgram(0);
 //                /*glDepthMask(GL_FALSE);
 //                
@@ -266,6 +264,16 @@ void Renderer::onDraw(al::Graphics& gl)
 //                
 //                glDisable( GL_TEXTURE_2D );
                 
+                static al::Texture tex(face->getContent()->getWidth(),
+                                       face->getContent()->getHeight(),
+                                       al::Graphics::RGBA,
+                                       al::Graphics::UBYTE);
+                
+                unsigned char * pixels = tex.data<unsigned char>();
+                memcpy(pixels,
+                       face->getContent()->getPixels(),
+                       face->getContent()->getWidth() * face->getContent()->getHeight() * 4);
+                
                 al::ShaderProgram::use(0);
                 
                 // Borrow a temporary Mesh from Graphics
@@ -281,10 +289,10 @@ void Renderer::onDraw(al::Graphics& gl)
                 m.vertex( 1, -1);
                 
                 // Add texture coordinates
-                m.texCoord(0,1);
-                m.texCoord(0,0);
                 m.texCoord(1,1);
                 m.texCoord(1,0);
+                m.texCoord(0,1);
+                m.texCoord(0,0);
                 
                 // We must tell the GPU to use the texture when rendering primitives
                 tex.bind();
