@@ -1,16 +1,6 @@
 #pragma once
 
 #include <alloutil/al_OmniApp.hpp>
-extern "C"
-{
-    #include <libavcodec/avcodec.h>
-    #include <libavutil/opt.h>
-    #include <libavutil/frame.h>
-    #include <libavutil/imgutils.h>
-    #include <libavutil/time.h>
-    #include <libswscale/swscale.h>
-    #include <x264.h>
-}
 #include <boost/thread.hpp>
 #include "AlloShared/concurrent_queue.h"
 #include "AlloReceiver/AlloReceiver.h"
@@ -18,20 +8,13 @@ extern "C"
 class Renderer : public al::OmniApp
 {
 public:
-    al::Mesh cube, sphere;
-    al::Light light;
-    al_sec now;
-    std::vector<AVFrame*> currentFrames;
-    SwsContext* resizeCtx;
-    CubemapSource* cubemapSource;
-
     Renderer(CubemapSource* cubemapSource);
     
     virtual ~Renderer();
+    
     bool onCreate();
     bool onFrame();
     void onDraw(al::Graphics& gl);
-    virtual void onAnimate(al_sec dt);
     virtual void onMessage(al::osc::Message& m);
     virtual bool onKeyDown(const al::Keyboard& k);
     StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
@@ -47,4 +30,6 @@ private:
     concurrent_queue<StereoCubemap*> cubemapBuffer;
     concurrent_queue<StereoCubemap*> cubemapPool;
     std::vector<al::Texture*>        textures;
+    al_sec                           now;
+    CubemapSource*                   cubemapSource;
 };

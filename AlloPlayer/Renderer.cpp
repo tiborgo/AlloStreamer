@@ -2,7 +2,7 @@
 
 Renderer::Renderer(CubemapSource* cubemapSource)
     :
-    al::OmniApp("AlloPlayer", false, 2048), resizeCtx(nullptr), cubemapSource(cubemapSource)
+    al::OmniApp("AlloPlayer", false, 2048), cubemapSource(cubemapSource)
 {
     nav().smooth(0.8);
     
@@ -143,11 +143,6 @@ void Renderer::onDraw(al::Graphics& gl)
         gl.draw(m);
         tex->unbind();
     }
-}
-
-
-void Renderer::onAnimate(al_sec dt)
-{
 }
 
 void Renderer::onMessage(al::osc::Message& m)
