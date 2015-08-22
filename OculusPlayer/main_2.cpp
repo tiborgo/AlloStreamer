@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
         _interface = "0.0.0.0";
     }
 
-	CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), DEFAULT_SINK_BUFFER_SIZE, 1024, AV_PIX_FMT_RGBA, _interface);
+	CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), DEFAULT_SINK_BUFFER_SIZE, AV_PIX_FMT_RGBA, _interface);
     
     std::function<void (CubemapSource*, int, uint8_t, size_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3, _4);
     cubemapSource->setOnDroppedNALU(callback);
