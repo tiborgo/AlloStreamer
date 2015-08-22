@@ -24,12 +24,15 @@ public class RenderStereoCubemap : MonoBehaviour
 
     public bool printFPS = false, adjustFOV = false;
 
-
     public int faceCount = 6;
     public bool extract = true;
-
-
+    
     public float fovAdjustValue=0.5f;
+
+    public enum Ceiling_Floor_StereoOption {None, PositiveX, All}
+
+    public Ceiling_Floor_StereoOption option;
+    
     private float preFOVAdjustValue = 0.5f;
 
 
@@ -41,7 +44,7 @@ public class RenderStereoCubemap : MonoBehaviour
     private GameObject[] CameraFR;  //for right floor view
 
     private GameObject[] planes,planeCeiling,planeFloor;
-    private GameObject cube, cubeCeiling, cubeFloor, cameras;
+    private GameObject cube, cubeCeiling, cubeFloor, cameras,cameraCeiling,cameraFloor;
 
     private Vector3 prePos;
     private Transform OVRCamRig, OVRPlayer;
@@ -220,6 +223,10 @@ public class RenderStereoCubemap : MonoBehaviour
             renderTexturesFloor[i] = new RenderTexture(resolution, resolution, 24);
             renderTexturesFloor[i].Create();
         }
+        cube = new GameObject();
+        cubeCeiling = new GameObject();
+        cubeFloor = new GameObject();
+
 
         planes = new GameObject[8];
         planeCeiling = new GameObject[8];
@@ -592,6 +599,7 @@ public class RenderStereoCubemap : MonoBehaviour
     {
         UpdateCharacter();
 
+        
 
         //if (transform.position==prePos) {
         //	return;
