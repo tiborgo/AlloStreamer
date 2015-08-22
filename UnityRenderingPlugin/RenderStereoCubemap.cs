@@ -15,6 +15,9 @@ public class RenderStereoCubemap : MonoBehaviour
     public GameObject[] CameraR;	//for right eye surround scene
     public GameObject[] CameraC;	//for top and bottom view (no stereo)
 
+    public int leftLayer = 15, rightLayer=16;
+
+
     public float eyeSep = 0.064f, near = 0.1f, far = 10000f, focal_length = 10f, aperture = 90f;
 
     public int resolution =1920;
@@ -135,9 +138,9 @@ public class RenderStereoCubemap : MonoBehaviour
             r.material.mainTexture = renderTextures[i];
 
             if(i<6)
-                planes[i].layer = 14;
+                planes[i].layer = leftLayer;
             else
-                planes[i].layer = 15;
+                planes[i].layer = rightLayer;
 
             planes[i].name = cubemapFaceNames[i];
             planes[i].transform.localPosition = cubemapFacePositions[i];
@@ -275,9 +278,9 @@ public class RenderStereoCubemap : MonoBehaviour
             cR.fieldOfView = aperture;
             
 
-
-            cL.cullingMask = 0x00001fff;
-            cR.cullingMask = 0x00001fff;
+            
+            cL.cullingMask = ~((1<<leftLayer)|(1<<rightLayer));
+            cR.cullingMask = ~((1 << leftLayer) | (1 << rightLayer));
 
             cL.enabled = true;
             cR.enabled = true;
@@ -375,8 +378,13 @@ public class RenderStereoCubemap : MonoBehaviour
         mat[2, 0] = 0; mat[2, 1] = 0; mat[2, 2] = c; mat[2, 3] = e;
         mat[3, 0] = 0; mat[3, 1] = 0; mat[3, 2] = d; mat[3, 3] = 0;
 
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 6; i++)
+        {
             CameraL[i].GetComponent<Camera>().projectionMatrix = mat;
+            if (i == 1)
+                i += 2;
+        }
+            
 
         //Right Eye
         x = 2 * near / (r_R - l_R);
@@ -385,8 +393,13 @@ public class RenderStereoCubemap : MonoBehaviour
         mat[0, 0] = x;
         mat[0, 2] = a;
 
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 6; i++)
+        {
             CameraR[i].GetComponent<Camera>().projectionMatrix = mat;
+            if (i == 1)
+                i += 2;
+        }
+           
     }
 
     IEnumerator Start()
