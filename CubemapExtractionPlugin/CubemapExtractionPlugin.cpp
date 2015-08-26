@@ -8,6 +8,10 @@
 #include <vector>
 #include <algorithm>
 
+#include <cuda_runtime.h>
+#include <helper_cuda.h>
+#include <cuda_d3d11_interop.h>
+
 #include "CubemapExtractionPlugin.h"
 #include "FrameD3D9.hpp"
 #include "FrameD3D11.hpp"
@@ -18,6 +22,8 @@
 #include "AlloShared/Binoculars.hpp"
 
 Frame* getFrameFromTexture(void* texturePtr);
+
+cudaGraphicsResource* cudaResource = nullptr;
 
 // --------------------------------------------------------------------------
 // Helper utilities
@@ -193,6 +199,10 @@ extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType,
 		DebugLog ("Set D3D11 graphics device\n");
 		g_DeviceType = deviceType;
 		g_D3D11Device = (ID3D11Device*)device;
+
+		// begin interop
+		cudaD3D11SetDirect3DDevice(g_D3D11Device);
+		getLastCudaError("cudaD3D11SetDirect3DDevice failed");
 	}
 	#endif
 
@@ -234,6 +244,10 @@ Frame* getFrameFromTexture(void* texturePtr)
 	{
 		frame = FrameD3D11::create((ID3D11Texture2D*)texturePtr,
 			                       *shmAllocator);
+
+		
+
+		
 	}
 #endif
 
@@ -250,8 +264,19 @@ Frame* getFrameFromTexture(void* texturePtr)
     return frame;
 }
 
+
+extern "C"
+void cuda_texture_2d(void *surface, int width, int height, size_t pitch, float t);
+
 void copyFromGPUToCPU(Frame* frame)
 {
+
+
+
+
+
+
+
     frame->setPresentationTime(presentationTime);
     
     // PREPARE COPYING
@@ -269,6 +294,8 @@ void copyFromGPUToCPU(Frame* frame)
     
 #if SUPPORT_D3D11
     // D3D11 case
+	void* cudaLinearMemory;
+	size_t pitch;
     if (g_DeviceType == kGfxRendererD3D11)
     {
 		FrameD3D11* frameD3D11 = (FrameD3D11*)frame;
@@ -281,6 +308,58 @@ void copyFromGPUToCPU(Frame* frame)
         
         // copy data from GPU to CPU
 		g_D3D11DeviceContext->CopyResource(frameD3D11->cpuTexturePtr, frameD3D11->gpuTexturePtr);
+
+
+
+
+		//static int counter = 0;
+		//counter++;
+
+
+		////char* argv[] = { "CubemapExtractionPlugin" };
+		////boost::thread(boost::bind(&main, 1, argv));
+		//int width = 256;
+		//int height = 256;
+
+		
+		
+		static float t = 0.0f;
+		t += 0.457f;
+
+		cudaError_t error;
+
+		if (!cudaResource)
+		{
+			error = cudaGraphicsD3D11RegisterResource(&cudaResource, ((FrameD3D11*)frame)->cpuTexturePtr, cudaGraphicsRegisterFlagsNone);
+			getLastCudaError("cudaGraphicsD3D11RegisterResource (g_texture_2d) failed");
+		}
+		
+		error = cudaGraphicsMapResources(1, &cudaResource);
+		getLastCudaError("cudaGraphicsMapResources(3) failed");
+
+		
+
+		//
+
+		cudaMallocPitch(&cudaLinearMemory, &pitch, frameD3D11->getWidth() * sizeof(uint8_t) * 4, frameD3D11->getHeight());
+		getLastCudaError("cudaMallocPitch (g_texture_2d) failed");
+		cudaMemset(cudaLinearMemory, 1, pitch * frameD3D11->getHeight());
+
+		
+
+		cudaArray* cuArray;
+
+		error = cudaGraphicsSubResourceGetMappedArray(&cuArray, cudaResource, 0, 0);
+		getLastCudaError("cudaGraphicsSubResourceGetMappedArray (cuda_texture_2d) failed");
+
+		cuda_texture_2d(cudaLinearMemory, frameD3D11->getWidth(), frameD3D11->getHeight(), pitch, t);
+		getLastCudaError("cuda_texture_2d failed");
+
+		////cudaGraphicsUnregisterResource(cudaResource);
+		////getLastCudaError("cudaGraphicsUnregisterResource (g_texture_2d) failed");
+		
+		error = cudaGraphicsUnmapResources(1, &cudaResource);
+		getLastCudaError("cudaGraphicsUnmapResources(3) failed");
     }
 #endif
     
@@ -335,9 +414,19 @@ void copyFromGPUToCPU(Frame* frame)
     if (g_DeviceType == kGfxRendererD3D11)
     {
 		FrameD3D11* frameD3D11 = (FrameD3D11*)frame;
-		memcpy(frameD3D11->getPixels(),
+		/*memcpy(frameD3D11->getPixels(),
 			   frameD3D11->resource.pData,
-			   frameD3D11->getWidth() * frameD3D11->getHeight() * 4);
+			   frameD3D11->getWidth() * frameD3D11->getHeight() * 4);*/
+
+		cudaMemcpy(frameD3D11->getPixels(),
+			cudaLinearMemory,
+			pitch * frameD3D11->getHeight(),
+			cudaMemcpyDeviceToHost);
+
+		cudaFree(cudaLinearMemory);
+		getLastCudaError("cudaFree (g_texture_2d) failed");
+
+
     }
 #endif
     
@@ -429,6 +518,9 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
     }
 }
 
+//int main(int argc, char *argv[]);
+
+
 // --------------------------------------------------------------------------
 // Start stop management
 
@@ -446,6 +538,8 @@ extern "C" void EXPORT_API ConfigureCubemapFromUnity(void** texturePtrs, int cub
     cubemapConfig->texturePtrs = texturePtrs;
     cubemapConfig->facesCount  = cubemapFacesCount;
     cubemapConfig->resolution  = resolution;
+
+
 }
 
 extern "C" void EXPORT_API ConfigureBinocularsFromUnity(void* texturePtr, int width, int height)
