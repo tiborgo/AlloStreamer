@@ -228,7 +228,7 @@ void Renderer::renderLoop()
 						SDL_Quit();
 						abort();
 					}
-					memcpy(pixels, content->getPixels(), content->getHeight() * content->getWidth() * 4);
+					memcpy(pixels, content->getPixels(0), content->getHeight() * content->getWidth() * 4);
 					SDL_UnlockTexture(texture);
 
 					//Draw the texture

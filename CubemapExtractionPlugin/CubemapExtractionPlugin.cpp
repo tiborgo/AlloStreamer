@@ -123,7 +123,7 @@ void allocateSHM(CubemapConfig* cubemapConfig, BinocularsConfig* binocularsConfi
     unsigned long shmSize = 65536;
     if (cubemapConfig)
     {
-        shmSize += cubemapConfig->resolution * cubemapConfig->resolution * 4 * cubemapConfig->facesCount +
+        shmSize += cubemapConfig->resolution * cubemapConfig->resolution * 4 * cubemapConfig->facesCount * Frame::MAX_PLANES_COUNT +
                    sizeof(Cubemap) + cubemapConfig->facesCount * sizeof(CubemapFace);
     }
     if (binocularsConfig)
@@ -425,7 +425,7 @@ void copyFromGPUToCPU(Frame* frame)
 			   frameD3D11->resource.pData,
 			   frameD3D11->getWidth() * frameD3D11->getHeight() * 4);*/
 
-		cudaMemcpy(frameD3D11->getPixels(),
+		cudaMemcpy(frameD3D11->getPixels(0),
 			cudaLinearMemory,
 			frameD3D11->getWidth() * frameD3D11->getHeight() * 4,
 			cudaMemcpyDeviceToHost);
@@ -442,7 +442,7 @@ void copyFromGPUToCPU(Frame* frame)
     // OpenGL case
     if (g_DeviceType == kGfxRendererOpenGL)
     {
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->getPixels());
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->getPixels(0));
     }
 #endif
     

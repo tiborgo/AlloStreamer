@@ -89,7 +89,7 @@ void H264CubemapSource::getNextCubemapLoop()
 										 fprintf(stderr, "Could not read pixels from frame\n");
 										 abort();
 										 }*/
-					memcpy(face->getContent()->getPixels(), nextFrame->data[0], nextFrame->width * nextFrame->height * 4);
+					memcpy(face->getContent()->getPixels(0), nextFrame->data[0], nextFrame->width * nextFrame->height * 4);
 
 					// delete nextFrame
 					//av_freep(&nextFrame->data[0]);

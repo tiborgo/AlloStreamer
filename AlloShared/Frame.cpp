@@ -4,13 +4,16 @@ Frame::Frame(boost::uint32_t                         width,
              boost::uint32_t                         height,
              AVPixelFormat                           format,
              boost::chrono::system_clock::time_point presentationTime,
-             void*                                   pixels,
+             void*                                   pixels[MAX_PLANES_COUNT],
              Allocator&                              allocator)
     :
     allocator(allocator), width(width), height(height), format(format),
-    presentationTime(presentationTime), pixels(pixels)
+    presentationTime(presentationTime)
 {
-
+	for (int i = 0; i < MAX_PLANES_COUNT; i++)
+	{
+		this->pixels[i] = pixels[i];
+	}
 }
 
 Frame::~Frame()
@@ -37,9 +40,10 @@ boost::chrono::system_clock::time_point Frame::getPresentationTime()
     return presentationTime;
 }
 
-void* Frame::getPixels()
+void* Frame::getPixels(size_t plane)
 {
-    return pixels.get();
+	assert(plane < 3);
+    return pixels[plane].get();
 }
 
 boost::interprocess::interprocess_mutex& Frame::getMutex()
@@ -64,13 +68,20 @@ Frame* Frame::create(boost::uint32_t                         width,
                      Allocator&                              allocator)
 {
     void* addr = allocator.allocate(sizeof(Frame));
-    void* pixels = allocator.allocate(width * height * 4);
+	void* pixels[MAX_PLANES_COUNT];
+	for (int i = 0; i < Frame::MAX_PLANES_COUNT; i++)
+	{
+		pixels[i] = allocator.allocate(width * height * 4);
+	}
     return new (addr) Frame(width, height, format, presentationTime, pixels, allocator);
 }
 
-void Frame::destroy(Frame* Frame)
+void Frame::destroy(Frame* frame)
 {
-    Frame->~Frame();
-    Frame->allocator.deallocate(Frame->pixels.get(), Frame->width * Frame->height * 4);
-    Frame->allocator.deallocate(Frame, sizeof(Frame));
+    frame->~Frame();
+	for (int i = 0; i < Frame::MAX_PLANES_COUNT; i++)
+	{
+		frame->allocator.deallocate(frame->pixels[i].get(), frame->width * frame->height * 4);
+	}
+	frame->allocator.deallocate(frame, sizeof(Frame));
 }

@@ -17,7 +17,8 @@
 
 #define PI 3.1415926536f
 
-texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef;
+// This must be global. Otherwise, cudaBindTextureToArray will fail
+texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef; 
 //texture<float4, 2, cudaReadModeElementType> texRef;
 
 /*
@@ -61,8 +62,7 @@ __global__ void cuda_kernel_texture_2d(unsigned char *surface, int width, int he
 	pixel[0] = src.x;
 	pixel[1] = src.y;
 	pixel[2] = src.z;
-
-	pixel[3] = 0; // alpha
+	pixel[3] = src.w; // alpha
 }
 
 extern "C"
@@ -84,6 +84,7 @@ void* cuda_texture_2d(cudaGraphicsResource* cudaResource, int width, int height,
 	error = cudaGraphicsSubResourceGetMappedArray(&cuArray, cudaResource, 0, 0);
 	getLastCudaError("cudaGraphicsSubResourceGetMappedArray (cuda_texture_2d) failed");
 
+	
 	error = cudaBindTextureToArray(texRef, cuArray);
 	getLastCudaError("cudaGraphicsSubResourceGetMappedArray (cuda_texture_2d) failed");
 

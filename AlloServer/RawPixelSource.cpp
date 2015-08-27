@@ -224,7 +224,7 @@ void RawPixelSource::frameContentLoop()
         
         // Fill frame
         avpicture_fill((AVPicture*)frame,
-            (uint8_t*)content->getPixels(),
+            (uint8_t*)content->getPixels(0),
             content->getFormat(),
             content->getWidth(),
             content->getHeight());

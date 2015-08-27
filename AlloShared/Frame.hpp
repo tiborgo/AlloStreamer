@@ -15,11 +15,13 @@ class Frame
 public:
 	typedef boost::interprocess::offset_ptr<Frame> Ptr;
     
+	static enum { MAX_PLANES_COUNT = 3 };
+
     boost::uint32_t                              getWidth();
     boost::uint32_t                              getHeight();
     AVPixelFormat                                getFormat();
     boost::chrono::system_clock::time_point      getPresentationTime();
-    void*                                        getPixels();
+	void*                                        getPixels(size_t plane);
     boost::interprocess::interprocess_mutex&     getMutex();
     boost::interprocess::interprocess_condition& getNewPixelsCondition();
     
@@ -37,7 +39,7 @@ protected:
           boost::uint32_t                         height,
           AVPixelFormat                           format,
           boost::chrono::system_clock::time_point presentationTime,
-          void*                                   pixels,
+		  void*                                   pixels[MAX_PLANES_COUNT],
           Allocator&                              allocator);
     ~Frame();
     
@@ -46,7 +48,7 @@ protected:
     boost::uint32_t                             height;
     AVPixelFormat                               format;
     boost::chrono::system_clock::time_point     presentationTime;
-    boost::interprocess::offset_ptr<void>       pixels;
-    boost::interprocess::interprocess_mutex     mutex;
+	boost::interprocess::offset_ptr<void>       pixels[3];
+	boost::interprocess::interprocess_mutex     mutex;
     boost::interprocess::interprocess_condition newPixelsCondition;
 };

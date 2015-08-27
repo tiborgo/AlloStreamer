@@ -18,7 +18,7 @@
                     boost::uint32_t                         height,
                     AVPixelFormat                           format,
                     boost::chrono::system_clock::time_point presentationTime,
-                    void*                                   pixels,
+					void*                                   pixels[MAX_PLANES_COUNT],
                     GLuint                                  gpuTextureID,
                     Allocator&                              allocator);
         
