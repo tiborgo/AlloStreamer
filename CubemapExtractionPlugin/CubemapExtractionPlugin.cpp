@@ -266,7 +266,7 @@ Frame* getFrameFromTexture(void* texturePtr)
 
 
 extern "C"
-void cuda_texture_2d(void *surface, int width, int height, size_t pitch, float t);
+void* cuda_texture_2d(cudaGraphicsResource* cudaResource, int width, int height, float t);
 
 void copyFromGPUToCPU(Frame* frame)
 {
@@ -295,7 +295,7 @@ void copyFromGPUToCPU(Frame* frame)
 #if SUPPORT_D3D11
     // D3D11 case
 	void* cudaLinearMemory;
-	size_t pitch;
+	//size_t pitch;
     if (g_DeviceType == kGfxRendererD3D11)
     {
 		FrameD3D11* frameD3D11 = (FrameD3D11*)frame;
@@ -341,22 +341,16 @@ void copyFromGPUToCPU(Frame* frame)
 
 		//
 
-		cudaMallocPitch(&cudaLinearMemory, &pitch, frameD3D11->getWidth() * sizeof(uint8_t) * 4, frameD3D11->getHeight());
-		getLastCudaError("cudaMallocPitch (g_texture_2d) failed");
-		cudaMemset(cudaLinearMemory, 1, pitch * frameD3D11->getHeight());
+		
 
 		
 
-		cudaArray* cuArray;
+		
 
-		error = cudaGraphicsSubResourceGetMappedArray(&cuArray, cudaResource, 0, 0);
-		getLastCudaError("cudaGraphicsSubResourceGetMappedArray (cuda_texture_2d) failed");
-
-		cuda_texture_2d(cudaLinearMemory, frameD3D11->getWidth(), frameD3D11->getHeight(), pitch, t);
+		cudaLinearMemory = cuda_texture_2d(cudaResource, frameD3D11->getWidth(), frameD3D11->getHeight(), t);
 		getLastCudaError("cuda_texture_2d failed");
 
-		////cudaGraphicsUnregisterResource(cudaResource);
-		////getLastCudaError("cudaGraphicsUnregisterResource (g_texture_2d) failed");
+		
 		
 		error = cudaGraphicsUnmapResources(1, &cudaResource);
 		getLastCudaError("cudaGraphicsUnmapResources(3) failed");
@@ -414,13 +408,26 @@ void copyFromGPUToCPU(Frame* frame)
     if (g_DeviceType == kGfxRendererD3D11)
     {
 		FrameD3D11* frameD3D11 = (FrameD3D11*)frame;
+
+		/*ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
+		g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
+
+		D3D11_MAPPED_SUBRESOURCE resource;
+		ZeroMemory(&resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
+		unsigned int subresource = D3D11CalcSubresource(0, 0, 0);
+		HRESULT hr = g_D3D11DeviceContext->Map(frameD3D11->cpuTexturePtr, subresource, D3D11_MAP_READ, 0, &resource);
+		memcpy(frameD3D11->getPixels(),
+			resource.pData,
+			frameD3D11->getWidth() * frameD3D11->getHeight() * 4);
+		g_D3D11DeviceContext->Unmap(frameD3D11->cpuTexturePtr, subresource);*/
+
 		/*memcpy(frameD3D11->getPixels(),
 			   frameD3D11->resource.pData,
 			   frameD3D11->getWidth() * frameD3D11->getHeight() * 4);*/
 
 		cudaMemcpy(frameD3D11->getPixels(),
 			cudaLinearMemory,
-			pitch * frameD3D11->getHeight(),
+			frameD3D11->getWidth() * frameD3D11->getHeight() * 4,
 			cudaMemcpyDeviceToHost);
 
 		cudaFree(cudaLinearMemory);
@@ -552,5 +559,8 @@ extern "C" void EXPORT_API ConfigureBinocularsFromUnity(void* texturePtr, int wi
 
 extern "C" void EXPORT_API StopFromUnity()
 {
-    releaseSHM();
+	//cudaGraphicsUnregisterResource(cudaResource);
+	//getLastCudaError("cudaGraphicsUnregisterResource (g_texture_2d) failed");
+	
+	releaseSHM();
 }

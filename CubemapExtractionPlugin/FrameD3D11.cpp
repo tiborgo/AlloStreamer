@@ -56,6 +56,7 @@ FrameD3D11* FrameD3D11::create(ID3D11Texture2D* texturePtr,
 	if (textureDescription.Format != DXGI_FORMAT_R8G8B8A8_TYPELESS)
 	{
 		std::cerr << "Can only handle render textures with format DXGI_FORMAT_R8G8B8A8_TYPELESS" << std::endl;
+		abort();
 	}
 
 	D3D11_TEXTURE2D_DESC desc;
@@ -68,6 +69,9 @@ FrameD3D11* FrameD3D11::create(ID3D11Texture2D* texturePtr,
 	desc.SampleDesc.Count = 1;
 	desc.Usage = D3D11_USAGE_DEFAULT;
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+	//textureDescription.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	//textureDescription.Usage = D3D11_USAGE_STAGING;
 
 	ID3D11Texture2D* cpuTexturePtr;
 	//HRESULT hr = g_D3D11Device->CreateTexture2D(&textureDescription, NULL, &cpuTexturePtr);
