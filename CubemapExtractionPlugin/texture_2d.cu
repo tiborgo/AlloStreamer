@@ -21,27 +21,61 @@
 texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef; 
 //texture<float4, 2, cudaReadModeElementType> texRef;
 
+__device__ __inline__ float3 make_float3(uchar4& v)
+{
+	return make_float3(v.x, v.y, v.z);
+}
+
 /*
  * Paint a 2D texture with a moving red/green hatch pattern on a
  * strobing blue background.  Note that this kernel reads to and
  * writes from the texture, hence why this texture was not mapped
  * as WriteDiscard.
  */
-__global__ void cuda_kernel_texture_2d(uint8_t* surface, int width, int height)
+__global__ void cuda_kernel_texture_2d(uint8_t* buffer, int width, int height, int t)
 {
-    int x = blockIdx.x*blockDim.x + threadIdx.x;
-    int y = blockIdx.y*blockDim.y + threadIdx.y;
+    int x = (blockIdx.x*blockDim.x + threadIdx.x) * 2;
+    int y = (blockIdx.y*blockDim.y + threadIdx.y) * 2;
 
     // in the case where, due to quantization into grids, we have
     // more threads than pixels, skip the threads which don't
     // correspond to valid pixels
-    if (x >= width || y >= height) return;
+    if ((x+1) >= width || (y+1) >= height) return;
 
-	uchar4 pixel = tex2D(texRef, x, y);
+	float3 yuv = make_float3(0.0f, 0.0f, 0.0f);
 
-	uint8_t& yPart = *(surface + y * width + x);
+	for (int x_ = x; x_ <= x + 1; x_++)
+	{
+		for (int y_ = y; y_ <= y + 1; y_++)
+		{
+			float3 rgb = make_float3(tex2D(texRef, x_, y_));
 
-	yPart = 0.299 * pixel.x + 0.587 * pixel.y + 0.114 * pixel.z;
+			
+
+			/*yuv.x  =  0.299f  * rgb.x + 0.587f  * rgb.y + 0.114f * rgb.z;
+			yuv.y += -0.1687f * rgb.x - 0.3313f * rgb.y + 0.5f   * rgb.z + 256.f;
+			yuv.z +=  0.5f    * rgb.x - 0.4187f * rgb.y - 0.813f * rgb.z + 256.f;*/
+
+			yuv.x =  (0.257f * rgb.z) + (0.504f * rgb.y) + (0.098f * rgb.x) + 16.f;
+			yuv.y =  (0.439f * rgb.z) - (0.368f * rgb.y) - (0.071f * rgb.x) + 128.f;
+			yuv.z = -(0.148f * rgb.z) - (0.291f * rgb.y) + (0.439f * rgb.x) + 128.f;
+		
+			uint8_t& yPos = *(buffer + y_ * width + x_);
+			yPos = yuv.x;
+
+			int8_t& uPos = *(int8_t*)(buffer + width * height + (height - y_ - 1) * width + x_);
+			int8_t& vPos = *(int8_t*)(buffer + width * height * 2 + (height - y_ - 1) * width + x_);
+
+			uPos = yuv.y;
+			vPos = yuv.z;
+		}
+	}
+
+	/*uint8_t& uPos = *(uint8_t*)(buffer + width * height + (y / 2) * width + (x / 2));
+	uint8_t& vPos = *(uint8_t*)(buffer + width * height + width * height / 4 + (y / 2) * width + (x / 2));
+
+	uPos = yuv.y / 4.f;
+	vPos = yuv.z / 4.f;*/
 }
 
 extern "C"
@@ -50,6 +84,8 @@ void* cuda_texture_2d(cudaGraphicsResource* cudaResource, int width, int height,
     cudaError_t error = cudaSuccess;
 
 	//texture<uint8_t, cudaTextureType2D, cudaReadModeElementType> texRef;
+	static int x = 0;
+	x++;
 
 	cudaArray* cuArray;
 
@@ -68,9 +104,9 @@ void* cuda_texture_2d(cudaGraphicsResource* cudaResource, int width, int height,
 	getLastCudaError("cudaGraphicsSubResourceGetMappedArray (cuda_texture_2d) failed");
 
     dim3 Db = dim3(16, 16);   // block dimensions are fixed to be 256 threads
-    dim3 Dg = dim3((width+Db.x-1)/Db.x, (height+Db.y-1)/Db.y);
+    dim3 Dg = dim3(((width/2)+Db.x-1)/Db.x, ((height/2)+Db.y-1)/Db.y);
 
-    cuda_kernel_texture_2d<<<Dg,Db>>>((uint8_t*)cudaLinearMemory, width, height);
+    cuda_kernel_texture_2d<<<Dg,Db>>>((uint8_t*)cudaLinearMemory, width, height, x);
 
     error = cudaGetLastError();
 
