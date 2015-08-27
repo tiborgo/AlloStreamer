@@ -50,26 +50,20 @@ __global__ void cuda_kernel_texture_2d(uint8_t* buffer, int width, int height, i
 		{
 			float3 rgb = make_float3(tex2D(texRef, x_, y_));
 
-			yuv.x =  (0.257f * rgb.z) + (0.504f * rgb.y) + (0.098f * rgb.x) +  16.f;
-			yuv.y =  (0.439f * rgb.z) - (0.368f * rgb.y) - (0.071f * rgb.x) + 128.f;
-			yuv.z = -(0.148f * rgb.z) - (0.291f * rgb.y) + (0.439f * rgb.x) + 128.f;
+			yuv.x  =  (0.257f * rgb.z) + (0.504f * rgb.y) + (0.098f * rgb.x) +  16.f;
+			yuv.y +=  (0.439f * rgb.z) - (0.368f * rgb.y) - (0.071f * rgb.x) + 128.f;
+			yuv.z += -(0.148f * rgb.z) - (0.291f * rgb.y) + (0.439f * rgb.x) + 128.f;
 		
-			uint8_t* yPtr = (buffer + y_ * width + x_);
+			uint8_t* yPtr = (buffer + (height - y_ - 1) * width + x_);
 			*yPtr = yuv.x;
-
-			uint8_t* uPtr = (buffer + width * height     + (height - y_ - 1) * width + x_);
-			uint8_t* vPtr = (buffer + width * height * 2 + (height - y_ - 1) * width + x_);
-
-			*uPtr = yuv.y;
-			*vPtr = yuv.z;
 		}
 	}
 
-	/*uint8_t& uPos = *(uint8_t*)(buffer + width * height + (y / 2) * width + (x / 2));
-	uint8_t& vPos = *(uint8_t*)(buffer + width * height + width * height / 4 + (y / 2) * width + (x / 2));
+	uint8_t* uPtr = (buffer + width * height                        + (height/2 - y/2 - 1) * width/2 + x/2);
+	uint8_t* vPtr = (buffer + width * height + (width * height) / 4 + (height/2 - y/2 - 1) * width/2 + x/2);
 
-	uPos = yuv.y / 4.f;
-	vPos = yuv.z / 4.f;*/
+	*uPtr = yuv.y / 4.f;
+	*vPtr = yuv.z / 4.f;
 }
 
 extern "C"

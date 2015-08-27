@@ -26,7 +26,7 @@ FrameD3D11::FrameD3D11(boost::uint32_t width,
 	:
 	Frame(width,
 	      height,
-		  PIX_FMT_YUV444P,
+		  PIX_FMT_YUV420P,
 	      presentationTime,
 	      allocator),
 	gpuTexturePtr(gpuTexturePtr),
