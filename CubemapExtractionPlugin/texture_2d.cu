@@ -27,42 +27,21 @@ texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef;
  * writes from the texture, hence why this texture was not mapped
  * as WriteDiscard.
  */
-__global__ void cuda_kernel_texture_2d(unsigned char *surface, int width, int height, size_t pitch, float t)
+__global__ void cuda_kernel_texture_2d(uint8_t* surface, int width, int height)
 {
     int x = blockIdx.x*blockDim.x + threadIdx.x;
     int y = blockIdx.y*blockDim.y + threadIdx.y;
-    uint8_t *pixel;
 
     // in the case where, due to quantization into grids, we have
     // more threads than pixels, skip the threads which don't
     // correspond to valid pixels
     if (x >= width || y >= height) return;
 
-	uchar4 src = tex2D(texRef, x, y);
+	uchar4 pixel = tex2D(texRef, x, y);
 
-    // get a pointer to the pixel at (x,y)
-	pixel = (uint8_t*)(surface + y*pitch) + 4 * x;
+	uint8_t& yPart = *(surface + y * width + x);
 
-    // populate it
-    float value_x = 0.5f + 0.5f*cos(t + 10.0f*((2.0f*x)/width  - 1.0f));
-    float value_y = 0.5f + 0.5f*cos(t + 10.0f*((2.0f*y)/height - 1.0f));
-	if (src.y == 0 && src.x == 0 && src.z == 0 && src.w == 0)
-	{
-		pixel[0] = 0;// texRef 255 * (0.5*pixel[0] + 0.5*pow(value_x, 3.0f)); // red
-		pixel[1] = 0;// 255 * (0.5*pixel[1] + 0.5*pow(value_y, 3.0f)); // green
-		pixel[2] = 0;// 255 * (0.5f + 0.5f*cos(t)); // blue
-	}
-	else
-	{
-		pixel[0] = 255;// texRef 255 * (0.5*pixel[0] + 0.5*pow(value_x, 3.0f)); // red
-		pixel[1] = 0;// 255 * (0.5*pixel[1] + 0.5*pow(value_y, 3.0f)); // green
-		pixel[2] = 0;// 255 * (0.5f + 0.5f*cos(t)); // blue
-	}
-	
-	pixel[0] = src.x;
-	pixel[1] = src.y;
-	pixel[2] = src.z;
-	pixel[3] = src.w; // alpha
+	yPart = 0.299 * pixel.x + 0.587 * pixel.y + 0.114 * pixel.z;
 }
 
 extern "C"
@@ -75,11 +54,11 @@ void* cuda_texture_2d(cudaGraphicsResource* cudaResource, int width, int height,
 	cudaArray* cuArray;
 
 	void* cudaLinearMemory;
-	size_t pitch;
+	//size_t pitch;
 
-	cudaMallocPitch(&cudaLinearMemory, &pitch, width * sizeof(uint8_t) * 4, height);
+	cudaMalloc(&cudaLinearMemory, width * height * 4);
 	getLastCudaError("cudaMallocPitch (g_texture_2d) failed");
-	cudaMemset(cudaLinearMemory, 1, pitch * height);
+	cudaMemset(cudaLinearMemory, 0, width * height * 3);
 
 	error = cudaGraphicsSubResourceGetMappedArray(&cuArray, cudaResource, 0, 0);
 	getLastCudaError("cudaGraphicsSubResourceGetMappedArray (cuda_texture_2d) failed");
@@ -91,7 +70,7 @@ void* cuda_texture_2d(cudaGraphicsResource* cudaResource, int width, int height,
     dim3 Db = dim3(16, 16);   // block dimensions are fixed to be 256 threads
     dim3 Dg = dim3((width+Db.x-1)/Db.x, (height+Db.y-1)/Db.y);
 
-    cuda_kernel_texture_2d<<<Dg,Db>>>((unsigned char*)cudaLinearMemory, width, height, pitch, t);
+    cuda_kernel_texture_2d<<<Dg,Db>>>((uint8_t*)cudaLinearMemory, width, height);
 
     error = cudaGetLastError();
 

@@ -319,7 +319,7 @@ void Renderer::renderLoop()
 		UINT w = cubemap->getEye(0)->getFace(0)->getContent()->getWidth(), h = cubemap->getEye(0)->getFace(0)->getContent()->getWidth();
 		for (int e = 0; e < cubemap->getEyesCount(); e++){
 			for (int i = 0; i < cubemap->getEye(e)->getFacesCount(); i++){
-				pixels[i + 6 * e] = cubemap->getEye(e)->getFace(i)->getContent()->getPixels(0);	//Draws left eye scene for both eyes
+				pixels[i + 6 * e] = cubemap->getEye(e)->getFace(i)->getContent()->getPixels();	//Draws left eye scene for both eyes
 			}
 		}
 

@@ -18,7 +18,6 @@ static AVPixelFormat avPixel2DXGIFormat(DXGI_FORMAT format)
 FrameD3D11::FrameD3D11(boost::uint32_t width,
                                    boost::uint32_t height,
 								   boost::chrono::system_clock::time_point presentationTime,
-                                   void* pixels[MAX_PLANES_COUNT],
 	                               Allocator& allocator,
 	                               ID3D11Texture2D* gpuTexturePtr,
 	                               ID3D11Texture2D* cpuTexturePtr,
@@ -27,9 +26,8 @@ FrameD3D11::FrameD3D11(boost::uint32_t width,
 	:
 	Frame(width,
 	      height,
-          avPixel2DXGIFormat(description.Format),
+          PIX_FMT_YUV420P,
 	      presentationTime,
-		  pixels,
 	      allocator),
 	gpuTexturePtr(gpuTexturePtr),
 	cpuTexturePtr(cpuTexturePtr),
@@ -88,17 +86,10 @@ FrameD3D11* FrameD3D11::create(ID3D11Texture2D* texturePtr,
 	/*hr = g_D3D11DeviceContext->Map(cpuTexturePtr, subresource, D3D11_MAP_READ, 0, &resource);
 	g_D3D11DeviceContext->Unmap(cpuTexturePtr, subresource);*/
 
-	void* pixels[MAX_PLANES_COUNT];
-	for (int i = 0; i < Frame::MAX_PLANES_COUNT; i++)
-	{
-		pixels[i] = allocator.allocate(width * height * 4);
-	}
 	void* addr = allocator.allocate(sizeof(FrameD3D11));
-
 	return new (addr) FrameD3D11(width,
 		                         height,
 							     boost::chrono::system_clock::now(),
-							     pixels,
 						         allocator,
 		                         gpuTexturePtr,
 		                         cpuTexturePtr,

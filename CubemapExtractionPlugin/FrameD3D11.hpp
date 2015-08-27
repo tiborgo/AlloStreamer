@@ -23,7 +23,6 @@ protected:
 	FrameD3D11(boost::uint32_t width,
                boost::uint32_t height,
 			   boost::chrono::system_clock::time_point presentationTime,
-               void* pixels[MAX_PLANES_COUNT],
 			   Allocator& allocator,
 			   ID3D11Texture2D* gpuTexturePtr,
 			   ID3D11Texture2D* cpuTexturePtr,

@@ -35,7 +35,7 @@ public:
                 }
             }
             virtual void* pixels() {
-                return face_->getContent()->getPixels(0);
+                return face_->getContent()->getPixels();
             }
 
             CubemapFace* face_;

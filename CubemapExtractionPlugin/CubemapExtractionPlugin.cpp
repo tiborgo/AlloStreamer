@@ -123,7 +123,7 @@ void allocateSHM(CubemapConfig* cubemapConfig, BinocularsConfig* binocularsConfi
     unsigned long shmSize = 65536;
     if (cubemapConfig)
     {
-        shmSize += cubemapConfig->resolution * cubemapConfig->resolution * 4 * cubemapConfig->facesCount * Frame::MAX_PLANES_COUNT +
+        shmSize += cubemapConfig->resolution * cubemapConfig->resolution * 4 * cubemapConfig->facesCount +
                    sizeof(Cubemap) + cubemapConfig->facesCount * sizeof(CubemapFace);
     }
     if (binocularsConfig)
@@ -425,10 +425,20 @@ void copyFromGPUToCPU(Frame* frame)
 			   frameD3D11->resource.pData,
 			   frameD3D11->getWidth() * frameD3D11->getHeight() * 4);*/
 
-		cudaMemcpy(frameD3D11->getPixels(0),
-			cudaLinearMemory,
-			frameD3D11->getWidth() * frameD3D11->getHeight() * 4,
+		cudaMemcpy(frameD3D11->getPixels(),
+				   cudaLinearMemory,
+				   frameD3D11->getWidth() * frameD3D11->getHeight() * 4,
+			       cudaMemcpyDeviceToHost);
+
+		/*cudaMemcpy(frameD3D11->getPixels(1),
+			(uint8_t*)cudaLinearMemory + frameD3D11->getWidth() * frameD3D11->getHeight(),
+			frameD3D11->getWidth() * frameD3D11->getHeight(),
 			cudaMemcpyDeviceToHost);
+
+		cudaMemcpy(frameD3D11->getPixels(2),
+			(uint8_t*)cudaLinearMemory + frameD3D11->getWidth() * frameD3D11->getHeight() * 2,
+			frameD3D11->getWidth() * frameD3D11->getHeight(),
+			cudaMemcpyDeviceToHost);*/
 
 		cudaFree(cudaLinearMemory);
 		getLastCudaError("cudaFree (g_texture_2d) failed");
@@ -442,7 +452,7 @@ void copyFromGPUToCPU(Frame* frame)
     // OpenGL case
     if (g_DeviceType == kGfxRendererOpenGL)
     {
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->getPixels(0));
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->getPixels());
     }
 #endif
     

@@ -9,7 +9,6 @@ CubemapFaceD3D9::CubemapFaceD3D9(boost::uint32_t width,
 	                             boost::uint32_t height,
 	                             int index,
 	                             boost::chrono::system_clock::time_point presentationTime,
-	                             void* pixels[MAX_PLANES_COUNT],
 	                             Allocator& allocator,
 	                             IDirect3DTexture9* texturePtr,
 	                             IDirect3DSurface9* gpuSurfacePtr,
@@ -18,11 +17,10 @@ CubemapFaceD3D9::CubemapFaceD3D9(boost::uint32_t width,
 	                             D3DLOCKED_RECT lockedRect)
 	:
 	Frame(width,
-	            height,
-				AV_PIX_FMT_NONE,
-				presentationTime,
-				pixels,
-				allocator),
+	      height,
+		  AV_PIX_FMT_NONE,
+		  presentationTime,
+		  allocator),
 	texturePtr(texturePtr),
 	gpuSurfacePtr(gpuSurfacePtr),
 	cpuSurfacePtr(cpuSurfacePtr),
@@ -55,18 +53,11 @@ CubemapFaceD3D9* CubemapFaceD3D9::create(IDirect3DTexture9* texturePtr,
 	hr = cpuSurfacePtr->LockRect(&lockedRect, 0, D3DLOCK_READONLY);
 	hr = cpuSurfacePtr->UnlockRect();
 
-	void* pixels[MAX_PLANES_COUNT];
-	for (int i = 0; i < Frame::MAX_PLANES_COUNT; i++)
-	{
-		pixels[i] = allocator.allocate(width * height * 4);
-	}
 	void* addr = allocator.allocate(sizeof(CubemapFaceD3D9));
-	
 	return new (addr) CubemapFaceD3D9(width,
 		                              height,
 									  index,
 									  boost::chrono::system_clock::now(),
-									  pixels,
 									  allocator,
 									  texturePtr,
 		                              gpuSurfacePtr,

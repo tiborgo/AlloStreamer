@@ -222,13 +222,12 @@ void RawPixelSource::frameContentLoop()
         // barrier1  // barrier1
                      // barrier2
         
-        // Fill frame
+		// Fill frame
         avpicture_fill((AVPicture*)frame,
-            (uint8_t*)content->getPixels(0),
+			(uint8_t*)content->getPixels(),
             content->getFormat(),
             content->getWidth(),
             content->getHeight());
-
 		// std::cout << "framed face" << std::endl;
         
         // barrier2
@@ -326,28 +325,35 @@ void RawPixelSource::encodeFrameLoop()
 
         //std::cout << this << " encode" << std::endl;
         
-		yuv420pFrame = av_frame_alloc();
-		if (!yuv420pFrame)
+		if (xFrame->format != AV_PIX_FMT_YUV420P)
 		{
-			fprintf(stderr, "Could not allocate video frame\n");
-			return;
+			yuv420pFrame = av_frame_alloc();
+			if (!yuv420pFrame)
+			{
+				fprintf(stderr, "Could not allocate video frame\n");
+				return;
+			}
+			yuv420pFrame->format = AV_PIX_FMT_YUV420P;
+			yuv420pFrame->width = xFrame->width;
+			yuv420pFrame->height = xFrame->height;
+
+
+
+			/* the image can be allocated by any means and av_image_alloc() is
+			* just the most convenient way if av_malloc() is to be used */
+			if (av_image_alloc(yuv420pFrame->data, yuv420pFrame->linesize, yuv420pFrame->width, yuv420pFrame->height,
+				AV_PIX_FMT_YUV420P, 32) < 0)
+			{
+				fprintf(stderr, "Could not allocate raw picture buffer\n");
+				abort();
+			}
+
+			x2yuv(xFrame, yuv420pFrame, codecContext);
 		}
-		yuv420pFrame->format = AV_PIX_FMT_YUV420P;
-		yuv420pFrame->width = xFrame->width;
-		yuv420pFrame->height = xFrame->height;
-
-
-
-		/* the image can be allocated by any means and av_image_alloc() is
-		* just the most convenient way if av_malloc() is to be used */
-		if (av_image_alloc(yuv420pFrame->data, yuv420pFrame->linesize, yuv420pFrame->width, yuv420pFrame->height,
-			AV_PIX_FMT_YUV420P, 32) < 0)
+		else
 		{
-			fprintf(stderr, "Could not allocate raw picture buffer\n");
-			abort();
+			yuv420pFrame = xFrame;
 		}
-
-		x2yuv(xFrame, yuv420pFrame, codecContext);
 
 		pkt.data = NULL; // packet data will be allocated by the encoder
 		pkt.size = 0;
@@ -382,8 +388,11 @@ void RawPixelSource::encodeFrameLoop()
 			//std::cout << this << ": event triggered" << std::endl;
 		}
 
-		av_freep(&yuv420pFrame->data[0]);
-		av_frame_free(&yuv420pFrame);
+		if (xFrame->format != AV_PIX_FMT_YUV420P)
+		{
+			av_freep(&yuv420pFrame->data[0]);
+			av_frame_free(&yuv420pFrame);
+		}
 	}
 }
 
