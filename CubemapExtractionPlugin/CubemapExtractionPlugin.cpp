@@ -265,7 +265,7 @@ Frame* getFrameFromTexture(void* texturePtr)
 }
 
 
-extern "C" void* cuda_texture_2d(cudaGraphicsResource* cudaResource, int width, int height, int face);
+extern "C" void* cuda_texture_2d(cudaGraphicsResource* cudaResource, void* cudaLinearMemory, int width, int height, int face);
 
 void copyFromGPUToCPU(Frame* frame, int face)
 {
@@ -298,30 +298,29 @@ void copyFromGPUToCPU(Frame* frame, int face)
     if (g_DeviceType == kGfxRendererD3D11)
     {
 		FrameD3D11* frameD3D11 = (FrameD3D11*)frame;
-        
-        // DirectX 11 is not thread-safe
-        boost::mutex::scoped_lock lock(d3D11DeviceContextMutex);
-        
-        ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
-        g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
-        
-        // copy data from GPU to CPU
-		g_D3D11DeviceContext->CopyResource(frameD3D11->cpuTexturePtr, frameD3D11->gpuTexturePtr);
 
+		// DirectX 11 is not thread-safe
+		boost::mutex::scoped_lock lock(d3D11DeviceContextMutex);
+		
+		ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
+		g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
+
+		g_D3D11DeviceContext->CopyResource(frameD3D11->cpuTexturePtr, frameD3D11->gpuTexturePtr);		
 
 		
-
 		cudaError_t error;
-		
 		error = cudaGraphicsMapResources(1, &frameD3D11->cudaResource);
 		getLastCudaError("cudaGraphicsMapResources(3) failed");
 
-		cudaLinearMemory = cuda_texture_2d(frameD3D11->cudaResource, frameD3D11->getWidth(), frameD3D11->getHeight(), face);
+		cudaLinearMemory = cuda_texture_2d(frameD3D11->cudaResource,
+			                               frameD3D11->cudaLinearMemory,
+										   frameD3D11->getWidth(),
+										   frameD3D11->getHeight(),
+										   face);
 		getLastCudaError("cuda_texture_2d failed");
 
 		error = cudaGraphicsUnmapResources(1, &frameD3D11->cudaResource);
 		getLastCudaError("cudaGraphicsUnmapResources(3) failed");
-
 	}
 #endif
     
@@ -377,41 +376,10 @@ void copyFromGPUToCPU(Frame* frame, int face)
     {
 		FrameD3D11* frameD3D11 = (FrameD3D11*)frame;
 
-		/*ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
-		g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
-
-		D3D11_MAPPED_SUBRESOURCE resource;
-		ZeroMemory(&resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
-		unsigned int subresource = D3D11CalcSubresource(0, 0, 0);
-		HRESULT hr = g_D3D11DeviceContext->Map(frameD3D11->cpuTexturePtr, subresource, D3D11_MAP_READ, 0, &resource);
-		memcpy(frameD3D11->getPixels(),
-			resource.pData,
-			frameD3D11->getWidth() * frameD3D11->getHeight() * 4);
-		g_D3D11DeviceContext->Unmap(frameD3D11->cpuTexturePtr, subresource);*/
-
-		/*memcpy(frameD3D11->getPixels(),
-			   frameD3D11->resource.pData,
-			   frameD3D11->getWidth() * frameD3D11->getHeight() * 4);*/
-
 		cudaMemcpy(frameD3D11->getPixels(),
-				   cudaLinearMemory,
-				   frameD3D11->getWidth() * frameD3D11->getHeight() * 4,
+			       frameD3D11->cudaLinearMemory,
+				   (frameD3D11->getWidth() * frameD3D11->getHeight() * 3) / 2,
 			       cudaMemcpyDeviceToHost);
-
-		/*cudaMemcpy(frameD3D11->getPixels(1),
-			(uint8_t*)cudaLinearMemory + frameD3D11->getWidth() * frameD3D11->getHeight(),
-			frameD3D11->getWidth() * frameD3D11->getHeight(),
-			cudaMemcpyDeviceToHost);
-
-		cudaMemcpy(frameD3D11->getPixels(2),
-			(uint8_t*)cudaLinearMemory + frameD3D11->getWidth() * frameD3D11->getHeight() * 2,
-			frameD3D11->getWidth() * frameD3D11->getHeight(),
-			cudaMemcpyDeviceToHost);*/
-
-		cudaFree(cudaLinearMemory);
-		getLastCudaError("cudaFree (g_texture_2d) failed");
-
-
     }
 #endif
     

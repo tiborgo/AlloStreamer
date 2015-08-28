@@ -100,15 +100,10 @@ __global__ void cuda_kernel_texture_2d(uint8_t* buffer, int width, int height, i
 	*vPtr = yuv.z / 4.f;
 }
 
-extern "C" void* cuda_texture_2d(cudaGraphicsResource* cudaResource, int width, int height, int face)
+extern "C" void* cuda_texture_2d(cudaGraphicsResource* cudaResource, void* cudaLinearMemory, int width, int height, int face)
 {
     cudaError_t error = cudaSuccess;
 	cudaArray* cuArray;
-	void* cudaLinearMemory;
-
-	error = cudaMalloc(&cudaLinearMemory, width * height * 4);
-	getLastCudaError("cudaMallocPitch (g_texture_2d) failed");
-	error = cudaMemset(cudaLinearMemory, 0, width * height * 3);
 
 	error = cudaGraphicsSubResourceGetMappedArray(&cuArray, cudaResource, 0, 0);
 	getLastCudaError("cudaGraphicsSubResourceGetMappedArray (cuda_texture_2d) failed");

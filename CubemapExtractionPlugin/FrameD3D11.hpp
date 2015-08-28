@@ -20,6 +20,7 @@ public:
 	ID3D11Texture2D* const cpuTexturePtr;
 	D3D11_MAPPED_SUBRESOURCE resource;
 	cudaGraphicsResource* cudaResource;
+	void* cudaLinearMemory;
 
 	static FrameD3D11* create(ID3D11Texture2D* texturePtr,
 		                      Allocator&       allocator);
