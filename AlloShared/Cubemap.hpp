@@ -48,7 +48,6 @@ class Cubemap
 {
 public:
     typedef boost::interprocess::offset_ptr<Cubemap> Ptr;
-    //static const size_t MAX_FACES_COUNT;
 
 	static enum { MAX_FACES_COUNT = 6 };
     

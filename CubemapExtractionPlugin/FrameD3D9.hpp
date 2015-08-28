@@ -28,7 +28,6 @@ protected:
 		            boost::uint32_t height,
 		            int index,
 		            boost::chrono::system_clock::time_point presentationTime,
-		            void* pixels,
 		            Allocator& allocator,
 		            IDirect3DTexture9* texturePtr,
 		            IDirect3DSurface9* gpuSurfacePtr,

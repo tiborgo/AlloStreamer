@@ -6,7 +6,6 @@ FrameOpenGL::FrameOpenGL(boost::uint32_t                         width,
                          boost::uint32_t                         height,
                          AVPixelFormat                           format,
                          boost::chrono::system_clock::time_point presentationTime,
-                         void*                                   pixels,
                          GLuint                                  gpuTextureID,
                          Allocator&                              allocator)
 	:
@@ -14,7 +13,6 @@ FrameOpenGL::FrameOpenGL(boost::uint32_t                         width,
 	      height,
 		  format,
 		  presentationTime,
-		  pixels,
 		  allocator),
 	gpuTextureID(gpuTextureID)
 {
@@ -34,12 +32,10 @@ FrameOpenGL* FrameOpenGL::create(GLuint     gpuTextureID,
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
     
     void* addr = allocator.allocate(sizeof(FrameOpenGL));
-    void* pixels = allocator.allocate(width * height * 4);
     return new (addr) FrameOpenGL(width,
                                   height,
                                   AV_PIX_FMT_RGB24,
                                   boost::chrono::system_clock::time_point(),
-                                  pixels,
                                   gpuTextureID,
                                   allocator);
 }
