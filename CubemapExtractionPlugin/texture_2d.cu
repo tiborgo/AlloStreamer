@@ -1,38 +1,31 @@
-/*
- * Copyright 1993-2015 NVIDIA Corporation.  All rights reserved.
- *
- * Please refer to the NVIDIA end user license agreement (EULA) associated
- * with this source code for terms and conditions that govern your use of
- * this software. Any use, reproduction, disclosure, or distribution of
- * this software and related documentation outside the terms of the EULA
- * is strictly prohibited.
- *
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include <helper_cuda.h>
 
-#define PI 3.1415926536f
+#include "AlloShared/Cubemap.hpp"
 
 // This must be global. Otherwise, cudaBindTextureToArray will fail
-texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef; 
-//texture<float4, 2, cudaReadModeElementType> texRef;
+texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef0;
+texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef1;
+texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef2;
+texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef3;
+texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef4;
+texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef5;
+texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef6;
+texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef7;
+texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef8;
+texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef9;
+texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef10;
+texture<uchar4, cudaTextureType2D, cudaReadModeElementType> texRef11;
 
 __device__ __inline__ float3 make_float3(uchar4& v)
 {
 	return make_float3(v.x, v.y, v.z);
 }
 
-/*
- * Paint a 2D texture with a moving red/green hatch pattern on a
- * strobing blue background.  Note that this kernel reads to and
- * writes from the texture, hence why this texture was not mapped
- * as WriteDiscard.
- */
-__global__ void cuda_kernel_texture_2d(uint8_t* buffer, int width, int height, int t)
+__global__ void cuda_kernel_texture_2d(uint8_t* buffer, int width, int height, int face)
 {
     int x = (blockIdx.x*blockDim.x + threadIdx.x) * 2;
     int y = (blockIdx.y*blockDim.y + threadIdx.y) * 2;
@@ -48,7 +41,48 @@ __global__ void cuda_kernel_texture_2d(uint8_t* buffer, int width, int height, i
 	{
 		for (int y_ = y; y_ <= y + 1; y_++)
 		{
-			float3 rgb = make_float3(tex2D(texRef, x_, y_));
+			float3 rgb;
+			
+			switch (face)
+			{
+			case 0:
+				rgb = make_float3(tex2D(texRef0, x_, y_));
+				break;
+			case 1:
+				rgb = make_float3(tex2D(texRef1, x_, y_));
+				break;
+			case 2:
+				rgb = make_float3(tex2D(texRef2, x_, y_));
+				break;
+			case 3:
+				rgb = make_float3(tex2D(texRef3, x_, y_));
+				break;
+			case 4:
+				rgb = make_float3(tex2D(texRef4, x_, y_));
+				break;
+			case 5:
+				rgb = make_float3(tex2D(texRef5, x_, y_));
+				break;
+			case 6:
+				rgb = make_float3(tex2D(texRef6, x_, y_));
+				break;
+			case 7:
+				rgb = make_float3(tex2D(texRef7, x_, y_));
+				break;
+			case 8:
+				rgb = make_float3(tex2D(texRef8, x_, y_));
+				break;
+			case 9:
+				rgb = make_float3(tex2D(texRef9, x_, y_));
+				break;
+			case 10:
+				rgb = make_float3(tex2D(texRef10, x_, y_));
+				break;
+			case 11:
+				rgb = make_float3(tex2D(texRef11, x_, y_));
+				break;
+			}
+			
 
 			yuv.x  =  (0.257f * rgb.z) + (0.504f * rgb.y) + (0.098f * rgb.x) +  16.f;
 			yuv.y +=  (0.439f * rgb.z) - (0.368f * rgb.y) - (0.071f * rgb.x) + 128.f;
@@ -66,35 +100,65 @@ __global__ void cuda_kernel_texture_2d(uint8_t* buffer, int width, int height, i
 	*vPtr = yuv.z / 4.f;
 }
 
-extern "C"
-void* cuda_texture_2d(cudaGraphicsResource* cudaResource, int width, int height, float t)
+extern "C" void* cuda_texture_2d(cudaGraphicsResource* cudaResource, int width, int height, int face)
 {
     cudaError_t error = cudaSuccess;
-
-	//texture<uint8_t, cudaTextureType2D, cudaReadModeElementType> texRef;
-	static int x = 0;
-	x++;
-
 	cudaArray* cuArray;
-
 	void* cudaLinearMemory;
-	//size_t pitch;
 
-	cudaMalloc(&cudaLinearMemory, width * height * 4);
+	error = cudaMalloc(&cudaLinearMemory, width * height * 4);
 	getLastCudaError("cudaMallocPitch (g_texture_2d) failed");
-	cudaMemset(cudaLinearMemory, 0, width * height * 3);
+	error = cudaMemset(cudaLinearMemory, 0, width * height * 3);
 
 	error = cudaGraphicsSubResourceGetMappedArray(&cuArray, cudaResource, 0, 0);
 	getLastCudaError("cudaGraphicsSubResourceGetMappedArray (cuda_texture_2d) failed");
 
+	switch (face)
+	{
+	case 0:
+		error = cudaBindTextureToArray(texRef0, cuArray);
+		break;
+	case 1:
+		error = cudaBindTextureToArray(texRef1, cuArray);
+		break;
+	case 2:
+		error = cudaBindTextureToArray(texRef2, cuArray);
+		break;
+	case 3:
+		error = cudaBindTextureToArray(texRef3, cuArray);
+		break;
+	case 4:
+		error = cudaBindTextureToArray(texRef4, cuArray);
+		break;
+	case 5:
+		error = cudaBindTextureToArray(texRef5, cuArray);
+		break;
+	case 6:
+		error = cudaBindTextureToArray(texRef6, cuArray);
+		break;
+	case 7:
+		error = cudaBindTextureToArray(texRef7, cuArray);
+		break;
+	case 8:
+		error = cudaBindTextureToArray(texRef8, cuArray);
+		break;
+	case 9:
+		error = cudaBindTextureToArray(texRef9, cuArray);
+		break;
+	case 10:
+		error = cudaBindTextureToArray(texRef10, cuArray);
+		break;
+	case 11:
+		error = cudaBindTextureToArray(texRef11, cuArray);
+		break;
+	}
 	
-	error = cudaBindTextureToArray(texRef, cuArray);
 	getLastCudaError("cudaGraphicsSubResourceGetMappedArray (cuda_texture_2d) failed");
 
     dim3 Db = dim3(16, 16);   // block dimensions are fixed to be 256 threads
     dim3 Dg = dim3(((width/2)+Db.x-1)/Db.x, ((height/2)+Db.y-1)/Db.y);
 
-    cuda_kernel_texture_2d<<<Dg,Db>>>((uint8_t*)cudaLinearMemory, width, height, x);
+    cuda_kernel_texture_2d<<<Dg,Db>>>((uint8_t*)cudaLinearMemory, width, height, face);
 
     error = cudaGetLastError();
 
@@ -102,16 +166,6 @@ void* cuda_texture_2d(cudaGraphicsResource* cudaResource, int width, int height,
     {
         printf("cuda_kernel_texture_2d() failed to launch error = %d\n", error);
     }
-
-	//error = cudaMemcpyFromArray(cudaLinearMemory, cuArray, 0, 0, width * height * 4, cudaMemcpyDeviceToDevice);
-
-	/*error = cudaMemcpy2DToArray(
-		cuArray, // dst array
-		0, 0,    // offset
-		cudaLinearMemory, pitch,       // src
-		width * 4 * sizeof(uint8_t), height, // extent
-		cudaMemcpyDeviceToDevice);*/
-	//getLastCudaError("cudaMemcpy2DToArray failed");
 
 	return cudaLinearMemory;
 }

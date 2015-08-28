@@ -1,9 +1,13 @@
 #pragma once
 
+#if SUPPORT_D3D11
+
+#include <cuda_runtime.h>
+#include <helper_cuda.h>
+#include <cuda_d3d11_interop.h>
+
 #include "UnityPluginInterface.h"
 #include "AlloShared/Frame.hpp"
-
-#if SUPPORT_D3D11
 
 #include <d3d11.h>
 
@@ -15,6 +19,7 @@ public:
 	ID3D11Texture2D* const gpuTexturePtr;
 	ID3D11Texture2D* const cpuTexturePtr;
 	D3D11_MAPPED_SUBRESOURCE resource;
+	cudaGraphicsResource* cudaResource;
 
 	static FrameD3D11* create(ID3D11Texture2D* texturePtr,
 		                      Allocator&       allocator);
@@ -28,6 +33,7 @@ protected:
 			   ID3D11Texture2D* cpuTexturePtr,
 			   D3D11_MAPPED_SUBRESOURCE resource,
 			   D3D11_TEXTURE2D_DESC& description);
+	~FrameD3D11();
 };
 
 #endif

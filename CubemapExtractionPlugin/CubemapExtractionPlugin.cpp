@@ -23,7 +23,7 @@
 
 Frame* getFrameFromTexture(void* texturePtr);
 
-cudaGraphicsResource* cudaResource = nullptr;
+
 
 // --------------------------------------------------------------------------
 // Helper utilities
@@ -265,10 +265,9 @@ Frame* getFrameFromTexture(void* texturePtr)
 }
 
 
-extern "C"
-void* cuda_texture_2d(cudaGraphicsResource* cudaResource, int width, int height, float t);
+extern "C" void* cuda_texture_2d(cudaGraphicsResource* cudaResource, int width, int height, int face);
 
-void copyFromGPUToCPU(Frame* frame)
+void copyFromGPUToCPU(Frame* frame, int face)
 {
 
 
@@ -310,51 +309,20 @@ void copyFromGPUToCPU(Frame* frame)
 		g_D3D11DeviceContext->CopyResource(frameD3D11->cpuTexturePtr, frameD3D11->gpuTexturePtr);
 
 
-
-
-		//static int counter = 0;
-		//counter++;
-
-
-		////char* argv[] = { "CubemapExtractionPlugin" };
-		////boost::thread(boost::bind(&main, 1, argv));
-		//int width = 256;
-		//int height = 256;
-
 		
-		
-		static float t = 0.0f;
-		t += 0.457f;
 
 		cudaError_t error;
-
-		if (!cudaResource)
-		{
-			error = cudaGraphicsD3D11RegisterResource(&cudaResource, ((FrameD3D11*)frame)->cpuTexturePtr, cudaGraphicsRegisterFlagsNone);
-			getLastCudaError("cudaGraphicsD3D11RegisterResource (g_texture_2d) failed");
-		}
 		
-		error = cudaGraphicsMapResources(1, &cudaResource);
+		error = cudaGraphicsMapResources(1, &frameD3D11->cudaResource);
 		getLastCudaError("cudaGraphicsMapResources(3) failed");
 
-		
-
-		//
-
-		
-
-		
-
-		
-
-		cudaLinearMemory = cuda_texture_2d(cudaResource, frameD3D11->getWidth(), frameD3D11->getHeight(), t);
+		cudaLinearMemory = cuda_texture_2d(frameD3D11->cudaResource, frameD3D11->getWidth(), frameD3D11->getHeight(), face);
 		getLastCudaError("cuda_texture_2d failed");
 
-		
-		
-		error = cudaGraphicsUnmapResources(1, &cudaResource);
+		error = cudaGraphicsUnmapResources(1, &frameD3D11->cudaResource);
 		getLastCudaError("cudaGraphicsUnmapResources(3) failed");
-    }
+
+	}
 #endif
     
     
@@ -467,7 +435,7 @@ void copyFromGPUtoCPU (std::vector<Frame*>& frames)
         
         for (int i = 0; i < frames.size(); i++)
         {
-            threads[i] = boost::thread(boost::bind(&copyFromGPUToCPU, frames[i]));
+            threads[i] = boost::thread(boost::bind(&copyFromGPUToCPU, frames[i], i));
         }
         
         for (int i = 0; i < frames.size(); i++)
@@ -479,7 +447,7 @@ void copyFromGPUtoCPU (std::vector<Frame*>& frames)
     {
         for (int i = 0; i < frames.size(); i++)
         {
-            copyFromGPUToCPU(frames[i]);
+            copyFromGPUToCPU(frames[i], i);
         }
     }
 }

@@ -33,6 +33,14 @@ FrameD3D11::FrameD3D11(boost::uint32_t width,
 	cpuTexturePtr(cpuTexturePtr),
 	resource(resource)
 {
+	cudaError_t error = cudaGraphicsD3D11RegisterResource(&cudaResource, cpuTexturePtr, cudaGraphicsRegisterFlagsNone);
+	getLastCudaError("cudaGraphicsD3D11RegisterResource (g_texture_2d) failed");
+}
+
+FrameD3D11::~FrameD3D11()
+{
+	cudaError_t error = cudaGraphicsUnregisterResource(cudaResource);
+	getLastCudaError("cudaGraphicsUnregisterResource (g_texture_2d) failed");
 }
 
 FrameD3D11* FrameD3D11::create(ID3D11Texture2D* texturePtr,
