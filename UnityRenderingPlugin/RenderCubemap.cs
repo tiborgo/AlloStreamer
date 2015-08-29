@@ -149,19 +149,20 @@ public class RenderCubemap : MonoBehaviour
                 shader.SetInt("Pitch", resolution);
 
                 
-                shader.SetTexture(shader.FindKernel("CSMain"), "In", inTex);
-                shader.SetTexture(shader.FindKernel("CSMain"), "OutYUV444", yuv444Tex);
+      //          shader.SetTexture(shader.FindKernel("CSMain"), "In", inTex);
+    //            shader.SetTexture(shader.FindKernel("CSMain"), "OutYUV444", yuv444Tex);
                 
                 //shader.SetTexture(shader.FindKernel("CSMain"), "Out", outTex);
-                shader.Dispatch(shader.FindKernel("CSMain"), resolution / 8, resolution / 8, 1);
+  //            shader.Dispatch(shader.FindKernel("CSMain"), resolution / 8, resolution / 8, 1);
 
                 //buffer.GetData(pixels);
                 //buffer.SetData(pixels);
 
                 shader.SetInt("Channel", 0);
 
+                shader.SetTexture(shader.FindKernel("Condense"), "In", inTex);
                 shader.SetTexture(shader.FindKernel("Condense"), "Out", outTex);
-                shader.SetTexture(shader.FindKernel("Condense"), "InYUV444", yuv444Tex);
+                //shader.SetTexture(shader.FindKernel("Condense"), "InYUV444", yuv444Tex);
                 //shader.SetBuffer(shader.FindKernel("Condense"), "Out2", buffer);
                 //shader.SetBuffer(shader.FindKernel("Condense"), "Out2", buffer);
                 //shader.SetBuffer(shader.FindKernel("Condense"), "CondensedPixels", condensedPixelsBuffer);
@@ -169,17 +170,19 @@ public class RenderCubemap : MonoBehaviour
 
                 shader.SetInt("Channel", 1);
 
-                shader.SetTexture(shader.FindKernel("Condense"), "Out", outTex);
-                shader.SetTexture(shader.FindKernel("Condense"), "InYUV444", yuv444Tex);
+               shader.SetTexture(shader.FindKernel("Condense"), "In", inTex);
+               shader.SetTexture(shader.FindKernel("Condense"), "Out", outTex);
+                //shader.SetTexture(shader.FindKernel("Condense"), "InYUV444", yuv444Tex);
                 //shader.SetBuffer(shader.FindKernel("Condense"), "Out2", buffer);
                 //shader.SetBuffer(shader.FindKernel("Condense"), "Out2", buffer);
                 //shader.SetBuffer(shader.FindKernel("Condense"), "CondensedPixels", condensedPixelsBuffer);
-                shader.Dispatch(shader.FindKernel("Condense"), resolution * resolution / 4, 1, 1);
+               shader.Dispatch(shader.FindKernel("Condense"), resolution * resolution / 4, 1, 1);
 
-                shader.SetInt("Channel", 2);
+               shader.SetInt("Channel", 2);
 
+                shader.SetTexture(shader.FindKernel("Condense"), "In", inTex);
                 shader.SetTexture(shader.FindKernel("Condense"), "Out", outTex);
-                shader.SetTexture(shader.FindKernel("Condense"), "InYUV444", yuv444Tex);
+                //shader.SetTexture(shader.FindKernel("Condense"), "InYUV444", yuv444Tex);
                 //shader.SetBuffer(shader.FindKernel("Condense"), "Out2", buffer);
                 //shader.SetBuffer(shader.FindKernel("Condense"), "Out2", buffer);
                 //shader.SetBuffer(shader.FindKernel("Condense"), "CondensedPixels", condensedPixelsBuffer);

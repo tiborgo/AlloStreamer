@@ -39,12 +39,37 @@ void Condense (uint3 id : SV_DispatchThreadID)
 {
 	uint2 yuvPos;
 	yuvPos.x = (id.x * 4) % Pitch;
-	yuvPos.y = (id.x * 4) / Pitch;
+	yuvPos.y = Pitch - 1 - (id.x * 4) / Pitch;
 
-	float4 yuv0 = InYUV444[yuvPos];
-	float4 yuv1 = InYUV444[uint2(yuvPos.x+1, yuvPos.y)];
-	float4 yuv2 = InYUV444[uint2(yuvPos.x+2, yuvPos.y)];
-	float4 yuv3 = InYUV444[uint2(yuvPos.x+3, yuvPos.y)];
+	float4 rgb0 = In[yuvPos];
+	float4 rgb1 = In[uint2(yuvPos.x+1, yuvPos.y)];
+	float4 rgb2 = In[uint2(yuvPos.x+2, yuvPos.y)];
+	float4 rgb3 = In[uint2(yuvPos.x+3, yuvPos.y)];
+
+	float4 yuv0;
+	float4 yuv1;
+	float4 yuv2;
+	float4 yuv3;
+
+	yuv0.x  =  (0.257f * rgb0.z) + (0.504f * rgb0.y) + (0.098f * rgb0.x) + ( 16.f / 255.f);
+	yuv0.y  =  (0.439f * rgb0.z) - (0.368f * rgb0.y) - (0.071f * rgb0.x) + (128.f / 255.f);
+	yuv0.z  = -(0.148f * rgb0.z) - (0.291f * rgb0.y) + (0.439f * rgb0.x) + (128.f / 255.f); 
+	yuv0.w  = 0.0f;
+
+	yuv1.x  =  (0.257f * rgb1.z) + (0.504f * rgb1.y) + (0.098f * rgb1.x) + ( 16.f / 255.f);
+	yuv1.y  =  (0.439f * rgb1.z) - (0.368f * rgb1.y) - (0.071f * rgb1.x) + (128.f / 255.f);
+	yuv1.z  = -(0.148f * rgb1.z) - (0.291f * rgb1.y) + (0.439f * rgb1.x) + (128.f / 255.f); 
+	yuv1.w  = 0.0f;
+
+	yuv2.x  =  (0.257f * rgb2.z) + (0.504f * rgb2.y) + (0.098f * rgb2.x) + ( 16.f / 255.f);
+	yuv2.y  =  (0.439f * rgb2.z) - (0.368f * rgb2.y) - (0.071f * rgb2.x) + (128.f / 255.f);
+	yuv2.z  = -(0.148f * rgb2.z) - (0.291f * rgb2.y) + (0.439f * rgb2.x) + (128.f / 255.f); 
+	yuv2.w  = 0.0f;
+
+	yuv3.x  =  (0.257f * rgb3.z) + (0.504f * rgb3.y) + (0.098f * rgb3.x) + ( 16.f / 255.f);
+	yuv3.y  =  (0.439f * rgb3.z) - (0.368f * rgb3.y) - (0.071f * rgb3.x) + (128.f / 255.f);
+	yuv3.z  = -(0.148f * rgb3.z) - (0.291f * rgb3.y) + (0.439f * rgb3.x) + (128.f / 255.f); 
+	yuv3.w  = 0.0f;
 
 	if (Channel == 0)
 	{
@@ -70,8 +95,6 @@ void Condense (uint3 id : SV_DispatchThreadID)
 		uint2 uPPos;
 		uPPos.x = (id.x) % Pitch;
 		uPPos.y = (id.x) / Pitch + Pitch / 4;
-		//uPPos.x = (id.x) % Pitch;
-		//uPPos.y = (id.x) / Pitch;
 		Out[uPPos] = uP;
 	}
 	else if (Channel == 2)
