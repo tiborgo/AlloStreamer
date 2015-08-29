@@ -54,9 +54,18 @@ public class RenderCubemap : MonoBehaviour
     private RenderTexture[] inTextures;
     private RenderTexture[] outTextures;
 
+    private uint[] pixels;
+    private uint[] condensedPixels;
+    private ComputeBuffer buffer;
+    private ComputeBuffer condensedPixelsBuffer;
+
     // Use this for initialization
     IEnumerator Start()
     {
+        pixels = new uint[resolution * resolution * 3];
+        condensedPixels = new uint[resolution * resolution];
+        buffer = new ComputeBuffer(pixels.Length, sizeof(uint));
+        condensedPixelsBuffer = new ComputeBuffer(condensedPixels.Length, sizeof(uint));
 
         if (fps != -1)
         {
@@ -117,6 +126,7 @@ public class RenderCubemap : MonoBehaviour
         StopFromUnity();
     }
 
+    
 
     private IEnumerator CallPluginAtEndOfFrames()
     {
@@ -129,10 +139,22 @@ public class RenderCubemap : MonoBehaviour
                 RenderTexture inTex = inTextures[i];
                 RenderTexture outTex = outTextures[i];
 
-                int kernelHandle = shader.FindKernel("CSMain");
-                shader.SetTexture(kernelHandle, "In", inTex);
-                shader.SetTexture(kernelHandle, "Out", outTex);
-                shader.Dispatch(kernelHandle, resolution / 8, resolution / 8, 1);
+                shader.SetInt("Pitch", resolution);
+                
+                shader.SetTexture(shader.FindKernel("CSMain"), "In", inTex);
+                shader.SetBuffer(shader.FindKernel("CSMain"), "Out2", buffer);
+                shader.Dispatch(shader.FindKernel("CSMain"), resolution / 8, resolution / 8, 1);
+
+                //buffer.GetData(pixels);
+                //buffer.SetData(pixels);
+
+                shader.SetTexture(shader.FindKernel("Condense"), "Out", outTex);
+                shader.SetBuffer(shader.FindKernel("Condense"), "Out2", buffer);
+                shader.SetBuffer(shader.FindKernel("Condense"), "CondensedPixels", condensedPixelsBuffer);
+                shader.Dispatch(shader.FindKernel("Condense"), resolution / 8, resolution / 8, 1);
+
+                //buffer.GetData(pixels);
+                //Debug.Log(pixels[0]);
             }
 
             if (extract)
