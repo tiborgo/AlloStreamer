@@ -29,12 +29,14 @@ int RawPixelSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
 			return -1;
 		}
 	}
-	if (xFrame->linesize[0] > 0)
+	/*for (int i = 0; i < 4; i++)
 	{
-		xFrame->data[0] += xFrame->linesize[0] * (c->height - 1);
-
-		xFrame->linesize[0] = -xFrame->linesize[0];
-	}
+		if (xFrame->linesize[i] > 0)
+		{
+			xFrame->data[i] += xFrame->linesize[i] * (c->height - 1);
+			xFrame->linesize[i] = -xFrame->linesize[i];
+		}
+	}*/
 	return sws_scale(img_convert_ctx, xFrame->data,
 		xFrame->linesize, 0, c->height,
 		yuvFrame->data, yuvFrame->linesize);

@@ -38,37 +38,45 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 [numthreads(8,8,1)]
 void Condense (uint3 id : SV_DispatchThreadID) 
 {
-	uint2 pos;
-	pos.x = (id.x * 4) % Pitch;
-	pos.y = (id.x * 4) / Pitch;
+	uint2 yuvPos;
+	yuvPos.x = (id.x * 4) % Pitch;
+	yuvPos.y = (id.x * 4) / Pitch;
 
-	float4 yuv0 = InYUV444[pos];
-	pos.x++;
-	float4 yuv1 = InYUV444[pos];
-	pos.x++;
-	float4 yuv2 = InYUV444[pos];
-	pos.x++;
-	float4 yuv3 = InYUV444[pos]; 
+	float4 yuv0 = InYUV444[yuvPos];
+	float4 yuv1 = InYUV444[uint2(yuvPos.x+1, yuvPos.y)];
+	float4 yuv2 = InYUV444[uint2(yuvPos.x+2, yuvPos.y)];
+	float4 yuv3 = InYUV444[uint2(yuvPos.x+3, yuvPos.y)];
 
-	float4 planarYUV;
-	planarYUV.x = yuv0.x;
-	planarYUV.y = yuv1.x;
-	planarYUV.z = yuv2.x;
-	planarYUV.w = yuv3.x;
+	float4 yP;
+	yP.x = yuv0.x;
+	yP.y = yuv1.x;
+	yP.z = yuv2.x;
+	yP.w = yuv3.x;
 
-	//YUV444[id.xy] = float4(0, 0, 0, 0);
+	uint2 yPPos;
+	yPPos.x = (id.x) % Pitch;
+	yPPos.y = (id.x) / Pitch;
+	//Out[yPPos] = yP;
 
-	/*CondensedPixels[id.y * Pitch + id.x] =   Out2[id.y * Pitch * 3 + id.x * 3    ] << 16
-	                                       | Out2[id.y * Pitch * 3 + id.x * 3 + 1] <<  8
-										   | Out2[id.y * Pitch * 3 + id.x * 3 + 2];*/
+	float4 uP;
+	uP.x = yuv0.y;
+	uP.y = yuv1.y;
+	uP.z = yuv2.y;
+	uP.w = yuv3.y;
 
-	/*Out[id.xy]  = float4(((CondensedPixels[id.y * Pitch + id.x] & 0xFF0000) >> 16) / 255.f,
-	                     ((CondensedPixels[id.y * Pitch + id.x] & 0x00FF00) >>  8) / 255.f,
-						 ((CondensedPixels[id.y * Pitch + id.x] & 0x0000FF)      ) / 255.f,
-						 0);*/
+	uint2 uPPos;
+	uPPos.x = (id.x) % Pitch;
+	uPPos.y = (id.x) / Pitch + Pitch / 4;
+	Out[uPPos] = uP;
 
-	uint2 pos_;
-	pos_.x = (id.x) % Pitch;
-	pos_.y = (id.x) / Pitch;
-	Out[pos_] = planarYUV; 
+	float4 vP;
+	vP.x = yuv0.z;
+	vP.y = yuv1.z;
+	vP.z = yuv2.z;
+	vP.w = yuv3.z; 
+
+	uint2 vPPos;
+	vPPos.x = (id.x) % Pitch;
+	vPPos.y = (id.x) / Pitch + Pitch / 2;
+	Out[vPPos] = vP;
 }
