@@ -58,6 +58,7 @@ public class RenderCubemap : MonoBehaviour
     private uint[] condensedPixels;
     private ComputeBuffer buffer;
     private ComputeBuffer condensedPixelsBuffer;
+    private RenderTexture yuv444Tex;
 
     // Use this for initialization
     IEnumerator Start()
@@ -66,6 +67,10 @@ public class RenderCubemap : MonoBehaviour
         condensedPixels = new uint[resolution * resolution];
         buffer = new ComputeBuffer(pixels.Length, sizeof(uint));
         condensedPixelsBuffer = new ComputeBuffer(condensedPixels.Length, sizeof(uint));
+
+        yuv444Tex = new RenderTexture(resolution, resolution, 0, RenderTextureFormat.ARGB32);
+        yuv444Tex.enableRandomWrite = true;
+        yuv444Tex.Create();
 
         if (fps != -1)
         {
@@ -139,19 +144,25 @@ public class RenderCubemap : MonoBehaviour
                 RenderTexture inTex = inTextures[i];
                 RenderTexture outTex = outTextures[i];
 
+                
+
                 shader.SetInt("Pitch", resolution);
+
                 
                 shader.SetTexture(shader.FindKernel("CSMain"), "In", inTex);
+                shader.SetTexture(shader.FindKernel("CSMain"), "OutYUV444", yuv444Tex);
                 shader.SetBuffer(shader.FindKernel("CSMain"), "Out2", buffer);
+                //shader.SetTexture(shader.FindKernel("CSMain"), "Out", outTex);
                 shader.Dispatch(shader.FindKernel("CSMain"), resolution / 8, resolution / 8, 1);
 
                 //buffer.GetData(pixels);
                 //buffer.SetData(pixels);
 
                 shader.SetTexture(shader.FindKernel("Condense"), "Out", outTex);
-                shader.SetBuffer(shader.FindKernel("Condense"), "Out2", buffer);
-                shader.SetBuffer(shader.FindKernel("Condense"), "CondensedPixels", condensedPixelsBuffer);
-                shader.Dispatch(shader.FindKernel("Condense"), resolution / 8, resolution / 8, 1);
+                shader.SetTexture(shader.FindKernel("Condense"), "InYUV444", yuv444Tex);
+                //shader.SetBuffer(shader.FindKernel("Condense"), "Out2", buffer);
+                //shader.SetBuffer(shader.FindKernel("Condense"), "CondensedPixels", condensedPixelsBuffer);
+                shader.Dispatch(shader.FindKernel("Condense"), resolution * resolution / 4, 1, 1);
 
                 //buffer.GetData(pixels);
                 //Debug.Log(pixels[0]);

@@ -7,6 +7,10 @@ RWStructuredBuffer<int> bufColors;
 // with cs.SetTexture
 Texture2D<float4> In;
 RWTexture2D<float4> Out;
+
+Texture2D<float4> InYUV444;
+RWTexture2D<float4> OutYUV444;
+
 RWStructuredBuffer<uint> Out2;
 RWStructuredBuffer<uint> CondensedPixels;
 uint Pitch;
@@ -15,25 +19,56 @@ uint Pitch;
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     // TODO: insert actual code here!
-	float4 pixel = In[id.xy];
-	float red   = pixel.x;
-	float green = pixel.y;
-	float blue  = pixel.z;
+	float4 rgb = In[id.xy];
 
-	Out2[id.y * Pitch * 3 + id.x * 3    ] = red   * 255.f;
-	Out2[id.y * Pitch * 3 + id.x * 3 + 1] = green * 255.f;
-	Out2[id.y * Pitch * 3 + id.x * 3 + 2] = blue  * 255.f;
+	float4 yuv;
+	yuv.x  =  (0.257f * rgb.z) + (0.504f * rgb.y) + (0.098f * rgb.x) + ( 16.f / 255.f);
+	yuv.y  =  (0.439f * rgb.z) - (0.368f * rgb.y) - (0.071f * rgb.x) + (128.f / 255.f);
+	yuv.z  = -(0.148f * rgb.z) - (0.291f * rgb.y) + (0.439f * rgb.x) + (128.f / 255.f); 
+	yuv.w  = 0.0f;
+
+	OutYUV444[id.xy] = yuv; 
+	//Out[id.xy] = yuv; 
+
+	Out2[id.y * Pitch * 3 + id.x * 3    ] = yuv.x * 255.f;
+	Out2[id.y * Pitch * 3 + id.x * 3 + 1] = yuv.y * 255.f;
+	Out2[id.y * Pitch * 3 + id.x * 3 + 2] = yuv.z * 255.f;
 }
 
 [numthreads(8,8,1)]
-void Condense (uint3 id : SV_DispatchThreadID)
+void Condense (uint3 id : SV_DispatchThreadID) 
 {
-	CondensedPixels[id.y * Pitch + id.x] =   Out2[id.y * Pitch * 3 + id.x * 3    ] << 16
-	                                       | Out2[id.y * Pitch * 3 + id.x * 3 + 1] <<  8
-										   | Out2[id.y * Pitch * 3 + id.x * 3 + 2];
+	uint2 pos;
+	pos.x = (id.x * 4) % Pitch;
+	pos.y = (id.x * 4) / Pitch;
 
-	Out[id.xy]  = float4(((CondensedPixels[id.y * Pitch + id.x] & 0xFF0000) >> 16) / 255.f,
+	float4 yuv0 = InYUV444[pos];
+	pos.x++;
+	float4 yuv1 = InYUV444[pos];
+	pos.x++;
+	float4 yuv2 = InYUV444[pos];
+	pos.x++;
+	float4 yuv3 = InYUV444[pos]; 
+
+	float4 planarYUV;
+	planarYUV.x = yuv0.x;
+	planarYUV.y = yuv1.x;
+	planarYUV.z = yuv2.x;
+	planarYUV.w = yuv3.x;
+
+	//YUV444[id.xy] = float4(0, 0, 0, 0);
+
+	/*CondensedPixels[id.y * Pitch + id.x] =   Out2[id.y * Pitch * 3 + id.x * 3    ] << 16
+	                                       | Out2[id.y * Pitch * 3 + id.x * 3 + 1] <<  8
+										   | Out2[id.y * Pitch * 3 + id.x * 3 + 2];*/
+
+	/*Out[id.xy]  = float4(((CondensedPixels[id.y * Pitch + id.x] & 0xFF0000) >> 16) / 255.f,
 	                     ((CondensedPixels[id.y * Pitch + id.x] & 0x00FF00) >>  8) / 255.f,
 						 ((CondensedPixels[id.y * Pitch + id.x] & 0x0000FF)      ) / 255.f,
-						 0);
+						 0);*/
+
+	uint2 pos_;
+	pos_.x = (id.x) % Pitch;
+	pos_.y = (id.x) / Pitch;
+	Out[pos_] = planarYUV; 
 }

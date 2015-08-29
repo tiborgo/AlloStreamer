@@ -26,7 +26,7 @@ FrameD3D11::FrameD3D11(boost::uint32_t width,
 	:
 	Frame(width,
 	      height,
-		  avPixel2DXGIFormat(description.Format),//PIX_FMT_YUV420P,
+		  PIX_FMT_YUV444P,//avPixel2DXGIFormat(description.Format),//PIX_FMT_YUV420P,
 	      presentationTime,
 	      allocator),
 	gpuTexturePtr(gpuTexturePtr),
