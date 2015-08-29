@@ -10,37 +10,40 @@ uint Pitch;
 [numthreads(1,1,1)]
 void Convert (uint3 id : SV_DispatchThreadID) 
 {
-	uint2 rgbPos;
-	rgbPos.x = (id.x * 4) % Pitch;
-	rgbPos.y = Pitch - 1 - (id.x * 4) / Pitch;
-
-	float4 rgb[4];
-	for (int i = 0; i < 4; i++)
+	for (int j = 0; j < 4; j++)
 	{
-		rgb[i] = In[uint2(rgbPos.x+i, rgbPos.y)];
-	}
-	
-	float4 yuv[4];
-	for (int i = 0; i < 4; i++)
-	{
-		yuv[i].x  =  (0.257f * rgb[i].z) + (0.504f * rgb[i].y) + (0.098f * rgb[i].x) + ( 16.f / 255.f);
-		yuv[i].y  =  (0.439f * rgb[i].z) - (0.368f * rgb[i].y) - (0.071f * rgb[i].x) + (128.f / 255.f);
-		yuv[i].z  = -(0.148f * rgb[i].z) - (0.291f * rgb[i].y) + (0.439f * rgb[i].x) + (128.f / 255.f); 
-		yuv[i].w  = 0.0f;
-	}
+		uint2 rgbPos;
+		rgbPos.x = (id.x * 16 + j * 4) % Pitch;
+		rgbPos.y = Pitch - 1 - (id.x * 16 + j * 4) / Pitch;
 
-	for (int plane = 0; plane < 3; plane++)
-	{
-		uint2 yuvPos;
-		yuvPos.x = (id.x) % Pitch;
-		yuvPos.y = (id.x) / Pitch + (Pitch / 4) * plane;
-
-		float4 yuvPlane;
+		float4 rgb[4];
 		for (int i = 0; i < 4; i++)
 		{
-			yuvPlane[i] = yuv[i][plane];
+			rgb[i] = In[uint2(rgbPos.x+i, rgbPos.y)];
+		}
+	
+		float4 yuv[4];
+		for (int i = 0; i < 4; i++)
+		{
+			yuv[i].x  =  (0.257f * rgb[i].z) + (0.504f * rgb[i].y) + (0.098f * rgb[i].x) + ( 16.f / 255.f);
+			yuv[i].y  =  (0.439f * rgb[i].z) - (0.368f * rgb[i].y) - (0.071f * rgb[i].x) + (128.f / 255.f);
+			yuv[i].z  = -(0.148f * rgb[i].z) - (0.291f * rgb[i].y) + (0.439f * rgb[i].x) + (128.f / 255.f); 
+			yuv[i].w  = 0.0f;
 		}
 
-		Out[yuvPos] = yuvPlane;
+		for (int plane = 0; plane < 3; plane++)
+		{
+			uint2 yuvPos;
+			yuvPos.x = (id.x * 4 + j) % Pitch;
+			yuvPos.y = (id.x * 4 + j) / Pitch + (Pitch / 4) * plane;
+
+			float4 yuvPlane;
+			for (int i = 0; i < 4; i++)
+			{
+				yuvPlane[i] = yuv[i][plane];
+			}
+
+			Out[yuvPos] = yuvPlane;
+		}
 	}	
 }

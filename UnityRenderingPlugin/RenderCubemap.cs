@@ -134,7 +134,7 @@ public class RenderCubemap : MonoBehaviour
                     shader.SetInt("Pitch", resolution);
                     shader.SetTexture(shader.FindKernel("Convert"), "In", inTex);
                     shader.SetTexture(shader.FindKernel("Convert"), "Out", outTex);
-                    shader.Dispatch(shader.FindKernel("Convert"), resolution * resolution / 4, 1, 1);
+                    shader.Dispatch(shader.FindKernel("Convert"), resolution * resolution / 16, 1, 1);
                 }
 
                 GL.IssuePluginEvent(1);
