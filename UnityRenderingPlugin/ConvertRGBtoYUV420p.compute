@@ -1,113 +1,44 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
-#pragma kernel CSMain
-#pragma kernel Condense
- 
-RWStructuredBuffer<int> bufColors;
+#pragma kernel Convert
 
 // with cs.SetTexture
 Texture2D<float4> In;
 RWTexture2D<float4> Out;
 
-Texture2D<float4> InYUV444;
-RWTexture2D<float4> OutYUV444;
-
-RWStructuredBuffer<uint> Out2;
-RWStructuredBuffer<uint> CondensedPixels;
 uint Pitch;
-uint Channel;
+uint Plane;
 
 [numthreads(8,8,1)]
-void CSMain (uint3 id : SV_DispatchThreadID)
+void Convert (uint3 id : SV_DispatchThreadID) 
 {
-    // TODO: insert actual code here!
-	float4 rgb = In[id.xy];
+	uint2 rgbPos;
+	rgbPos.x = (id.x * 4) % Pitch;
+	rgbPos.y = Pitch - 1 - (id.x * 4) / Pitch;
 
-	float4 yuv;
-	yuv.x  =  (0.257f * rgb.z) + (0.504f * rgb.y) + (0.098f * rgb.x) + ( 16.f / 255.f);
-	yuv.y  =  (0.439f * rgb.z) - (0.368f * rgb.y) - (0.071f * rgb.x) + (128.f / 255.f);
-	yuv.z  = -(0.148f * rgb.z) - (0.291f * rgb.y) + (0.439f * rgb.x) + (128.f / 255.f); 
-	yuv.w  = 0.0f;
-
-	OutYUV444[id.xy] = yuv; 
-	//Out[id.xy] = yuv; 
-
+	float4 rgb[4];
+	for (int i = 0; i < 4; i++)
+	{
+		rgb[i] = In[uint2(rgbPos.x+i, rgbPos.y)];
+	}
 	
-}
+	float4 yuv[4];
+	for (int i = 0; i < 4; i++)
+	{
+		yuv[i].x  =  (0.257f * rgb[i].z) + (0.504f * rgb[i].y) + (0.098f * rgb[i].x) + ( 16.f / 255.f);
+		yuv[i].y  =  (0.439f * rgb[i].z) - (0.368f * rgb[i].y) - (0.071f * rgb[i].x) + (128.f / 255.f);
+		yuv[i].z  = -(0.148f * rgb[i].z) - (0.291f * rgb[i].y) + (0.439f * rgb[i].x) + (128.f / 255.f); 
+		yuv[i].w  = 0.0f;
+	}
 
-[numthreads(8,8,1)]
-void Condense (uint3 id : SV_DispatchThreadID) 
-{
 	uint2 yuvPos;
-	yuvPos.x = (id.x * 4) % Pitch;
-	yuvPos.y = Pitch - 1 - (id.x * 4) / Pitch;
+	yuvPos.x = (id.x) % Pitch;
+	yuvPos.y = (id.x) / Pitch + (Pitch / 4) * Plane;
 
-	float4 rgb0 = In[yuvPos];
-	float4 rgb1 = In[uint2(yuvPos.x+1, yuvPos.y)];
-	float4 rgb2 = In[uint2(yuvPos.x+2, yuvPos.y)];
-	float4 rgb3 = In[uint2(yuvPos.x+3, yuvPos.y)];
-
-	float4 yuv0;
-	float4 yuv1;
-	float4 yuv2;
-	float4 yuv3;
-
-	yuv0.x  =  (0.257f * rgb0.z) + (0.504f * rgb0.y) + (0.098f * rgb0.x) + ( 16.f / 255.f);
-	yuv0.y  =  (0.439f * rgb0.z) - (0.368f * rgb0.y) - (0.071f * rgb0.x) + (128.f / 255.f);
-	yuv0.z  = -(0.148f * rgb0.z) - (0.291f * rgb0.y) + (0.439f * rgb0.x) + (128.f / 255.f); 
-	yuv0.w  = 0.0f;
-
-	yuv1.x  =  (0.257f * rgb1.z) + (0.504f * rgb1.y) + (0.098f * rgb1.x) + ( 16.f / 255.f);
-	yuv1.y  =  (0.439f * rgb1.z) - (0.368f * rgb1.y) - (0.071f * rgb1.x) + (128.f / 255.f);
-	yuv1.z  = -(0.148f * rgb1.z) - (0.291f * rgb1.y) + (0.439f * rgb1.x) + (128.f / 255.f); 
-	yuv1.w  = 0.0f;
-
-	yuv2.x  =  (0.257f * rgb2.z) + (0.504f * rgb2.y) + (0.098f * rgb2.x) + ( 16.f / 255.f);
-	yuv2.y  =  (0.439f * rgb2.z) - (0.368f * rgb2.y) - (0.071f * rgb2.x) + (128.f / 255.f);
-	yuv2.z  = -(0.148f * rgb2.z) - (0.291f * rgb2.y) + (0.439f * rgb2.x) + (128.f / 255.f); 
-	yuv2.w  = 0.0f;
-
-	yuv3.x  =  (0.257f * rgb3.z) + (0.504f * rgb3.y) + (0.098f * rgb3.x) + ( 16.f / 255.f);
-	yuv3.y  =  (0.439f * rgb3.z) - (0.368f * rgb3.y) - (0.071f * rgb3.x) + (128.f / 255.f);
-	yuv3.z  = -(0.148f * rgb3.z) - (0.291f * rgb3.y) + (0.439f * rgb3.x) + (128.f / 255.f); 
-	yuv3.w  = 0.0f;
-
-	if (Channel == 0)
+	float4 yuvPlane;
+	for (int i = 0; i < 4; i++)
 	{
-		float4 yP;
-		yP.x = yuv0.x;
-		yP.y = yuv1.x;
-		yP.z = yuv2.x;
-		yP.w = yuv3.x;
-
-		uint2 yPPos;
-		yPPos.x = (id.x) % Pitch;
-		yPPos.y = (id.x) / Pitch;
-		Out[yPPos] = yP; 
+		yuvPlane[i] = yuv[i][Plane];
 	}
-	else if (Channel == 1)
-	{
-		float4 uP;
-		uP.x = yuv0.y;
-		uP.y = yuv1.y;
-		uP.z = yuv2.y;
-		uP.w = yuv3.y;
 
-		uint2 uPPos;
-		uPPos.x = (id.x) % Pitch;
-		uPPos.y = (id.x) / Pitch + Pitch / 4;
-		Out[uPPos] = uP;
-	}
-	else if (Channel == 2)
-	{
-		float4 vP;
-		vP.x = yuv0.z;
-		vP.y = yuv1.z;
-		vP.z = yuv2.z;
-		vP.w = yuv3.z; 
-
-		uint2 vPPos;
-		vPPos.x = (id.x) % Pitch;
-		vPPos.y = (id.x) / Pitch + Pitch / 2;
-		Out[vPPos] = vP;
-	}
+	Out[yuvPos] = yuvPlane;
 }
