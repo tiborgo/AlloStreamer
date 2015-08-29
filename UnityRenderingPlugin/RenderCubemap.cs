@@ -124,31 +124,19 @@ public class RenderCubemap : MonoBehaviour
         {
             yield return new WaitForEndOfFrame();
 
-            for (int i = 0; i < faceCount; i++)
-            {
-                RenderTexture inTex = inTextures[i];
-                RenderTexture outTex = outTextures[i];
-
-                shader.SetInt("Pitch", resolution);
-
-                shader.SetInt("Plane", 0);
-                shader.SetTexture(shader.FindKernel("Convert"), "In", inTex);
-                shader.SetTexture(shader.FindKernel("Convert"), "Out", outTex);
-                shader.Dispatch(shader.FindKernel("Convert"), resolution * resolution / 4, 1, 1);
-
-                shader.SetInt("Plane", 1);
-                shader.SetTexture(shader.FindKernel("Convert"), "In", inTex);
-                shader.SetTexture(shader.FindKernel("Convert"), "Out", outTex);
-                shader.Dispatch(shader.FindKernel("Convert"), resolution * resolution / 4, 1, 1);
-
-                shader.SetInt("Plane", 2);
-                shader.SetTexture(shader.FindKernel("Convert"), "In", inTex);
-                shader.SetTexture(shader.FindKernel("Convert"), "Out", outTex);
-                shader.Dispatch(shader.FindKernel("Convert"), resolution * resolution / 4, 1, 1);
-            }
-
             if (extract)
             {
+                for (int i = 0; i < faceCount; i++)
+                {
+                    RenderTexture inTex = inTextures[i];
+                    RenderTexture outTex = outTextures[i];
+
+                    shader.SetInt("Pitch", resolution);
+                    shader.SetTexture(shader.FindKernel("Convert"), "In", inTex);
+                    shader.SetTexture(shader.FindKernel("Convert"), "Out", outTex);
+                    shader.Dispatch(shader.FindKernel("Convert"), resolution * resolution / 4, 1, 1);
+                }
+
                 GL.IssuePluginEvent(1);
             }
         }

@@ -6,9 +6,8 @@ Texture2D<float4> In;
 RWTexture2D<float4> Out;
 
 uint Pitch;
-uint Plane;
 
-[numthreads(8,8,1)]
+[numthreads(1,1,1)]
 void Convert (uint3 id : SV_DispatchThreadID) 
 {
 	uint2 rgbPos;
@@ -30,15 +29,18 @@ void Convert (uint3 id : SV_DispatchThreadID)
 		yuv[i].w  = 0.0f;
 	}
 
-	uint2 yuvPos;
-	yuvPos.x = (id.x) % Pitch;
-	yuvPos.y = (id.x) / Pitch + (Pitch / 4) * Plane;
-
-	float4 yuvPlane;
-	for (int i = 0; i < 4; i++)
+	for (int plane = 0; plane < 3; plane++)
 	{
-		yuvPlane[i] = yuv[i][Plane];
-	}
+		uint2 yuvPos;
+		yuvPos.x = (id.x) % Pitch;
+		yuvPos.y = (id.x) / Pitch + (Pitch / 4) * plane;
 
-	Out[yuvPos] = yuvPlane;
+		float4 yuvPlane;
+		for (int i = 0; i < 4; i++)
+		{
+			yuvPlane[i] = yuv[i][plane];
+		}
+
+		Out[yuvPos] = yuvPlane;
+	}	
 }
