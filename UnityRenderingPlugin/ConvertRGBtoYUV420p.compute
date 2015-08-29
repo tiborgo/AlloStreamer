@@ -14,6 +14,7 @@ RWTexture2D<float4> OutYUV444;
 RWStructuredBuffer<uint> Out2;
 RWStructuredBuffer<uint> CondensedPixels;
 uint Pitch;
+uint Channel;
 
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -30,9 +31,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 	OutYUV444[id.xy] = yuv; 
 	//Out[id.xy] = yuv; 
 
-	Out2[id.y * Pitch * 3 + id.x * 3    ] = yuv.x * 255.f;
-	Out2[id.y * Pitch * 3 + id.x * 3 + 1] = yuv.y * 255.f;
-	Out2[id.y * Pitch * 3 + id.x * 3 + 2] = yuv.z * 255.f;
+	
 }
 
 [numthreads(8,8,1)]
@@ -47,36 +46,45 @@ void Condense (uint3 id : SV_DispatchThreadID)
 	float4 yuv2 = InYUV444[uint2(yuvPos.x+2, yuvPos.y)];
 	float4 yuv3 = InYUV444[uint2(yuvPos.x+3, yuvPos.y)];
 
-	float4 yP;
-	yP.x = yuv0.x;
-	yP.y = yuv1.x;
-	yP.z = yuv2.x;
-	yP.w = yuv3.x;
+	if (Channel == 0)
+	{
+		float4 yP;
+		yP.x = yuv0.x;
+		yP.y = yuv1.x;
+		yP.z = yuv2.x;
+		yP.w = yuv3.x;
 
-	uint2 yPPos;
-	yPPos.x = (id.x) % Pitch;
-	yPPos.y = (id.x) / Pitch;
-	//Out[yPPos] = yP;
+		uint2 yPPos;
+		yPPos.x = (id.x) % Pitch;
+		yPPos.y = (id.x) / Pitch;
+		Out[yPPos] = yP; 
+	}
+	else if (Channel == 1)
+	{
+		float4 uP;
+		uP.x = yuv0.y;
+		uP.y = yuv1.y;
+		uP.z = yuv2.y;
+		uP.w = yuv3.y;
 
-	float4 uP;
-	uP.x = yuv0.y;
-	uP.y = yuv1.y;
-	uP.z = yuv2.y;
-	uP.w = yuv3.y;
+		uint2 uPPos;
+		uPPos.x = (id.x) % Pitch;
+		uPPos.y = (id.x) / Pitch + Pitch / 4;
+		//uPPos.x = (id.x) % Pitch;
+		//uPPos.y = (id.x) / Pitch;
+		Out[uPPos] = uP;
+	}
+	else if (Channel == 2)
+	{
+		float4 vP;
+		vP.x = yuv0.z;
+		vP.y = yuv1.z;
+		vP.z = yuv2.z;
+		vP.w = yuv3.z; 
 
-	uint2 uPPos;
-	uPPos.x = (id.x) % Pitch;
-	uPPos.y = (id.x) / Pitch + Pitch / 4;
-	Out[uPPos] = uP;
-
-	float4 vP;
-	vP.x = yuv0.z;
-	vP.y = yuv1.z;
-	vP.z = yuv2.z;
-	vP.w = yuv3.z; 
-
-	uint2 vPPos;
-	vPPos.x = (id.x) % Pitch;
-	vPPos.y = (id.x) / Pitch + Pitch / 2;
-	Out[vPPos] = vP;
+		uint2 vPPos;
+		vPPos.x = (id.x) % Pitch;
+		vPPos.y = (id.x) / Pitch + Pitch / 2;
+		Out[vPPos] = vP;
+	}
 }
