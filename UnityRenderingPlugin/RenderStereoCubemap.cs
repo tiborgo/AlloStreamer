@@ -771,9 +771,9 @@ public class RenderStereoCubemap : MonoBehaviour
         }
         
         texturePtrs[2] = renderTexturesCeiling[side].GetNativeTexturePtr();
-        texturePtrs[3] = renderTexturesCeiling[side].GetNativeTexturePtr();
+        texturePtrs[3] = renderTexturesFloor[side].GetNativeTexturePtr();
         texturePtrs[8] = renderTexturesCeiling[side+4].GetNativeTexturePtr();
-        texturePtrs[9] = renderTexturesCeiling[side+4].GetNativeTexturePtr();
+        texturePtrs[9] = renderTexturesFloor[side+4].GetNativeTexturePtr();
         
         return texturePtrs;
     }

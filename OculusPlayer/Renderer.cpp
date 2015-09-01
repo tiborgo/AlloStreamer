@@ -180,7 +180,6 @@ void Renderer::OculusInit(){
 
 	// Create the room model
 	scene = new Scene(1024,1024,10);
-
 	// Create camera
 	mainCam=Camera(Vector3f(0.0f, 0.0f, 0.0f), Matrix4f::RotationY(0.0f));
 
@@ -312,11 +311,16 @@ void Renderer::renderLoop()
 		}
 
 		//Frame* content = cubemap->getEye(0)->getFace(0)->getContent();
+		
 
 		void *pixels[12];
 		for (int i = 0; i < 12; i++)
 			pixels[i] = NULL;
 		UINT w = cubemap->getEye(0)->getFace(0)->getContent()->getWidth(), h = cubemap->getEye(0)->getFace(0)->getContent()->getWidth();
+		if (scene->Width != w){
+			scene = new Scene(w,h);
+			std::cout << "New resolution: " << scene->Width << std::endl;
+		}
 		for (int e = 0; e < cubemap->getEyesCount(); e++){
 			for (int i = 0; i < cubemap->getEye(e)->getFacesCount(); i++){
 				pixels[i + 6 * e] = cubemap->getEye(e)->getFace(i)->getContent()->getPixels();	//Draws left eye scene for both eyes
