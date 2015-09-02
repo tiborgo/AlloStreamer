@@ -140,14 +140,15 @@ public class RenderStereoCubemap : MonoBehaviour
          */
     };
     private static Vector2[][] floorUV = {
-        new Vector2[] {new Vector2 (1, 0), new Vector2 (0.5f, 0.5f), new Vector2 (1, 1)},
-        new Vector2[] {new Vector2 (0,0), new Vector2 (0, 1), new Vector2 (0.5f, 0.5f)},
-        new Vector2[] {new Vector2 (0, 1), new Vector2 (1, 1), new Vector2 (0.5f, 0.5f)},
-        new Vector2[] {new Vector2 (1,0), new Vector2 (0, 0), new Vector2 (0.5f, 0.5f)},
-        new Vector2[] {new Vector2 (1, 0), new Vector2 (0.5f, 0.5f), new Vector2 (1, 1)},
-        new Vector2[] {new Vector2 (0,0), new Vector2 (0, 1), new Vector2 (0.5f, 0.5f)},
-        new Vector2[] {new Vector2 (0, 1), new Vector2 (1, 1), new Vector2 (0.5f, 0.5f)},
-        new Vector2[] {new Vector2 (1,0), new Vector2 (0, 0), new Vector2 (0.5f, 0.5f)}
+        new Vector2[] {new Vector2 (1, 1),new Vector2 (0.5f, 0),new Vector2 (0,1) },
+        new Vector2[] { new Vector2 (0,1),new Vector2 (1, 1),new Vector2 (0.5f, 0)},
+        new Vector2[] { new Vector2 (0,1),new Vector2 (1, 1),new Vector2 (0.5f, 0)},
+        new Vector2[] { new Vector2 (0,1),new Vector2 (1, 1),new Vector2 (0.5f, 0)},
+        
+        new Vector2[] {new Vector2 (1, 1),new Vector2 (0.5f, 0),new Vector2 (0,1) },
+        new Vector2[] { new Vector2 (0,1),new Vector2 (1, 1),new Vector2 (0.5f, 0)},
+        new Vector2[] { new Vector2 (0,1),new Vector2 (1, 1),new Vector2 (0.5f, 0)},
+        new Vector2[] { new Vector2 (0,1),new Vector2 (1, 1),new Vector2 (0.5f, 0)}
     };
 
     private static int[][] ceilingTriangles ={
@@ -189,13 +190,13 @@ public class RenderStereoCubemap : MonoBehaviour
         Vector3[][] ceilingVertices ={
             new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (0, 0, 0), new Vector3 (focal_length, 0, focal_length) },
             new Vector3[]{new Vector3 (-focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, focal_length), new Vector3 (0, 0, 0) },
-            new Vector3[]{new Vector3 (-focal_length, 0, focal_length), new Vector3 (focal_length, 0, focal_length), new Vector3 (0, 0, 0) },
             new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, -focal_length), new Vector3 (0, 0, 0) },
-
+            new Vector3[]{new Vector3 (-focal_length, 0, focal_length), new Vector3 (focal_length, 0, focal_length), new Vector3 (0, 0, 0) },
+            
             new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (0, 0, 0), new Vector3 (focal_length, 0, focal_length) },
             new Vector3[]{new Vector3 (-focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, focal_length), new Vector3 (0, 0, 0) },
-            new Vector3[]{new Vector3 (-focal_length, 0, focal_length), new Vector3 (focal_length, 0, focal_length), new Vector3 (0, 0, 0) },
-            new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, -focal_length), new Vector3 (0, 0, 0) }
+            new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, -focal_length), new Vector3 (0, 0, 0) },
+            new Vector3[]{new Vector3 (-focal_length, 0, focal_length), new Vector3 (focal_length, 0, focal_length), new Vector3 (0, 0, 0) }
         };
 
         Vector3[][] floorVertices ={
@@ -220,14 +221,20 @@ public class RenderStereoCubemap : MonoBehaviour
         renderTexturesCeiling = new RenderTexture[8];
         for (int i = 0; i < renderTexturesCeiling.Length; i++)
         {
-            renderTexturesCeiling[i] = new RenderTexture(resolution, resolution/2, 24);
+            if(option==Ceiling_Floor_StereoOption.All)
+                renderTexturesCeiling[i] = new RenderTexture(resolution, resolution/2, 24);
+            else
+                renderTexturesCeiling[i] = new RenderTexture(resolution, resolution, 24);
             renderTexturesCeiling[i].Create();
         }
 
         renderTexturesFloor = new RenderTexture[8];
         for (int i = 0; i < renderTexturesFloor.Length; i++)
         {
-            renderTexturesFloor[i] = new RenderTexture(resolution, resolution/2, 24);
+            if (option == Ceiling_Floor_StereoOption.All)
+                renderTexturesFloor[i] = new RenderTexture(resolution, resolution/2, 24);
+            else
+                renderTexturesFloor[i] = new RenderTexture(resolution, resolution, 24);
             renderTexturesFloor[i].Create();
         }
         cube = new GameObject();
@@ -489,7 +496,7 @@ public class RenderStereoCubemap : MonoBehaviour
         {
             if (k == 2){
                  k = 4;
-                angle=180;
+                angle=0;
             }
                
             //
@@ -561,7 +568,8 @@ public class RenderStereoCubemap : MonoBehaviour
 
         CameraProjectionInit();
     }
-    Matrix4x4[] CalculateProjectionMatrix(float near, float far, float aperture, float eyeSep, float focal_length, bool fourway=false) {
+    Matrix4x4[] CalculateProjectionMatrix(float near, float far, float aperture, float eyeSep, float focal_length, int op=0) //op: 0=not 4way stereo, 1= 4way stereo ceiling, 2= 4way stereo floor
+    {  
         //for asymmetric frustum for left and right eyes 
         Matrix4x4[] mats = new Matrix4x4[2];
 
@@ -581,15 +589,22 @@ public class RenderStereoCubemap : MonoBehaviour
         //Right Eye
         l_R = -wid_div_2 - shift;
         r_R = wid_div_2 - shift;
-        
-        if (fourway) {
-            top = 0;
+
+        /*if (op != 0) {
             //Left Eye
-            l_L = -wid_div_2 + shift;
-            r_L = wid_div_2 + shift;
+            l_L =2* -wid_div_2 + shift;
+            r_L =2* wid_div_2 + shift;
             //Right Eye
-            l_R = -wid_div_2 - shift;
-            r_R = wid_div_2 - shift;
+            l_R =2* -wid_div_2 - shift;
+            r_R =2* wid_div_2 - shift;
+        }*/
+        if (op==1) {
+            top = 0;
+            //bot *= 2;
+        }
+        else if (op == 2) {
+            bot = 0;
+            //top *= 2;
         }
 
         
@@ -627,11 +642,18 @@ public class RenderStereoCubemap : MonoBehaviour
     {
 
         Matrix4x4[] mat = CalculateProjectionMatrix(near, far, aperture, eyeSep, focal_length);
-        Matrix4x4[] matCF;
-        if(option==Ceiling_Floor_StereoOption.All)
-             matCF= CalculateProjectionMatrix(near, far, aperture, eyeSep, focal_length,true);
-        else
-            matCF = CalculateProjectionMatrix(near, far, aperture, eyeSep, focal_length);
+        Matrix4x4[] matC, matF;
+        if (option == Ceiling_Floor_StereoOption.All)
+        {
+            matC = CalculateProjectionMatrix(near, far, aperture/*/2*/, eyeSep, focal_length, 1);
+            matF = CalculateProjectionMatrix(near, far, aperture/*/2*/, eyeSep, focal_length, 2);
+        }
+
+        else {
+            matC = CalculateProjectionMatrix(near, far, aperture, eyeSep, focal_length);
+            matF = CalculateProjectionMatrix(near, far, aperture, eyeSep, focal_length);
+        }
+            
         for (int i = 0; i < CameraL.Length; i++)
         {
             CameraL[i].GetComponent<Camera>().projectionMatrix = mat[0];
@@ -640,8 +662,8 @@ public class RenderStereoCubemap : MonoBehaviour
         }
 
         for (int i = 0; i < CameraCL.Length; i++) {
-            CameraCL[i].GetComponent<Camera>().projectionMatrix = matCF[0];
-            CameraFL[i].GetComponent<Camera>().projectionMatrix = matCF[0];
+            CameraCL[i].GetComponent<Camera>().projectionMatrix = matC[0];
+            CameraFL[i].GetComponent<Camera>().projectionMatrix = matF[0];
         }
 
         for (int i = 0; i < CameraR.Length; i++)
@@ -653,8 +675,8 @@ public class RenderStereoCubemap : MonoBehaviour
 
         for (int i = 0; i < CameraCR.Length; i++)
         {
-            CameraCR[i].GetComponent<Camera>().projectionMatrix = matCF[1];
-            CameraFR[i].GetComponent<Camera>().projectionMatrix = matCF[1];
+            CameraCR[i].GetComponent<Camera>().projectionMatrix = matC[1];
+            CameraFR[i].GetComponent<Camera>().projectionMatrix = matF[1];
         }
 
            
@@ -706,12 +728,17 @@ public class RenderStereoCubemap : MonoBehaviour
             planeFloor_4Way[i].SetActive(false);
 
         }
-
+        Vector3 v= CameraCL[side].transform.eulerAngles;
+        v.x=0;
+        v.z = 180;
         for (int i = 8; i < 12; i++)
         {
             planes[i].SetActive(true);
-            if (i % 2 == 0)
+            if (i % 2 == 0){
                 planes[i].GetComponent<Renderer>().material.mainTexture = renderTexturesCeiling[side];
+                planes[i].transform.eulerAngles = v;
+            }
+                
             else
             {
                 planes[i].GetComponent<Renderer>().material.mainTexture = renderTexturesFloor[side];
