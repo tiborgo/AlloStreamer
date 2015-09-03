@@ -179,7 +179,7 @@ void Renderer::OculusInit(){
 	ovrHmd_CreateMirrorTextureD3D11(HMD, DIRECTX.Device, &td, &mirrorTexture);
 
 	// Create the room model
-	scene = new Scene(1024,1024,10);
+	scene = new Scene(1024,1024);
 	// Create camera
 	mainCam=Camera(Vector3f(0.0f, 0.0f, 0.0f), Matrix4f::RotationY(0.0f));
 
@@ -323,7 +323,7 @@ void Renderer::renderLoop()
 		}
 		for (int e = 0; e < cubemap->getEyesCount(); e++){
 			for (int i = 0; i < cubemap->getEye(e)->getFacesCount(); i++){
-				pixels[i + 6 * e] = cubemap->getEye(e)->getFace(i)->getContent()->getPixels();	//Draws left eye scene for both eyes
+				pixels[i + 6 * e] = cubemap->getEye(e)->getFace(i)->getContent()->getPixels();	
 			}
 		}
 

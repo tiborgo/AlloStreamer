@@ -23,12 +23,12 @@ public class RenderStereoCubemap : MonoBehaviour
     public float moveSpeed = 1;
 
     public bool printFPS = false, adjustFOV = false;
+    public float fovAdjustValue = 0.5f;
 
     public int faceCount = 6;
     public bool extract = true, disablePlanes=false;
     
-    public float fovAdjustValue=0.5f;
-
+    
     public enum Ceiling_Floor_StereoOption {None, PositiveZ, NegativeZ, PositiveX, NegativeX, All}
 
     public Ceiling_Floor_StereoOption option;
@@ -51,7 +51,9 @@ public class RenderStereoCubemap : MonoBehaviour
 
     
     public RenderTexture[] renderTextures,renderTexturesCeiling,renderTexturesFloor;
-
+    private RenderTexture[] inTextures;
+    private RenderTexture[] outTextures;
+    private ComputeShader shader;
 
     [DllImport("CubemapExtractionPlugin")]
     private static extern void ConfigureCubemapFromUnity(System.IntPtr[] texturePtrs, int cubemapFacesCount, int resolution);
@@ -211,20 +213,24 @@ public class RenderStereoCubemap : MonoBehaviour
             new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, -focal_length), new Vector3 (0, 0, 0) }
         };
 
-        renderTextures = new RenderTexture[12];
+        renderTextures = new RenderTexture[faceCount];
+        outTextures = new RenderTexture[faceCount];
         for (int i = 0; i < renderTextures.Length; i++)
         {
-            renderTextures[i] = new RenderTexture(resolution, resolution, 24);
+            renderTextures[i] = new RenderTexture(resolution, resolution, 1, RenderTextureFormat.ARGB32);
+            outTextures[i] = new RenderTexture(resolution, resolution, 1, RenderTextureFormat.ARGB32);
             renderTextures[i].Create();
+            outTextures[i].enableRandomWrite = true;
+            outTextures[i].Create();
         }
 
         renderTexturesCeiling = new RenderTexture[8];
         for (int i = 0; i < renderTexturesCeiling.Length; i++)
         {
             if(option==Ceiling_Floor_StereoOption.All)
-                renderTexturesCeiling[i] = new RenderTexture(resolution, resolution/2, 24);
+                renderTexturesCeiling[i] = new RenderTexture(resolution, resolution / 2, 1, RenderTextureFormat.ARGB32);
             else
-                renderTexturesCeiling[i] = new RenderTexture(resolution, resolution, 24);
+                renderTexturesCeiling[i] = new RenderTexture(resolution, resolution, 1, RenderTextureFormat.ARGB32);
             renderTexturesCeiling[i].Create();
         }
 
@@ -232,9 +238,9 @@ public class RenderStereoCubemap : MonoBehaviour
         for (int i = 0; i < renderTexturesFloor.Length; i++)
         {
             if (option == Ceiling_Floor_StereoOption.All)
-                renderTexturesFloor[i] = new RenderTexture(resolution, resolution/2, 24);
+                renderTexturesFloor[i] = new RenderTexture(resolution, resolution / 2, 1, RenderTextureFormat.ARGB32);
             else
-                renderTexturesFloor[i] = new RenderTexture(resolution, resolution, 24);
+                renderTexturesFloor[i] = new RenderTexture(resolution, resolution, 1, RenderTextureFormat.ARGB32);
             renderTexturesFloor[i].Create();
         }
         cube = new GameObject();
@@ -836,56 +842,65 @@ public class RenderStereoCubemap : MonoBehaviour
 
         }
     }
-    System.IntPtr[] OneWayStereoExtractionSetUp(int side) {
-        System.IntPtr[] texturePtrs = new System.IntPtr[faceCount];
+    void OneWayStereoExtractionSetUp(int side) {
+        
         for (int i = 0; i < Math.Min(faceCount, 12); i++)
         {
             if (i != 2 || i != 3 || i != 8 || i != 9)
-                texturePtrs[i] = renderTextures[i].GetNativeTexturePtr();
+                inTextures[i] = renderTextures[i];
         }
+
+        inTextures[2] = renderTexturesCeiling[side];
+        inTextures[3] = renderTexturesFloor[side];
+        inTextures[8] = renderTexturesCeiling[side + 4];
+        inTextures[9] = renderTexturesFloor[side + 4];
         
-        texturePtrs[2] = renderTexturesCeiling[side].GetNativeTexturePtr();
-        texturePtrs[3] = renderTexturesFloor[side].GetNativeTexturePtr();
-        texturePtrs[8] = renderTexturesCeiling[side+4].GetNativeTexturePtr();
-        texturePtrs[9] = renderTexturesFloor[side+4].GetNativeTexturePtr();
-        
-        return texturePtrs;
     }
-    System.IntPtr[] ExtractionSetUp() {
-        System.IntPtr[] texturePtrs = new System.IntPtr[faceCount];
+    void ExtractionSetUp() {
+        inTextures  = new RenderTexture[faceCount];
         switch (option) { 
             case Ceiling_Floor_StereoOption.None:
             case Ceiling_Floor_StereoOption.All:
                 for (int i = 0; i < Math.Min(faceCount, 12); i++)
                 {
-                    texturePtrs[i] = renderTextures[i].GetNativeTexturePtr();
+                    inTextures[i] = renderTextures[i];
                 }
                 break;
             case Ceiling_Floor_StereoOption.PositiveX:
-                return OneWayStereoExtractionSetUp(0);
+                OneWayStereoExtractionSetUp(0);
+                break;
             case Ceiling_Floor_StereoOption.NegativeX:
-                return OneWayStereoExtractionSetUp(1);
+                OneWayStereoExtractionSetUp(1);
+                break;
             case Ceiling_Floor_StereoOption.PositiveZ:
-                return OneWayStereoExtractionSetUp(2);
+                OneWayStereoExtractionSetUp(2);
+                break;
             case Ceiling_Floor_StereoOption.NegativeZ:
-                return OneWayStereoExtractionSetUp(3);
+                OneWayStereoExtractionSetUp(3);
+                break;
         }
         
-        return texturePtrs;
+        
     }
     IEnumerator Start()
     {
+        // Setup convert shader
+        shader = Resources.Load("ConvertRGBtoYUV420p") as ComputeShader;
+        
+
         PlaneInit();
         CameraInit();
 
         Plane_CameraSetUp();
+        ExtractionSetUp();
 
-        /*System.IntPtr[] texturePtrs = new System.IntPtr[faceCount];
+        System.IntPtr[] texturePtrs = new System.IntPtr[faceCount];
         for (int i = 0; i < Math.Min(faceCount, 12); i++)
         {
-            texturePtrs[i] = renderTextures[i].GetNativeTexturePtr();
+            texturePtrs[i] = outTextures[i].GetNativeTexturePtr();
         }
-        */System.IntPtr[] texturePtrs=ExtractionSetUp();
+        
+        //System.IntPtr[] texturePtrs=ExtractionSetUp();
 
 
         // Tell native plugin that rendering has started
@@ -971,8 +986,21 @@ public class RenderStereoCubemap : MonoBehaviour
         while (true)
         {
             yield return new WaitForEndOfFrame();
+
             if (extract)
             {
+
+                for (int i = 0; i < faceCount; i++)
+                {
+                    RenderTexture inTex = inTextures[i];
+                    RenderTexture outTex = outTextures[i];
+
+                    shader.SetInt("Pitch", resolution);
+                    shader.SetTexture(shader.FindKernel("Convert"), "In", inTex);
+                    shader.SetTexture(shader.FindKernel("Convert"), "Out", outTex);
+                    shader.Dispatch(shader.FindKernel("Convert"), (resolution / 8) * (resolution / 2), 1, 1);
+                }
+
                 GL.IssuePluginEvent(1);
             }
         }

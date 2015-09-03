@@ -580,7 +580,7 @@ struct Scene
 	int getHeight(){
 		return Height;
 	}
-	Scene(UINT width = 256, UINT height = 256, float focal_length = 10.0f) : num_models(0), Width(width), Height(height)
+	Scene(UINT width = 256, UINT height = 256, float focal_length = 100.0f) : num_models(0), Width(width), Height(height)
 	{ 
 		
 
