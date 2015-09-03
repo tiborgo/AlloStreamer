@@ -57,7 +57,7 @@ RawPixelSource::RawPixelSource(UsageEnvironment& env,
                                Frame* content,
                                int avgBitRate)
 	:
-	FramedSource(env), img_convert_ctx(NULL), content(content), /*encodeBarrier(2),*/ destructing(false), texture(nullptr), renderer(nullptr), window(nullptr)
+	FramedSource(env), img_convert_ctx(NULL), content(content), /*encodeBarrier(2),*/ destructing(false)
 {
 
 	gettimeofday(&prevtime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
@@ -205,34 +205,6 @@ void RawPixelSource::setOnSentNALU(std::function<void(RawPixelSource*,
 	onSentNALU = callback;
 }
 
-void RawPixelSource::eventLoop()
-{
-	if (SDL_Init(SDL_INIT_VIDEO))
-	{
-		std::cerr << "Could not initialize SDL - " << SDL_GetError() << std::endl;
-		abort();
-	}
-
-	// Now create a window and show it
-	window = SDL_CreateWindow("AlloUnity - WindowedPlayer", 100, 100, 500, 500, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
-	// Make sure creating our window went ok
-	if (window == nullptr)
-	{
-		std::cerr << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
-		abort();
-	}
-
-	SDL_Event evt;
-	while (true)
-	{
-		SDL_WaitEvent(&evt);
-		if (evt.type == SDL_QUIT)
-		{
-			return;
-		}
-	}
-}
-
 void RawPixelSource::frameContentLoop()
 {
 
@@ -258,129 +230,12 @@ void RawPixelSource::frameContentLoop()
 		// barrier1  // barrier1
 		// barrier2
 
-
-		//if (window)
-		//{
-		//	if (!renderer)
-		//	{
-		//		renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		//		if (renderer == nullptr)
-		//		{
-		//			SDL_DestroyWindow(window);
-		//			std::cerr << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
-		//			SDL_Quit();
-		//			abort();
-		//		}
-
-		//		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, content->getWidth(), content->getHeight());
-		//		if (texture == nullptr)
-		//		{
-		//			SDL_DestroyRenderer(renderer);
-		//			SDL_DestroyWindow(window);
-		//			std::cerr << "SDL_CreateTextureFromSurface Error: " << SDL_GetError() << std::endl;
-		//			SDL_Quit();
-		//			abort();
-		//		}
-		//	}
-
-
-		//	//First clear the renderer
-		//	SDL_RenderClear(renderer);
-
-		//	
-
-		//	char* srcPixels = (char*)content->getPixels();
-		//	static char* buffer = new char[content->getHeight() * content->getWidth() * 4];
-		//	for (int i = 0; i < content->getHeight() * content->getWidth() * 4; i += 4)
-		//	{
-		//		buffer[i] = 0;
-		//		buffer[i + 1] = 0;
-		//		buffer[i + 2] = 0;// srcPixels[i / 3];
-		//		buffer[i + 3] = 0;
-		//	}
-
-		//	void* pixels;
-		//	int   pitch;
-		//	if (SDL_LockTexture(texture, NULL, &pixels, &pitch) < 0)
-		//	{
-		//		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
-		//		SDL_Quit();
-		//		abort();
-		//	}
-		//	memcpy(pixels, srcPixels, content->getHeight() * content->getWidth() * 4);
-		//	SDL_UnlockTexture(texture);
-
-		//	//Draw the texture
-		//	if (SDL_RenderCopy(renderer, texture, NULL, NULL) < 0)
-		//	{
-		//		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
-		//		abort();
-		//	}
-		//}
-
-		unsigned char* pixels = (unsigned char*)content->getPixels();
-		uint32_t width = content->getWidth();
-		uint32_t height = content->getHeight();
-		//for (int y = 0; y < height; y++)
-		//{
-		//	for (int x = 0; x < width; x++)
-		//	{
-		//		/*if (pixels[y * width + x] == 0)
-		//		{
-		//			std::cout << "o ";
-		//		}
-		//		else
-		//		{
-		//			std::cout << "x ";
-		//		}*/
-		//		
-		//		//std::cout << std::setw(3) << (int)pixels[y * width + x] << " ";
-		//	}
-		//	//std::cout << std::endl;
-		//}
-
-		if (width <= 32)
-		{
-			/*for (int i = 0; i < width * height; i++)
-			{
-				std::cout << std::setw(3) << (int)pixels[i] << " ";
-				if (i % (width) == (width)-1)
-				{
-					std::cout << std::endl;
-				}
-			}
-			std::cout << std::endl;*/
-
-
-			for (int i = width * height; i < width * height + width * height / 4; i++)
-			{
-				std::cout << std::setw(3) << (int)pixels[i] << " ";
-				if (i % (width/2) == (width/2)-1)
-				{
-					std::cout << std::endl;
-				}
-			}
-			std::cout << std::endl;
-		}
-
-		//for (int i = 0; i < width * height * 4; i++)
-		//{
-		//	if (pixels[i] == 2)
-		//	{
-		//		std::cout << i << " ";
-		//	}
-		//}
-		//std::cout << std::endl;
-
 		// Fill frame
         avpicture_fill((AVPicture*)frame,
 			(uint8_t*)content->getPixels(),
             content->getFormat(),
             content->getWidth(),
             content->getHeight());
-		// std::cout << "framed face" << std::endl;
-
-		std::cout << (int)(((char*)content->getPixels())[content->getWidth() * content->getHeight() * 3]) << std::endl;
         
         // barrier2
 
