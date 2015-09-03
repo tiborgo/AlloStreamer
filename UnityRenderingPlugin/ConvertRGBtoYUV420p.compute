@@ -86,8 +86,6 @@ void Convert (uint3 id : SV_DispatchThreadID)
 				uPlane[i] += yuv[i*2+x][y].y / 4.0f;
 			}
 		}
-
-		uPlane[i] = yuv[i*2][0].y;
 	}
 
 	Out[uPos] = uPlane;
