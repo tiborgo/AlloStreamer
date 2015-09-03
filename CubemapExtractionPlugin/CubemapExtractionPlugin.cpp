@@ -337,7 +337,7 @@ void copyFromGPUToCPU(Frame* frame)
 		FrameD3D11* frameD3D11 = (FrameD3D11*)frame;
 		memcpy(frameD3D11->getPixels(),
 			   frameD3D11->resource.pData,
-			   frameD3D11->getWidth() * frameD3D11->getHeight() * 3);
+			   frameD3D11->getWidth() * frameD3D11->getHeight() * 4);
     }
 #endif
     

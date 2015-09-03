@@ -6,71 +6,96 @@ Texture2D<float4> In;
 RWTexture2D<float4> Out;
 
 uint Pitch;
+uint Shift;
 
 [numthreads(1,1,1)]
 void Convert (uint3 id : SV_DispatchThreadID) 
 {
-    float4 yuv[4][4];
-	for (int j = 0; j < 4; j++)
+	if (id.x < 4)
 	{
-		uint2 rgbPos;
-		rgbPos.x = (id.x * 16 + j * 4) % Pitch;
-		rgbPos.y = Pitch - 1 - (id.x * 16 + j * 4) / Pitch;
+		//return;
+	}
 
-		float4 rgb[4];
-		for (int i = 0; i < 4; i++)
+	const uint xRange = 8;
+	const uint yRange = 2;
+
+	uint2 pixelPos;
+	pixelPos.x = (id.x * xRange) % Pitch;
+	pixelPos.y = Pitch - 2 - ((id.x * xRange) / Pitch) * yRange;
+
+    float4 yuv[xRange][yRange];
+	for (int x = 0; x < xRange; x++)
+	{
+		for (int y = 0; y < yRange; y++)
 		{
-			rgb[i] = In[uint2(rgbPos.x+i, rgbPos.y)];
-		}
+			uint2 rgbPos;
+			rgbPos.x = x + pixelPos.x;
+			rgbPos.y = y + pixelPos.y;
+
+			float4 rgb = In[rgbPos];
 	
-		for (int i = 0; i < 4; i++)
-		{
-			yuv[j][i].x  =  (0.257f * rgb[i].z) + (0.504f * rgb[i].y) + (0.098f * rgb[i].x) + ( 16.f / 255.f);
-			yuv[j][i].y  =  (0.439f * rgb[i].z) - (0.368f * rgb[i].y) - (0.071f * rgb[i].x) + (128.f / 255.f);
-			yuv[j][i].z  = -(0.148f * rgb[i].z) - (0.291f * rgb[i].y) + (0.439f * rgb[i].x) + (128.f / 255.f); 
-			yuv[j][i].w  = 0.0f;
+			yuv[x][y].x  =  (0.257f * rgb.z) + (0.504f * rgb.y) + (0.098f * rgb.x) + ( 16.f / 255.f);
+			yuv[x][y].y  =  (0.439f * rgb.z) - (0.368f * rgb.y) - (0.071f * rgb.x) + (128.f / 255.f);
+			yuv[x][y].z  = -(0.148f * rgb.z) - (0.291f * rgb.y) + (0.439f * rgb.x) + (128.f / 255.f); 
+			yuv[x][y].w  = 0.0f;
 		}
 	}
 
-	for (int j = 0; j < 4; j++)
+	/*float4 yuv[xRange][yRange];
+	for (int x = 0; x < xRange; x++)
 	{
-		uint2 yPos;
-		yPos.x = (id.x * 4 + j) % Pitch;
-		yPos.y = (id.x * 4 + j) / Pitch;
-
-		float4 yPlane;
-		for (int i = 0; i < 4; i++)
+		for (int y = 0; y < yRange; y++)
 		{
-			yPlane[i] = yuv[j][i].x;
+			for (int i = 0; i < 4; i++)
+			{
+				yuv[x][y][i] = (pixelPos.y + y) / 255.f;
+			}
 		}
+	}*/
 
-		Out[yPos] = yPlane;
-	}
-
-	float4 uPlane;
-	for (int i = 0; i < 4; i++)
+	for (int x = 0; x < 2; x++)
 	{
-		uPlane[i] = 0.0f;
-		for (int j = 0; j < 4; j++)
+		for (int y = 0; y < 2; y++)
 		{
-		
-			uPlane[i] += yuv[j][i].y / 4.f;
+			uint2 yPos;
+			yPos.x = (((2 * id.x + x) + (y * (Pitch / 4)) + ((id.x * 8 / Pitch) * Pitch / 4)) % Pitch);
+			yPos.y = (4 * id.x) / Pitch;
+
+			float y2 = 1.f/256.f;//((4 * id.x) / Pitch) / 256.f;// (float)id.x / 256.f;//(4 * id.x) / Pitch;
+
+			float4 yPlane;
+			for (int i = 0; i < 4; i++)
+			{
+				yPlane[i] = yuv[(x*4)+i][1-y].x;
+			}
+
+			/*float4 pixel;
+			pixel.x = yPos.x / 255.f;
+			pixel.y = id.x / 255.f;
+			pixel.z = id.x / 255.f;
+			pixel.w = id.x / 255.f;*/
+
+			Out[yPos] = yPlane;  
 		}
 	}
 
-	//for (int j = 0; j < 4; j++)
-	//{
-		uint2 yPos;
-		yPos.x = (id.x) % Pitch;
-		yPos.y = (id.x) / Pitch + Pitch / 2 + 3 * (Pitch / 16);
+	/*uint x = 0;
+	uint y = 0;
+	uint2 yPos;
+	yPos.x = (((4 * id.x + x) + (y * (Pitch / 4))) % Pitch);
+	yPos.y = (4 * id.x) / Pitch;
 
-		
-	//}
+	float4 pixel;
+	pixel.x = yPos.x / 255.f;
+	pixel.y = yPos.y / 255.f;
+	pixel.z = 1.0f;
+	pixel.w = 1.0f;
+	Out[id.xy] = pixel;*/
 
-	uint2 yPos2;
-	yPos2.x = (id.x) % Pitch;
-	yPos2.y = (id.x) / Pitch + Pitch / 2 + 4 * (Pitch / 16);
-
-	Out[yPos] = uPlane;
-	Out[yPos2] = uPlane;
+	/*float4 pixel;
+	pixel.x = 1.0f;
+	pixel.y = 0.75f;
+	pixel.z = 0.5f;
+	pixel.w = 0.25;
+	Out[id.xy] = pixel;*/
 }

@@ -18,6 +18,7 @@ find_package(Boost
 find_package(FFmpeg REQUIRED)
 find_package(Live555 REQUIRED)
 find_package(X264 REQUIRED)
+find_package(SDL REQUIRED)
 
 add_executable(AlloServer
 	${SOURCES}
@@ -29,12 +30,14 @@ target_include_directories(AlloServer
 	${Live555_INCLUDE_DIRS}
 	${FFMPEG_INCLUDE_DIRS}
 	${X264_INCLUDE_DIRS}
+	${SDL_INCLUDE_DIR}
 )
 target_link_libraries(AlloServer
 	${Boost_LIBRARIES}
 	${FFMPEG_LIBRARIES}
 	${Live555_LIBRARIES}
 	${X264_LIBRARIES}
+	${SDL_LIBRARY}
 	AlloShared
 )
 set_target_properties(AlloServer

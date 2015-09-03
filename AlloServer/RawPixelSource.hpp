@@ -5,6 +5,8 @@
 #include <boost/thread/synchronized_value.hpp>
 #include <boost/thread/condition.hpp>
 #include <boost/thread.hpp>
+#include <SDL.h>
+#undef main
 
 extern "C"
 {
@@ -78,4 +80,11 @@ private:
 	bool destructing;
 
 	int64_t lastFrameTime;
+
+	SDL_Window*   window;
+	SDL_Texture*  texture;
+	SDL_Renderer* renderer;
+
+	boost::thread eventThread;
+	void eventLoop();
 };
