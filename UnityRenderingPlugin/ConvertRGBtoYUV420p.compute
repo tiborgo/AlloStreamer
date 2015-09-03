@@ -71,22 +71,25 @@ void Convert (uint3 id : SV_DispatchThreadID)
 		}
 	}
 
-	uint2 uPos;
-	uPos.x = id.x % Pitch;
-	uPos.y = id.x / Pitch + Pitch / 4;
-
-	float4 uPlane;
-	for (int i = 0; i < 4; i++)
+	for (int j = 0; j < 2; j++)
 	{
-		uPlane[i] = 0.0f;
-		for (int x = 0; x < 2; x++)
+		uint2 uvPos;
+		uvPos.x = id.x % Pitch;
+		uvPos.y = id.x / Pitch + Pitch / 4 + Pitch / 16 * j;
+
+		float4 uvPlane;
+		for (int i = 0; i < 4; i++)
 		{
-			for (int y = 0; y < 2; y++)
+			uvPlane[i] = 0.0f;
+			for (int x = 0; x < 2; x++)
 			{
-				uPlane[i] += yuv[i*2+x][y].y / 4.0f;
+				for (int y = 0; y < 2; y++)
+				{
+					uvPlane[i] += yuv[i*2+x][y][j+1] / 4.0f;
+				}
 			}
 		}
-	}
 
-	Out[uPos] = uPlane;
+		Out[uvPos] = uvPlane;
+	}
 }
