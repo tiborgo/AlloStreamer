@@ -5,7 +5,6 @@ using System;
 using System.Reflection;
 
 
-
 public class RenderCubemap : MonoBehaviour
 {
 
@@ -14,7 +13,6 @@ public class RenderCubemap : MonoBehaviour
     public int faceCount = 6;
     public bool extract = true;
     public int fps = -1;
-    public ComputeShader shader;
 
     [DllImport("CubemapExtractionPlugin")]
     private static extern void ConfigureCubemapFromUnity(System.IntPtr[] texturePtrs, int cubemapFacesCount, int resolution);
@@ -51,6 +49,7 @@ public class RenderCubemap : MonoBehaviour
 		new Vector3(  0, 180, 0)
 	};
 
+    private ComputeShader shader;
     private RenderTexture[] inTextures;
     private RenderTexture[] outTextures;
 
@@ -62,6 +61,9 @@ public class RenderCubemap : MonoBehaviour
             QualitySettings.vSyncCount = 0;  // VSync must be disabled
             Application.targetFrameRate = fps;
         }
+
+        // Setup convert shader
+        shader = Resources.Load("ConvertRGBtoYUV420p") as ComputeShader;
 
 
         // Setup the cameras for cubemap

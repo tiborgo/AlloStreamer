@@ -18,5 +18,5 @@ add_custom_target(UnityRenderingPlugin
         ${UNITY_PROJECT_ASSETS_DIR}/RenderStereoCubemap.cs
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_LIST_DIR}/ConvertRGBtoYUV420p.compute
-        ${UNITY_PROJECT_ASSETS_DIR}/ConvertRGBtoYUV420p.compute
+        ${UNITY_PROJECT_ASSETS_DIR}/Resources/ConvertRGBtoYUV420p.compute
 )
