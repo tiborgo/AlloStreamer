@@ -61,41 +61,34 @@ void Convert (uint3 id : SV_DispatchThreadID)
 			yPos.x = (((2 * id.x + x) + (y * (Pitch / 4)) + ((id.x * 8 / Pitch) * Pitch / 4)) % Pitch);
 			yPos.y = (4 * id.x) / Pitch;
 
-			float y2 = 1.f/256.f;//((4 * id.x) / Pitch) / 256.f;// (float)id.x / 256.f;//(4 * id.x) / Pitch;
-
 			float4 yPlane;
 			for (int i = 0; i < 4; i++)
 			{
 				yPlane[i] = yuv[(x*4)+i][1-y].x;
 			}
 
-			/*float4 pixel;
-			pixel.x = yPos.x / 255.f;
-			pixel.y = id.x / 255.f;
-			pixel.z = id.x / 255.f;
-			pixel.w = id.x / 255.f;*/
-
 			Out[yPos] = yPlane;  
 		}
 	}
 
-	/*uint x = 0;
-	uint y = 0;
-	uint2 yPos;
-	yPos.x = (((4 * id.x + x) + (y * (Pitch / 4))) % Pitch);
-	yPos.y = (4 * id.x) / Pitch;
+	uint2 uPos;
+	uPos.x = id.x % Pitch;
+	uPos.y = id.x / Pitch + Pitch / 4;
 
-	float4 pixel;
-	pixel.x = yPos.x / 255.f;
-	pixel.y = yPos.y / 255.f;
-	pixel.z = 1.0f;
-	pixel.w = 1.0f;
-	Out[id.xy] = pixel;*/
+	float4 uPlane;
+	for (int i = 0; i < 4; i++)
+	{
+		uPlane[i] = 0.0f;
+		for (int x = 0; x < 2; x++)
+		{
+			for (int y = 0; y < 2; y++)
+			{
+				uPlane[i] += yuv[i*2+x][y].y / 4.0f;
+			}
+		}
 
-	/*float4 pixel;
-	pixel.x = 1.0f;
-	pixel.y = 0.75f;
-	pixel.z = 0.5f;
-	pixel.w = 0.25;
-	Out[id.xy] = pixel;*/
+		uPlane[i] = yuv[i*2][0].y;
+	}
+
+	Out[uPos] = uPlane;
 }

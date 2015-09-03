@@ -341,7 +341,7 @@ void RawPixelSource::frameContentLoop()
 
 		if (width <= 32)
 		{
-			for (int i = 0; i < width * height; i++)
+			/*for (int i = 0; i < width * height; i++)
 			{
 				std::cout << std::setw(3) << (int)pixels[i] << " ";
 				if (i % (width) == (width)-1)
@@ -349,14 +349,18 @@ void RawPixelSource::frameContentLoop()
 					std::cout << std::endl;
 				}
 			}
-			std::cout << std::endl;
+			std::cout << std::endl;*/
 
-			size_t count = 0;
-			for (int i = 0; i < width * height * 4; i++)
+
+			for (int i = width * height; i < width * height + width * height / 4; i++)
 			{
-				if (pixels[i] == 0) count++;
+				std::cout << std::setw(3) << (int)pixels[i] << " ";
+				if (i % (width/2) == (width/2)-1)
+				{
+					std::cout << std::endl;
+				}
 			}
-			std::cout << "Count " << count << std::endl;
+			std::cout << std::endl;
 		}
 
 		//for (int i = 0; i < width * height * 4; i++)
