@@ -52,7 +52,7 @@ public class RenderCubemap : MonoBehaviour
 	};
 
     private RenderTexture[] inTextures;
-    public RenderTexture[] outTextures;
+    private RenderTexture[] outTextures;
 
     // Use this for initialization
     IEnumerator Start()
@@ -116,8 +116,6 @@ public class RenderCubemap : MonoBehaviour
         StopFromUnity();
     }
 
-    private float shift = 0.0f;
-
     private IEnumerator CallPluginAtEndOfFrames()
     {
         while (true)
@@ -128,19 +126,13 @@ public class RenderCubemap : MonoBehaviour
             {
                 for (int i = 0; i < faceCount; i++)
                 {
-                    
-                    shift += 0.1f;
-
-                    //Debug.Log((int)shift);
-
                     RenderTexture inTex = inTextures[i];
                     RenderTexture outTex = outTextures[i];
 
                     shader.SetInt("Pitch", resolution);
-                    shader.SetInt("Shift", (int)shift);
                     shader.SetTexture(shader.FindKernel("Convert"), "In", inTex);
                     shader.SetTexture(shader.FindKernel("Convert"), "Out", outTex);
-                    shader.Dispatch(shader.FindKernel("Convert"), Math.Max(12, (resolution/8) * (resolution/2)), 1, 1);
+                    shader.Dispatch(shader.FindKernel("Convert"), (resolution/8) * (resolution/2), 1, 1);
                 }
 
                 GL.IssuePluginEvent(1);

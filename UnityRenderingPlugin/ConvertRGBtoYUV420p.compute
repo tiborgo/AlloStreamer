@@ -6,27 +6,18 @@ Texture2D<float4> In;
 RWTexture2D<float4> Out;
 
 uint Pitch;
-uint Shift;
 
 [numthreads(1,1,1)]
 void Convert (uint3 id : SV_DispatchThreadID) 
 {
-	if (id.x < 4)
-	{
-		//return;
-	}
-
-	const uint xRange = 8;
-	const uint yRange = 2;
-
 	uint2 pixelPos;
-	pixelPos.x = (id.x * xRange) % Pitch;
-	pixelPos.y = Pitch - 2 - ((id.x * xRange) / Pitch) * yRange;
+	pixelPos.x = (id.x * 8) % Pitch;
+	pixelPos.y = Pitch - 2 - ((id.x * 8) / Pitch) * 2;
 
-    float4 yuv[xRange][yRange];
-	for (int x = 0; x < xRange; x++)
+    float4 yuv[8][2];
+	for (int x = 0; x < 8; x++)
 	{
-		for (int y = 0; y < yRange; y++)
+		for (int y = 0; y < 2; y++)
 		{
 			uint2 rgbPos;
 			rgbPos.x = x + pixelPos.x;
@@ -41,30 +32,18 @@ void Convert (uint3 id : SV_DispatchThreadID)
 		}
 	}
 
-	/*float4 yuv[xRange][yRange];
-	for (int x = 0; x < xRange; x++)
-	{
-		for (int y = 0; y < yRange; y++)
-		{
-			for (int i = 0; i < 4; i++)
-			{
-				yuv[x][y][i] = (pixelPos.y + y) / 255.f;
-			}
-		}
-	}*/
-
 	for (int x = 0; x < 2; x++)
 	{
 		for (int y = 0; y < 2; y++)
 		{
 			uint2 yPos;
-			yPos.x = (((2 * id.x + x) + (y * (Pitch / 4)) + ((id.x * 8 / Pitch) * Pitch / 4)) % Pitch);
+			yPos.x = (2 * id.x + x + y * Pitch / 4 + (id.x * 8 / Pitch) * Pitch / 4) % Pitch;
 			yPos.y = (4 * id.x) / Pitch;
 
 			float4 yPlane;
 			for (int i = 0; i < 4; i++)
 			{
-				yPlane[i] = yuv[(x*4)+i][1-y].x;
+				yPlane[i] = yuv[x*4+i][1-y].x;
 			}
 
 			Out[yPos] = yPlane;  
