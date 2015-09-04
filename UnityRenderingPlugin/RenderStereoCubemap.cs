@@ -9,10 +9,6 @@ using System.Reflection;
 //[ExecuteInEditMode]
 public class RenderStereoCubemap : MonoBehaviour
 {
-    //public Cubemap left;
-    //public Cubemap right;
-    
-
     public int leftLayer = 15, rightLayer = 16;
 
 
@@ -31,9 +27,9 @@ public class RenderStereoCubemap : MonoBehaviour
     
     public enum Ceiling_Floor_StereoOption {None, PositiveZ, NegativeZ, PositiveX, NegativeX, All}
 
-    public Ceiling_Floor_StereoOption option;
+    public Ceiling_Floor_StereoOption CeilingFloorStereoOption;
     
-    private float preFOVAdjustValue = 0.5f;
+    //private float preFOVAdjustValue = 0.5f;
 
 
     private GameObject[] CameraL;	//for left eye surround scene
@@ -44,7 +40,7 @@ public class RenderStereoCubemap : MonoBehaviour
     private GameObject[] CameraFR;  //for right floor view
 
     private GameObject[] planes, planeCeiling_4Way, planeFloor_4Way; //planeCeiling_1Way, planeFloor_1Way;
-    private GameObject cube, cubeCeiling1, cubeFloor1, cubeCeiling4, cubeFloor4, cameras, cameraCeiling, cameraFloor;
+    private GameObject cube, cubeCeiling4, cubeFloor4, cameras, camerasCeiling, camerasFloor;
 
     private Vector3 prePos;
     private Transform OVRCamRig, OVRPlayer;
@@ -98,14 +94,13 @@ public class RenderStereoCubemap : MonoBehaviour
     private static Vector3[] cubemapFaceRotations = {
 		new Vector3(90, -90, 0),
 		new Vector3(90, 90, 0),
-		//new Vector3(0, 0, 180),
-		//new Vector3(0, 180, 0),
+		
 		new Vector3(90, 180, 0),
 		new Vector3(90, 0, 0),
+
         new Vector3(90, -90, 0),
 		new Vector3(90, 90, 0),
-		//new Vector3(0, 0, 180),
-		//new Vector3(0, 180, 0),
+		
 		new Vector3(90, 180, 0),
 		new Vector3(90, 0, 0),
 	};
@@ -134,12 +129,6 @@ public class RenderStereoCubemap : MonoBehaviour
         new Vector2[] {new Vector2 (1, 0), new Vector2 (0,0),new Vector2 (0.5f, 1)},
         new Vector2[] {new Vector2 (1, 0), new Vector2 (0,0),new Vector2 (0.5f, 1)}
         
-        /*new Vector2[] {new Vector2 (1, 0), new Vector2 (0.5f, 0.5f), new Vector2 (1, 1)},
-        new Vector2[] {new Vector2 (0,0), new Vector2 (0, 1), new Vector2 (0.5f, 0.5f)},
-        new Vector2[] {new Vector2 (0, 1), new Vector2 (1, 1), new Vector2 (0.5f, 0.5f)},
-        new Vector2[] {new Vector2 (1,0), new Vector2 (0, 0), new Vector2 (0.5f, 0.5f)}
-    
-         */
     };
     private static Vector2[][] floorUV = {
         new Vector2[] {new Vector2 (1, 1),new Vector2 (0.5f, 0),new Vector2 (0,1) },
@@ -178,6 +167,7 @@ public class RenderStereoCubemap : MonoBehaviour
 
     void PlaneInit()
     {
+        //Init Vertices
         Vector3[] cubemapFacePositions = {
             new Vector3(focal_length, 0, 0),
             new Vector3(-focal_length, 0, 0),
@@ -212,7 +202,7 @@ public class RenderStereoCubemap : MonoBehaviour
             new Vector3[]{new Vector3 (-focal_length, 0, focal_length), new Vector3 (focal_length, 0, focal_length), new Vector3 (0, 0, 0) },
             new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, -focal_length), new Vector3 (0, 0, 0) }
         };
-
+        //Create RenderTextures
         renderTextures = new RenderTexture[faceCount];
         outTextures = new RenderTexture[faceCount];
         for (int i = 0; i < renderTextures.Length; i++)
@@ -227,7 +217,7 @@ public class RenderStereoCubemap : MonoBehaviour
         renderTexturesCeiling = new RenderTexture[8];
         for (int i = 0; i < renderTexturesCeiling.Length; i++)
         {
-            if(option==Ceiling_Floor_StereoOption.All)
+            if(CeilingFloorStereoOption==Ceiling_Floor_StereoOption.All)
                 renderTexturesCeiling[i] = new RenderTexture(resolution, resolution / 2, 1, RenderTextureFormat.ARGB32);
             else
                 renderTexturesCeiling[i] = new RenderTexture(resolution, resolution, 1, RenderTextureFormat.ARGB32);
@@ -237,82 +227,76 @@ public class RenderStereoCubemap : MonoBehaviour
         renderTexturesFloor = new RenderTexture[8];
         for (int i = 0; i < renderTexturesFloor.Length; i++)
         {
-            if (option == Ceiling_Floor_StereoOption.All)
+            if (CeilingFloorStereoOption == Ceiling_Floor_StereoOption.All)
                 renderTexturesFloor[i] = new RenderTexture(resolution, resolution / 2, 1, RenderTextureFormat.ARGB32);
             else
                 renderTexturesFloor[i] = new RenderTexture(resolution, resolution, 1, RenderTextureFormat.ARGB32);
             renderTexturesFloor[i].Create();
         }
+
+        //Parent Object for Organization
+        
         cube = new GameObject();
-        //cubeCeiling1 = new GameObject();
-        //cubeFloor1 = new GameObject();
         cubeCeiling4 = new GameObject();
         cubeFloor4 = new GameObject();
 
         cube.transform.parent = transform;
-        //cubeCeiling1.transform.parent = transform;
-        //cubeFloor1.transform.parent = transform;
         cubeCeiling4.transform.parent = transform;
         cubeFloor4.transform.parent = transform;
         cube.transform.localPosition = new Vector3(0, 0, 0);
-        //cubeCeiling1.transform.localPosition = new Vector3(0, 0, 0);
-        //cubeFloor1.transform.localPosition = new Vector3(0, 0, 0);
         cubeCeiling4.transform.localPosition = new Vector3(0, 0, 0);
         cubeFloor4.transform.localPosition = new Vector3(0, 0, 0);
 
         cube.name = "Cube Walls";
-        //cubeCeiling1.name = "Cube Ceiling 1 Way Stereo";
-        //cubeFloor1.name = "Cube Floor 1 Way Stereo";
         cubeCeiling4.name = "Cube Ceiling 4 Way Stereo";
         cubeFloor4.name = "Cube Floor 4 Way Stereo";
+
+        //Create Planes for the Cube
 
         planes = new GameObject[12];
         planeCeiling_4Way = new GameObject[8];
         planeFloor_4Way = new GameObject[8];
-        //planeCeiling_1Way = new GameObject[8];
-        //planeFloor_1Way = new GameObject[8];
+        
         int k = 0;
         for (int i = 0; i < 8; i++)
         {
-            if (k == 2 || k == 8)
+            if (k == 2 || k == 8) //Init Ceilings and Floors for 1 directional stereo or no stereo later
                 k += 2;
+            
+            //Create Planes for Walls
             planes[i] = GameObject.CreatePrimitive(PrimitiveType.Plane);
             planes[i].transform.parent = cube.transform;
             planes[i].transform.localScale = new Vector3(focal_length / 5, 1, focal_length / 5);
 
-            /*
-            planeCeiling_1Way[i] = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            planeCeiling_1Way[i].transform.parent = cubeCeiling1.transform;
-            planeCeiling_1Way[i].transform.localScale = new Vector3(focal_length / 5, 1, focal_length / 5);
-            
-            planeFloor_1Way[i] = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            planeFloor_1Way[i].transform.parent = cubeFloor1.transform;
-            planeFloor_1Way[i].transform.localScale = new Vector3(focal_length / 5, 1, focal_length / 5);
-            */
+            //Game Object for Ceiling
             planeCeiling_4Way[i] = new GameObject();
             planeCeiling_4Way[i].transform.parent = cubeCeiling4.transform;
             planeCeiling_4Way[i].transform.localScale = new Vector3(1, 1, 1);
             planeCeiling_4Way[i].AddComponent<MeshFilter>();
             planeCeiling_4Way[i].AddComponent<MeshRenderer>();
 
+            //Game Object for Floor
             planeFloor_4Way[i] = new GameObject();
             planeFloor_4Way[i].transform.parent = cubeFloor4.transform;
             planeFloor_4Way[i].transform.localScale = new Vector3(1, 1,1);
             planeFloor_4Way[i].AddComponent<MeshFilter>();
             planeFloor_4Way[i].AddComponent<MeshRenderer>();
 
+            //Plane for Ceiling
             Mesh mesh = planeCeiling_4Way[i].GetComponent<MeshFilter>().mesh;
             mesh.Clear();
             mesh.vertices = ceilingVertices[i];
             mesh.uv = ceilingUV[i];
             mesh.triangles = ceilingTriangles[i];
 
+            //Plane for Floor
             mesh = planeFloor_4Way[i].GetComponent<MeshFilter>().mesh;
             mesh.Clear();
             mesh.vertices = floorVertices[i];
             mesh.uv = floorUV[i];
             mesh.triangles = floorTriangles[i];
 
+            //Rendering Setting
             Renderer[] r = new Renderer[] { planes[i].GetComponent<Renderer>(), planeCeiling_4Way[i].GetComponent<Renderer>(), planeFloor_4Way[i].GetComponent<Renderer>()};//, planeCeiling_1Way[i].GetComponent<Renderer>(), planeFloor_1Way[i].GetComponent<Renderer>() };
             for (int j = 0; j < r.Length; j++) {
                 r[j].shadowCastingMode = ShadowCastingMode.Off;
@@ -321,29 +305,28 @@ public class RenderStereoCubemap : MonoBehaviour
                 r[j].reflectionProbeUsage = ReflectionProbeUsage.Off;
                 r[j].material.shader = Shader.Find("Unlit/Texture");
             }
-               
+
+            //Set main texture to RenderTexture
             r[0].material.mainTexture = renderTextures[k];
             r[1].material.mainTexture = renderTexturesCeiling[i];
             r[2].material.mainTexture = renderTexturesFloor[i];
-            //r[3].material.mainTexture = renderTexturesCeiling[i];
-            //r[4].material.mainTexture = renderTexturesFloor[i];
 
-            if (i < 4)
+            //Set Layers for each plane
+            if (i < 4)  //left eye
             {
                 planes[i].layer = leftLayer;
                 planeCeiling_4Way[i].layer = leftLayer;
                 planeFloor_4Way[i].layer = leftLayer;
-            //    planeCeiling_1Way[i].layer = leftLayer;
-            //    planeFloor_1Way[i].layer = leftLayer;
+            
             }
-            else {
+            else {  //right eye
                 planes[i].layer = rightLayer;
                 planeCeiling_4Way[i].layer = rightLayer;
                 planeFloor_4Way[i].layer = rightLayer;
-            //    planeCeiling_1Way[i].layer = rightLayer;
-            //    planeFloor_1Way[i].layer = rightLayer;
+            
             }
             
+            //Name the planes and set their position and orientation
             planes[i].name = cubemapFaceNames[k];
             planes[i].transform.localPosition = cubemapFacePositions[i];
             planes[i].transform.eulerAngles = cubemapFaceRotations[i];
@@ -355,17 +338,11 @@ public class RenderStereoCubemap : MonoBehaviour
             planeFloor_4Way[i].name = cubemapFloorFaceNames[i];
             planeFloor_4Way[i].transform.localPosition = new Vector3(0,-focal_length, 0);
             planeFloor_4Way[i].transform.eulerAngles = new Vector3(0, 0, 0);
-            /*
-            planeCeiling_1Way[i].name = cubemapCeilingFaceNames[i];
-            planeCeiling_1Way[i].transform.localPosition = new Vector3(0, focal_length, 0);
-            planeCeiling_1Way[i].transform.eulerAngles = new Vector3(0, 180, 180);
-
-            planeFloor_1Way[i].name = cubemapFloorFaceNames[i];
-            planeFloor_1Way[i].transform.localPosition = new Vector3(0, -focal_length, 0);
-            planeFloor_1Way[i].transform.eulerAngles = new Vector3(0, 0, 0);
-            */
+            
             k++;
         }
+        
+        //Set Ceiling and Floor for no stereo or 1 directional stereo
         k = 2;
         for (int i = 8; i < 12; i++) {
             if (k == 4)
@@ -407,7 +384,7 @@ public class RenderStereoCubemap : MonoBehaviour
 
     void CameraInit()
     {
-
+        //Init Camera Positions
         Vector3[] cubemapCamPositions = {
             new Vector3(0, 0, eyeSep),
             new Vector3(0, 0, -eyeSep),
@@ -423,6 +400,23 @@ public class RenderStereoCubemap : MonoBehaviour
             new Vector3(-eyeSep, 0, 0)                                                     
         };
 
+        //Parent Object for Organization
+        cameras = new GameObject();
+        camerasCeiling = new GameObject();
+        camerasFloor = new GameObject();
+
+        cameras.transform.parent = transform;
+        camerasCeiling.transform.parent = transform;
+        camerasFloor.transform.parent = transform;
+        cameras.transform.localPosition = new Vector3(0, 0, 0);
+        camerasCeiling.transform.localPosition = new Vector3(0, 0, 0);
+        camerasFloor.transform.localPosition = new Vector3(0, 0, 0);
+
+        cameras.name = "Cameras";
+        camerasCeiling.name = "Cameras Ceiling 4 Way Stereo";
+        camerasFloor.name = "Cameras Floor 4 Way Stereo";
+
+        //Camera Objects
         CameraL = new GameObject[6];
         CameraR = new GameObject[6];
         CameraCL = new GameObject[4];
@@ -430,9 +424,10 @@ public class RenderStereoCubemap : MonoBehaviour
         CameraFL = new GameObject[4];
         CameraFR = new GameObject[4];
 
-        //int angle = 0;
+        //Init Cameras
         for (int i = 0; i < 6; i++)
         {
+            //Create Cameras
             CameraL[i] = new GameObject();
             CameraR[i] = new GameObject();
 
@@ -442,25 +437,23 @@ public class RenderStereoCubemap : MonoBehaviour
             CameraL[i].AddComponent<Camera>();
             CameraR[i].AddComponent<Camera>();
 
-            //position the left and right camera inside the cube
-            CameraL[i].transform.parent = transform;
-            CameraR[i].transform.parent = transform;
-            CameraL[i].transform.position = transform.position;
-            CameraR[i].transform.position = transform.position;
+            //position and orient the left and right camera inside the cube
+            CameraL[i].transform.parent = cameras.transform;
+            CameraR[i].transform.parent = cameras.transform;
+            CameraL[i].transform.position = cameras.transform.position;
+            CameraR[i].transform.position = cameras.transform.position;
             CameraL[i].transform.eulerAngles = cubemapCamRotations[i];
             CameraR[i].transform.eulerAngles = cubemapCamRotations[i];
             
             if(i<2 || i>3){
-                CameraL[i].transform.Translate(cubemapCamPositions[i], transform);
-                CameraR[i].transform.Translate(cubemapCamPositions[i+6], transform);
+                CameraL[i].transform.Translate(cubemapCamPositions[i], cameras.transform);
+                CameraR[i].transform.Translate(cubemapCamPositions[i + 6], cameras.transform);
             }
             
-            //CameraL[i].transform.RotateAround(transform.position, new Vector3(0, 1, 0), angle);
-            //CameraR[i].transform.RotateAround(transform.position, new Vector3(0, 1, 0), angle);
-
             Camera cL = CameraL[i].GetComponent<Camera>();
             Camera cR = CameraR[i].GetComponent<Camera>();
 
+            //Stub for camera config (later overriden by CameraProjectionInit())
             cL.aspect = 1;
             cL.nearClipPlane = near;
             cL.farClipPlane = far;
@@ -477,24 +470,25 @@ public class RenderStereoCubemap : MonoBehaviour
             cL.fieldOfView = aperture;
             cR.fieldOfView = aperture;
 
-
+            //Set Culling Mask so that camera do not see the planes
             if (i < 2 || i > 3)
             {
                 cL.cullingMask = ~((1 << leftLayer) | (1 << rightLayer));
                 cR.cullingMask = ~((1 << leftLayer) | (1 << rightLayer));
             }
-            else
+            else//exception for 4 directional stereo (cameras for +Y and -Y directions are used to capture textures for ceiling and floor)
             {
                 cL.cullingMask = (1 << leftLayer) ;
                 cR.cullingMask = (1 << rightLayer);
             }
+            //enables the cameras
             cL.enabled = true;
             cR.enabled = true;
 
+            //Set target texture
             cL.targetTexture = renderTextures[i];
             cR.targetTexture = renderTextures[i + 6];
 
-            //angle += 90;
         }
         int angle = 90;
         int k = 0;
@@ -505,32 +499,31 @@ public class RenderStereoCubemap : MonoBehaviour
                 angle=0;
             }
                
-            //
-            CameraCL[i] = new GameObject(); CameraCR[i] = new GameObject();
-            CameraFL[i] = new GameObject(); CameraFR[i] = new GameObject();
+            CameraCL[i] = new GameObject();                     CameraCR[i] = new GameObject();
+            CameraFL[i] = new GameObject();                     CameraFR[i] = new GameObject();
 
             CameraCL[i].name = "CameraC_" + cubemapFaceNames[k]; CameraCR[i].name = "CameraC_" + cubemapFaceNames[k+6];
             CameraFL[i].name = "CameraF_" + cubemapFaceNames[k]; CameraFR[i].name = "CameraF_" + cubemapFaceNames[k+6];
 
-            CameraCL[i].AddComponent<Camera>(); CameraCR[i].AddComponent<Camera>();
-            CameraFL[i].AddComponent<Camera>(); CameraFR[i].AddComponent<Camera>();
+            CameraCL[i].AddComponent<Camera>();                 CameraCR[i].AddComponent<Camera>();
+            CameraFL[i].AddComponent<Camera>();                 CameraFR[i].AddComponent<Camera>();
 
-            //position the center camera inside the cube
-            CameraCL[i].transform.parent = transform; CameraCR[i].transform.parent = transform;
-            CameraFL[i].transform.parent = transform; CameraFR[i].transform.parent = transform;
-            CameraCL[i].transform.position = transform.position; CameraCR[i].transform.position = transform.position;
-            CameraFL[i].transform.position = transform.position; CameraFR[i].transform.position = transform.position;
-            CameraCL[i].transform.eulerAngles = new Vector3(270, angle, 0); CameraCR[i].transform.eulerAngles = new Vector3(270, angle, 0);
-            CameraFL[i].transform.eulerAngles = new Vector3(90, angle, 0); CameraFR[i].transform.eulerAngles = new Vector3(90, angle, 0);
+            //position the cameras for stereo ceiling and floor inside the cube
+            CameraCL[i].transform.parent = camerasCeiling.transform;            CameraCR[i].transform.parent = camerasCeiling.transform;
+            CameraFL[i].transform.parent = camerasFloor.transform;              CameraFR[i].transform.parent = camerasFloor.transform;
+            CameraCL[i].transform.position = camerasCeiling.transform.position; CameraCR[i].transform.position = camerasCeiling.transform.position;
+            CameraFL[i].transform.position = camerasFloor.transform.position;   CameraFR[i].transform.position = camerasFloor.transform.position;
+            CameraCL[i].transform.eulerAngles = new Vector3(270, angle, 0);     CameraCR[i].transform.eulerAngles = new Vector3(270, angle, 0);
+            CameraFL[i].transform.eulerAngles = new Vector3(90, angle, 0);      CameraFR[i].transform.eulerAngles = new Vector3(90, angle, 0);
 
-            CameraCL[i].transform.Translate(cubemapCamPositions[k], transform); CameraCR[i].transform.Translate(cubemapCamPositions[k+6], transform);
-            CameraFL[i].transform.Translate(cubemapCamPositions[k], transform); CameraFR[i].transform.Translate(cubemapCamPositions[k + 6], transform);
+            CameraCL[i].transform.Translate(cubemapCamPositions[k], camerasCeiling.transform);      CameraCR[i].transform.Translate(cubemapCamPositions[k + 6], camerasCeiling.transform);
+            CameraFL[i].transform.Translate(cubemapCamPositions[k], camerasFloor.transform);        CameraFR[i].transform.Translate(cubemapCamPositions[k + 6], camerasFloor.transform);
 
             //camera setting
             Camera[] c = new Camera[] { CameraCL[i].GetComponent<Camera>(), CameraCR[i].GetComponent<Camera>(), CameraFL[i].GetComponent<Camera>(), CameraFR[i].GetComponent<Camera>() };
             for (int j = 0; j < c.Length; j++)
             {
-                if (option == Ceiling_Floor_StereoOption.All)
+                if (CeilingFloorStereoOption == Ceiling_Floor_StereoOption.All)
                 {
                     c[j].aspect = 2;
                     c[j].fieldOfView = aperture/2;
@@ -545,16 +538,17 @@ public class RenderStereoCubemap : MonoBehaviour
                 c[j].cullingMask = ~((1 << leftLayer) | (1 << rightLayer));
                 c[j].enabled = true;
             }
-            c[0].targetTexture = renderTexturesCeiling[i]; c[1].targetTexture = renderTexturesCeiling[i+4];
-            c[2].targetTexture = renderTexturesFloor[i]; c[3].targetTexture = renderTexturesFloor[i+4];
+            c[0].targetTexture = renderTexturesCeiling[i];      c[1].targetTexture = renderTexturesCeiling[i+4];
+            c[2].targetTexture = renderTexturesFloor[i];        c[3].targetTexture = renderTexturesFloor[i+4];
 
 
             k++;
             angle += 180;
             angle %= 360;
         }
-        
 
+        //Check if OVRPlayer or OVRCamRig is attached to the Game Object
+        //if so, enable Oculus Rift support
         if ((OVRPlayer = transform.Find("OVRPlayerController")) != null)
         {
             OVRCamRig = OVRPlayer.Find("OVRCameraRig");
@@ -574,6 +568,9 @@ public class RenderStereoCubemap : MonoBehaviour
 
         CameraProjectionInit();
     }
+    /*
+     * Returns asymmetric projection matrix for left and right eyes 
+     */
     Matrix4x4[] CalculateProjectionMatrix(float near, float far, float aperture, float eyeSep, float focal_length, int op=0) //op: 0=not 4way stereo, 1= 4way stereo ceiling, 2= 4way stereo floor
     {  
         //for asymmetric frustum for left and right eyes 
@@ -644,12 +641,15 @@ public class RenderStereoCubemap : MonoBehaviour
 
         return mats;
     }
+    /*
+     * Init the camera's projection matrix with correct stereo option
+     */
     void CameraProjectionInit()
     {
 
         Matrix4x4[] mat = CalculateProjectionMatrix(near, far, aperture, eyeSep, focal_length);
         Matrix4x4[] matC, matF;
-        if (option == Ceiling_Floor_StereoOption.All)
+        if (CeilingFloorStereoOption == Ceiling_Floor_StereoOption.All)
         {
             matC = CalculateProjectionMatrix(near, far, aperture/*/2*/, eyeSep, focal_length, 1);
             matF = CalculateProjectionMatrix(near, far, aperture/*/2*/, eyeSep, focal_length, 2);
@@ -687,11 +687,10 @@ public class RenderStereoCubemap : MonoBehaviour
 
            
     }
+    //enables or disables unnecessary planes
     void enablePlanes(bool enable) {
         cube.SetActive(enable);
-        //cubeCeiling1.SetActive(enable);
-        //cubeFloor1.SetActive(enable);
-        if (enable || option != Ceiling_Floor_StereoOption.All)
+        if (enable || CeilingFloorStereoOption != Ceiling_Floor_StereoOption.All)
         {
             cubeCeiling4.SetActive(enable);
             cubeFloor4.SetActive(enable);
@@ -703,6 +702,7 @@ public class RenderStereoCubemap : MonoBehaviour
         if(enable)
             Plane_CameraSetUp();
     }
+    //Configures the Planes and Cameras for 1 directional stereo
     void OneWayStereoPlaneCameraSetUp(int side) {
         CameraL[2].SetActive(false); CameraR[2].SetActive(false);
         CameraL[3].SetActive(false); CameraR[3].SetActive(false);
@@ -728,8 +728,6 @@ public class RenderStereoCubemap : MonoBehaviour
 
         for (int i = 0; i < 8; i++)
         {
-            //planeCeiling_1Way[i].SetActive(false);
-            //planeFloor_1Way[i].SetActive(false);
             planeCeiling_4Way[i].SetActive(false);
             planeFloor_4Way[i].SetActive(false);
 
@@ -754,8 +752,9 @@ public class RenderStereoCubemap : MonoBehaviour
         }
         
     }
+    //Configures the Planes and Cameras in accordance to stereo option
     void Plane_CameraSetUp() { 
-        switch(option){
+        switch(CeilingFloorStereoOption){
             case Ceiling_Floor_StereoOption.None:
                 CameraL[2].SetActive(true);    CameraR[2].SetActive(true);
                 CameraL[3].SetActive(true);    CameraR[3].SetActive(true);
@@ -781,8 +780,6 @@ public class RenderStereoCubemap : MonoBehaviour
 
                 for (int i = 0; i < 8; i++)
                 {
-                    //planeCeiling_1Way[i].SetActive(false);
-                    //planeFloor_1Way[i].SetActive(false);
                     planeCeiling_4Way[i].SetActive(false);
                     planeFloor_4Way[i].SetActive(false);
 
@@ -829,8 +826,6 @@ public class RenderStereoCubemap : MonoBehaviour
 
                 for (int i = 0; i < 8; i++)
                 {
-                    //planeCeiling_1Way[i].SetActive(false);
-                    //planeFloor_1Way[i].SetActive(false);
                     planeCeiling_4Way[i].SetActive(true);
                     planeFloor_4Way[i].SetActive(true);
 
@@ -842,11 +837,12 @@ public class RenderStereoCubemap : MonoBehaviour
 
         }
     }
+    //Cubemap extraction setup for 1 directional stereo
     void OneWayStereoExtractionSetUp(int side) {
         
         for (int i = 0; i < Math.Min(faceCount, 12); i++)
         {
-            if (i != 2 || i != 3 || i != 8 || i != 9)
+            if (i != 2 || i != 3 || i != 8 || i != 9) //if not ceiling or floor
                 inTextures[i] = renderTextures[i];
         }
 
@@ -856,9 +852,10 @@ public class RenderStereoCubemap : MonoBehaviour
         inTextures[9] = renderTexturesFloor[side + 4];
         
     }
+    //Cubemap extraction setup
     void ExtractionSetUp() {
         inTextures  = new RenderTexture[faceCount];
-        switch (option) { 
+        switch (CeilingFloorStereoOption) { 
             case Ceiling_Floor_StereoOption.None:
             case Ceiling_Floor_StereoOption.All:
                 for (int i = 0; i < Math.Min(faceCount, 12); i++)
@@ -924,31 +921,63 @@ public class RenderStereoCubemap : MonoBehaviour
     void UpdateCharacter()
     {
         float angleY = 0;
-        if (Input.GetKey(KeyCode.I))
+        if (Input.GetKey(KeyCode.I))//cubemap moves foward
         {
             angleY = getAngle();
-            transform.Translate(new Vector3(Mathf.Sin(angleY), 0, Mathf.Cos(angleY)) * moveSpeed);//*Time.deltaTime);
+            transform.Translate(new Vector3(Mathf.Sin(angleY), 0, Mathf.Cos(angleY)) * moveSpeed*Time.deltaTime);
         }
-        if (Input.GetKey(KeyCode.L))
+        else if (Input.GetKey(KeyCode.L))//cubemap moves rightward
         {
             angleY = getAngle();
-            transform.Translate(new Vector3(Mathf.Cos(angleY), 0, -Mathf.Sin(angleY)) * moveSpeed);//*Time.deltaTime);
+            transform.Translate(new Vector3(Mathf.Cos(angleY), 0, -Mathf.Sin(angleY)) * moveSpeed*Time.deltaTime);
         }
-        if (Input.GetKey(KeyCode.J))
+        else if (Input.GetKey(KeyCode.J))//cubema moves leftward
         {
             angleY = getAngle();
-            transform.Translate(new Vector3(-Mathf.Cos(angleY), 0, Mathf.Sin(angleY)) * moveSpeed);//*Time.deltaTime);
+            transform.Translate(new Vector3(-Mathf.Cos(angleY), 0, Mathf.Sin(angleY)) * moveSpeed*Time.deltaTime);
         }
-        if (Input.GetKey(KeyCode.K))
+        else if (Input.GetKey(KeyCode.K))//cubemap moves backward
         {
             angleY = getAngle();
-            transform.Translate(new Vector3(-Mathf.Sin(angleY), 0, -Mathf.Cos(angleY)) * moveSpeed);//*Time.deltaTime);
+            transform.Translate(new Vector3(-Mathf.Sin(angleY), 0, -Mathf.Cos(angleY)) * moveSpeed*Time.deltaTime);
         }
-        if (Input.GetKey(KeyCode.U)) {
-            transform.Translate(new Vector3(0, 1, 0) * moveSpeed);//*Time.deltaTime);
+        else if (Input.GetKey(KeyCode.U))//cubemap moves upward
+        {
+            transform.Translate(new Vector3(0, 1, 0) * moveSpeed*Time.deltaTime);
         }
-        if (Input.GetKey(KeyCode.O)) {
-            transform.Translate(new Vector3(0, -1, 0) * moveSpeed);//*Time.deltaTime);
+        else if (Input.GetKey(KeyCode.O)) //cubemap moves downward
+        {
+            transform.Translate(new Vector3(0, -1, 0) * moveSpeed*Time.deltaTime);
+        }
+        else if (OVRPlayer != null) {
+            if (Input.GetKey(KeyCode.W))//player moves foward
+            {
+                angleY = getAngle();
+                OVRPlayer.transform.Translate(new Vector3(Mathf.Sin(angleY), 0, Mathf.Cos(angleY)) * moveSpeed * Time.deltaTime);
+            }
+            else if (Input.GetKey(KeyCode.D))//player moves rightward
+            {
+                angleY = getAngle();
+                OVRPlayer.transform.Translate(new Vector3(Mathf.Cos(angleY), 0, -Mathf.Sin(angleY)) * moveSpeed * Time.deltaTime);
+            }
+            else if (Input.GetKey(KeyCode.A)) //player moves leftward
+            {
+                angleY = getAngle();
+                OVRPlayer.transform.Translate(new Vector3(-Mathf.Cos(angleY), 0, Mathf.Sin(angleY)) * moveSpeed * Time.deltaTime);
+            }
+            else if (Input.GetKey(KeyCode.S))//player moves backward
+            {
+                angleY = getAngle();
+                OVRPlayer.transform.Translate(new Vector3(-Mathf.Sin(angleY), 0, -Mathf.Cos(angleY)) * moveSpeed * Time.deltaTime);
+            }
+            else if (Input.GetKey(KeyCode.Z) ||Input.GetKey(KeyCode.UpArrow))//player moves upward
+            {
+                OVRPlayer.transform.Translate(new Vector3(0, 1, 0) * moveSpeed * Time.deltaTime);
+            }
+            else if (Input.GetKey(KeyCode.X) || Input.GetKey(KeyCode.DownArrow))//player moves downward
+            {
+                OVRPlayer.transform.Translate(new Vector3(0, -1, 0) * moveSpeed * Time.deltaTime);
+            }
         }
     }
 
