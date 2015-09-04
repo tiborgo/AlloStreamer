@@ -279,8 +279,14 @@ void copyFromGPUToCPU(Frame* frame)
         ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
         g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
         
-        // copy data from GPU to CPU
-		g_D3D11DeviceContext->CopyResource(frameD3D11->cpuTexturePtr, frameD3D11->gpuTexturePtr);
+        // Copy data from GPU to CPU
+		// Since the texture is YUV420p encoded we only need 3/8 the amount of data
+		D3D11_BOX region =
+		{
+			0, 0, 0,
+			frameD3D11->getWidth(), frameD3D11->getHeight() * 3 / 8, 1
+		};
+		g_D3D11DeviceContext->CopySubresourceRegion(frameD3D11->cpuTexturePtr, 0, 0, 0, 0, frameD3D11->gpuTexturePtr, 0, &region);
     }
 #endif
     
