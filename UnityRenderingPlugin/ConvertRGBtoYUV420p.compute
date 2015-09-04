@@ -1,0 +1,74 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel Convert
+
+// with cs.SetTexture
+Texture2D<float4> In;
+RWTexture2D<float4> Out;
+
+uint Pitch;
+
+[numthreads(1,1,1)]
+void Convert (uint3 id : SV_DispatchThreadID) 
+{
+	uint2 pixelPos;
+	pixelPos.x = (id.x * 8) % Pitch;
+	pixelPos.y = Pitch - 2 - ((id.x * 8) / Pitch) * 2;
+
+    float4 yuv[8][2];
+	for (int x = 0; x < 8; x++)
+	{
+		for (int y = 0; y < 2; y++)
+		{
+			uint2 rgbPos;
+			rgbPos.x = x + pixelPos.x;
+			rgbPos.y = y + pixelPos.y;
+
+			float4 rgb = In[rgbPos];
+	
+			yuv[x][y].x  =  (0.257f * rgb.z) + (0.504f * rgb.y) + (0.098f * rgb.x) + ( 16.f / 255.f);
+			yuv[x][y].y  =  (0.439f * rgb.z) - (0.368f * rgb.y) - (0.071f * rgb.x) + (128.f / 255.f);
+			yuv[x][y].z  = -(0.148f * rgb.z) - (0.291f * rgb.y) + (0.439f * rgb.x) + (128.f / 255.f); 
+			yuv[x][y].w  = 0.0f;
+		}
+	}
+
+	for (int x = 0; x < 2; x++)
+	{
+		for (int y = 0; y < 2; y++)
+		{
+			uint2 yPos;
+			yPos.x = (2 * id.x + x + y * Pitch / 4 + (id.x * 8 / Pitch) * Pitch / 4) % Pitch;
+			yPos.y = (4 * id.x) / Pitch;
+
+			float4 yPlane;
+			for (int i = 0; i < 4; i++)
+			{
+				yPlane[i] = yuv[x*4+i][1-y].x;
+			}
+
+			Out[yPos] = yPlane;  
+		}
+	}
+
+	for (int j = 0; j < 2; j++)
+	{
+		uint2 uvPos;
+		uvPos.x = id.x % Pitch;
+		uvPos.y = id.x / Pitch + Pitch / 4 + Pitch / 16 * j;
+
+		float4 uvPlane;
+		for (int i = 0; i < 4; i++)
+		{
+			uvPlane[i] = 0.0f;
+			for (int x = 0; x < 2; x++)
+			{
+				for (int y = 0; y < 2; y++)
+				{
+					uvPlane[i] += yuv[i*2+x][y][j+1] / 4.0f;
+				}
+			}
+		}
+
+		Out[uvPos] = uvPlane;
+	}
+}

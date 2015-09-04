@@ -4,17 +4,16 @@ Frame::Frame(boost::uint32_t                         width,
              boost::uint32_t                         height,
              AVPixelFormat                           format,
              boost::chrono::system_clock::time_point presentationTime,
-             void*                                   pixels,
              Allocator&                              allocator)
     :
     allocator(allocator), width(width), height(height), format(format),
-    presentationTime(presentationTime), pixels(pixels)
+	presentationTime(presentationTime), pixels(allocator.allocate(width * height * 4)) // for RGBA
 {
-
 }
 
 Frame::~Frame()
 {
+	allocator.deallocate(pixels.get(), width * height * 4);
 }
 
 boost::uint32_t Frame::getWidth()
@@ -64,13 +63,11 @@ Frame* Frame::create(boost::uint32_t                         width,
                      Allocator&                              allocator)
 {
     void* addr = allocator.allocate(sizeof(Frame));
-    void* pixels = allocator.allocate(width * height * 4);
-    return new (addr) Frame(width, height, format, presentationTime, pixels, allocator);
+    return new (addr) Frame(width, height, format, presentationTime, allocator);
 }
 
-void Frame::destroy(Frame* Frame)
+void Frame::destroy(Frame* frame)
 {
-    Frame->~Frame();
-    Frame->allocator.deallocate(Frame->pixels.get(), Frame->width * Frame->height * 4);
-    Frame->allocator.deallocate(Frame, sizeof(Frame));
+    frame->~Frame();
+	frame->allocator.deallocate(frame, sizeof(Frame));
 }
