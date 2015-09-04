@@ -552,7 +552,7 @@ struct Model
 //------------------------------------------------------------------------- 
 struct Scene  
 {
-    int     num_models;
+    int     num_models, Width,Height;
     Model * Models[10];
 
     void    Add(Model * n)
@@ -574,9 +574,16 @@ struct Scene
 		}*/
 	}
 
-	Scene(int width=256, int height=256,float focal_length = 10.0f) : num_models(0)
+	int getWidth(){
+		return Width;
+	}
+	int getHeight(){
+		return Height;
+	}
+	Scene(UINT width = 256, UINT height = 256, float focal_length = 10.0f) : num_models(0), Width(width), Height(height)
 	{ 
 		
+
         TriangleSet left,right,front,back,floor,ceiling;
 		left.AddQuad(Vertex(Vector3f(-focal_length, -focal_length, focal_length), 0xffffffff, 0, 1),
 			Vertex(Vector3f(-focal_length, focal_length, focal_length), 0xffffffff, 0, 0),
