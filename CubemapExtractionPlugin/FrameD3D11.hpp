@@ -17,12 +17,14 @@ public:
 	D3D11_MAPPED_SUBRESOURCE resource;
 
 	static FrameD3D11* create(ID3D11Texture2D* texturePtr,
+		                      std::string&     id,
 		                      Allocator&       allocator);
 
 protected:
 	FrameD3D11(boost::uint32_t width,
                boost::uint32_t height,
 			   boost::chrono::system_clock::time_point presentationTime,
+			   std::string& id,
 			   Allocator& allocator,
 			   ID3D11Texture2D* gpuTexturePtr,
 			   ID3D11Texture2D* cpuTexturePtr,

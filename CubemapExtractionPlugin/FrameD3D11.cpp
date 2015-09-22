@@ -16,18 +16,20 @@ static AVPixelFormat avPixel2DXGIFormat(DXGI_FORMAT format)
 }
 
 FrameD3D11::FrameD3D11(boost::uint32_t width,
-                                   boost::uint32_t height,
-								   boost::chrono::system_clock::time_point presentationTime,
-	                               Allocator& allocator,
-	                               ID3D11Texture2D* gpuTexturePtr,
-	                               ID3D11Texture2D* cpuTexturePtr,
-	                               D3D11_MAPPED_SUBRESOURCE resource,
-	                               D3D11_TEXTURE2D_DESC& description)
+                       boost::uint32_t height,
+					   boost::chrono::system_clock::time_point presentationTime,
+					   std::string& id,
+	                   Allocator& allocator,
+	                   ID3D11Texture2D* gpuTexturePtr,
+	                   ID3D11Texture2D* cpuTexturePtr,
+	                   D3D11_MAPPED_SUBRESOURCE resource,
+	                   D3D11_TEXTURE2D_DESC& description)
 	:
 	Frame(width,
 	      height,
 		  PIX_FMT_YUV420P,//avPixel2DXGIFormat(description.Format),//PIX_FMT_YUV420P,
 	      presentationTime,
+		  id,
 	      allocator),
 	gpuTexturePtr(gpuTexturePtr),
 	cpuTexturePtr(cpuTexturePtr),
@@ -36,7 +38,8 @@ FrameD3D11::FrameD3D11(boost::uint32_t width,
 }
 
 FrameD3D11* FrameD3D11::create(ID3D11Texture2D* texturePtr,
-	                                       Allocator& allocator)
+	                           std::string&     id,
+				               Allocator&       allocator)
 {
 
 	ID3D11Texture2D* gpuTexturePtr = (ID3D11Texture2D*)texturePtr;
@@ -68,11 +71,12 @@ FrameD3D11* FrameD3D11::create(ID3D11Texture2D* texturePtr,
 	return new (addr) FrameD3D11(width,
 		                         height,
 							     boost::chrono::system_clock::now(),
+								 id,
 						         allocator,
-		                               gpuTexturePtr,
-		                               cpuTexturePtr,
-		                               resource,
-		                               textureDescription);
+		                         gpuTexturePtr,
+		                         cpuTexturePtr,
+		                         resource,
+		                         textureDescription);
 }
 
 #endif
