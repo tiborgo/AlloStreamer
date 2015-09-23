@@ -45,6 +45,8 @@ protected:
 private:
 	EventTriggerId eventTriggerId;
 	static void deliverFrame0(void* clientData);
+	static boost::mutex triggerEventMutex;
+	static std::vector<RawPixelSource*> sourcesReadyForDelivery;
 	void deliverFrame();
 
 	// redefined virtual functions:

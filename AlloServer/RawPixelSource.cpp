@@ -12,6 +12,9 @@
 
 namespace bc = boost::chrono;
 
+boost::mutex RawPixelSource::triggerEventMutex;
+std::vector<RawPixelSource*> RawPixelSource::sourcesReadyForDelivery;
+
 int RawPixelSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
 {
 	char *err = NULL;
@@ -298,11 +301,14 @@ void RawPixelSource::doGetNextFrame()
 
 void RawPixelSource::deliverFrame0(void* clientData)
 {
+	boost::mutex::scoped_lock lock(triggerEventMutex);
+	for (RawPixelSource* source : sourcesReadyForDelivery)
+	{
+		source->deliverFrame();
+	}
+	sourcesReadyForDelivery.clear();
 	//std::cout << "deliver frame: " << ((CubemapFaceSource*)clientData)->face->index << std::endl;
-	((RawPixelSource*)clientData)->deliverFrame();
 }
-
-boost::mutex triggerEventMutex;
 
 void RawPixelSource::encodeFrameLoop()
 {
@@ -391,7 +397,8 @@ void RawPixelSource::encodeFrameLoop()
 		//if (!this->destructing && isCurrentlyAwaitingData())
 		{
 			boost::mutex::scoped_lock lock(triggerEventMutex);
-			envir().taskScheduler().triggerEvent(eventTriggerId, this);
+			sourcesReadyForDelivery.push_back(this);
+			envir().taskScheduler().triggerEvent(eventTriggerId, nullptr);
 			//std::cout << this << ": event triggered" << std::endl;
 		}
 
