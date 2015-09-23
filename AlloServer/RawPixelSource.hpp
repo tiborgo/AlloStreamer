@@ -25,8 +25,7 @@ class RawPixelSource : public FramedSource
 public:
 	static RawPixelSource* createNew(UsageEnvironment& env,
                                      Frame* content,
-                                     int avgBitRate,
-									 int face);
+                                     int avgBitRate);
 
 	virtual void setOnSentNALU(std::function<void(RawPixelSource*,
 												  uint8_t type,
@@ -35,8 +34,7 @@ public:
 protected:
 	RawPixelSource(UsageEnvironment& env,
                    Frame* content,
-                   int avgBitRate,
-				   int face);
+                   int avgBitRate);
 	// called only by createNew(), or by subclass constructors
 	virtual ~RawPixelSource();
 
@@ -46,8 +44,6 @@ protected:
 
 private:
 	EventTriggerId eventTriggerId;
-	static boost::mutex triggerEventMutex;
-	static std::vector<RawPixelSource*> sourcesReadyForDelivery;
 	static void deliverFrame0(void* clientData);
 	void deliverFrame();
 
@@ -82,7 +78,4 @@ private:
 	bool destructing;
 
 	int64_t lastFrameTime;
-
-	HANDLE mutex;
-	int face;
 };

@@ -17,7 +17,7 @@
 #include "AlloServer/AlloServer.h"
 #include "AlloShared/Binoculars.hpp"
 
-Frame* getFrameFromTexture(void* texturePtr, std::string& id);
+Frame* getFrameFromTexture(void* texturePtr);
 
 // --------------------------------------------------------------------------
 // Helper utilities
@@ -30,7 +30,6 @@ static boost::mutex d3D11DeviceContextMutex;
 static boost::interprocess::managed_shared_memory shm;
 static Binoculars* binoculars = nullptr;
 static StereoCubemap::Ptr cubemap;
-static std::array<HANDLE, StereoCubemap::MAX_EYES_COUNT * Cubemap::MAX_FACES_COUNT> faceMutexes;
 
 struct CubemapConfig
 {
@@ -66,32 +65,27 @@ void allocateCubemap(CubemapConfig* cubemapConfig)
     
     if (cubemapConfig)
     {
-		std::vector<Cubemap*> eyes;
-		for (int j = 0; j < (std::min)((size_t)StereoCubemap::MAX_EYES_COUNT, cubemapConfig->facesCount / StereoCubemap::MAX_EYES_COUNT + 1); j++)
+        std::vector<CubemapFace*> leftFaces;
+        for (int i = 0; i < (std::min)((size_t)Cubemap::MAX_FACES_COUNT, cubemapConfig->facesCount); i++)
+        {
+            CubemapFace* face = CubemapFace::create(getFrameFromTexture(cubemapConfig->texturePtrs[i]),
+                                                    i,
+                                                    *shmAllocator);
+			leftFaces.push_back(face);
+        }
+
+		std::vector<CubemapFace*> rightFaces;
+		for (int i = Cubemap::MAX_FACES_COUNT; i < cubemapConfig->facesCount; i++)
 		{
-			std::vector<CubemapFace*> faces;
-			for (int i = Cubemap::MAX_FACES_COUNT * j; i < (std::min)((size_t)Cubemap::MAX_FACES_COUNT * (j+1), cubemapConfig->facesCount); i++)
-			{
-				std::string id(CUBEMAPEXTRACTIONPLUGIN_ID "cubemap");
-				id += std::to_string(i);
-				CubemapFace* face = CubemapFace::create(getFrameFromTexture(cubemapConfig->texturePtrs[i],
-					                                                        id),
-					                                    i,
-					                                    *shmAllocator);
-
-				std::string mutexName = face->getContent()->getMutexName().c_str();
-				int wcharsCount = MultiByteToWideChar(CP_UTF8, 0, mutexName.c_str(), -1, NULL, 0);
-				wchar_t* wstr = new wchar_t[wcharsCount];
-				MultiByteToWideChar(CP_UTF8, 0, mutexName.c_str(), -1, wstr, wcharsCount);
-				faceMutexes[i] = CreateMutex(NULL, FALSE, wstr);
-				delete[] wstr;
-
-				faces.push_back(face);
-			}
-
-			
-			eyes.push_back(Cubemap::create(faces, *shmAllocator));
+			CubemapFace* face = CubemapFace::create(getFrameFromTexture(cubemapConfig->texturePtrs[i]),
+				i,
+				*shmAllocator);
+			rightFaces.push_back(face);
 		}
+        
+		std::vector<Cubemap*> eyes;
+		eyes.push_back(Cubemap::create(leftFaces, *shmAllocator));
+		eyes.push_back(Cubemap::create(rightFaces, *shmAllocator));
 
 		cubemap = StereoCubemap::create(eyes, *shmAllocator);
         StereoCubemap::Ptr cubemapPtr = *shm.construct<StereoCubemap::Ptr>("Cubemap")(cubemap.get());
@@ -108,9 +102,7 @@ void allocateBinoculars(BinocularsConfig* binocularsConfig)
     
     if (binocularsConfig)
     {
-		std::string id(CUBEMAPEXTRACTIONPLUGIN_ID "binoculars");
-        binoculars = Binoculars::create(getFrameFromTexture(binocularsConfig->texturePtr,
-			                                                id),
+        binoculars = Binoculars::create(getFrameFromTexture(binocularsConfig->texturePtr),
                                         *shmAllocator);
         Binoculars::Ptr binocarlsPtr = *shm.construct<Binoculars::Ptr>("Binoculars")(binoculars);
     }
@@ -216,7 +208,7 @@ extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType,
 	#endif
 }
 
-Frame* getFrameFromTexture(void* texturePtr, std::string& id)
+Frame* getFrameFromTexture(void* texturePtr)
 {
 	// A script calls this at initialization time; just remember the texture pointer here.
 	// Will update texture pixels each frame from the plugin rendering event (texture update
@@ -241,7 +233,6 @@ Frame* getFrameFromTexture(void* texturePtr, std::string& id)
 	if (g_DeviceType == kGfxRendererD3D11)
 	{
 		frame = FrameD3D11::create((ID3D11Texture2D*)texturePtr,
-								   id,
 			                       *shmAllocator);
 	}
 #endif
@@ -252,7 +243,6 @@ Frame* getFrameFromTexture(void* texturePtr, std::string& id)
 	if (g_DeviceType == kGfxRendererOpenGL)
 	{
         frame = FrameOpenGL::create((GLuint)(size_t)texturePtr,
-			                        id,
                                     *shmAllocator);
 	}
 #endif
@@ -260,7 +250,7 @@ Frame* getFrameFromTexture(void* texturePtr, std::string& id)
     return frame;
 }
 
-void copyFromGPUToCPU(Frame* frame, HANDLE mutex, int face)
+void copyFromGPUToCPU(Frame* frame)
 {
     frame->setPresentationTime(presentationTime);
     
@@ -311,7 +301,7 @@ void copyFromGPUToCPU(Frame* frame, HANDLE mutex, int face)
     }
 #endif
     
-    /*while (!frame->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(10)))
+    while (!frame->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
     {
         if (!alloServerProcess.isAlive())
         {
@@ -328,17 +318,10 @@ void copyFromGPUToCPU(Frame* frame, HANDLE mutex, int face)
             new (conditionAddr) boost::interprocess::interprocess_condition;
             return;
         }
-    }*/
+    }
 
-    /*boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(frame->getMutex(),
-                                                                                   boost::interprocess::accept_ownership);*/
-
-	//boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(frame->getMutex());
-
-	DWORD dwWaitResult = WaitForSingleObject(
-		mutex,    // handle to mutex
-		INFINITE);
-
+    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(frame->getMutex(),
+                                                                                   boost::interprocess::accept_ownership);
     // COPY
     
 #if SUPPORT_D3D9
@@ -372,8 +355,6 @@ void copyFromGPUToCPU(Frame* frame, HANDLE mutex, int face)
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->getPixels());
     }
 #endif
-
-	bool result = ReleaseMutex(mutex);
     
     frame->getNewPixelsCondition().notify_all();
 }
@@ -386,7 +367,7 @@ void copyFromGPUtoCPU (std::vector<Frame*>& frames)
         
         for (int i = 0; i < frames.size(); i++)
         {
-            threads[i] = boost::thread(boost::bind(&copyFromGPUToCPU, frames[i], faceMutexes[i], i));
+            threads[i] = boost::thread(boost::bind(&copyFromGPUToCPU, frames[i]));
         }
         
         for (int i = 0; i < frames.size(); i++)
@@ -398,7 +379,7 @@ void copyFromGPUtoCPU (std::vector<Frame*>& frames)
     {
         for (int i = 0; i < frames.size(); i++)
         {
-			copyFromGPUToCPU(frames[i], faceMutexes[i], i);
+            copyFromGPUToCPU(frames[i]);
         }
     }
 }

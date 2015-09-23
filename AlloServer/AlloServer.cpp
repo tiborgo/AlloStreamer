@@ -99,8 +99,7 @@ void addFaceSubstreams0(void*)
 
 			RawPixelSource* source = RawPixelSource::createNew(*env,
 				state->content,
-				avgBitRate,
-				j * Cubemap::MAX_FACES_COUNT + i);
+				avgBitRate);
 
 			std::function<void(RawPixelSource*,
 				uint8_t type,
@@ -157,8 +156,7 @@ void addBinocularsSubstream0(void*)
     binocularsStream->source = H264VideoStreamDiscreteFramer::createNew(*env,
                                                                         RawPixelSource::createNew(*env,
                                                                                                   binocularsStream->content,
-                                                                                                  avgBitRate,
-																								  -1));
+                                                                                                  avgBitRate));
     binocularsStream->sink->startPlaying(*binocularsStream->source, NULL, NULL);
     
     std::cout << "Streaming binoculars ..." << std::endl;

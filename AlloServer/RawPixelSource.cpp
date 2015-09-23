@@ -12,9 +12,6 @@
 
 namespace bc = boost::chrono;
 
-boost::mutex RawPixelSource::triggerEventMutex;
-std::vector<RawPixelSource*> RawPixelSource::sourcesReadyForDelivery;
-
 int RawPixelSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
 {
 	char *err = NULL;
@@ -47,10 +44,9 @@ int RawPixelSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
 
 RawPixelSource* RawPixelSource::createNew(UsageEnvironment& env,
                                           Frame* content,
-                                          int avgBitRate,
-										  int face)
+                                          int avgBitRate)
 {
-	return new RawPixelSource(env, content, avgBitRate, face);
+	return new RawPixelSource(env, content, avgBitRate);
 }
 
 unsigned RawPixelSource::referenceCount = 0;
@@ -59,10 +55,9 @@ struct timeval prevtime;
 
 RawPixelSource::RawPixelSource(UsageEnvironment& env,
                                Frame* content,
-                               int avgBitRate,
-							   int face)
+                               int avgBitRate)
 	:
-	FramedSource(env), img_convert_ctx(NULL), content(content), /*encodeBarrier(2),*/ destructing(false), face(face)
+	FramedSource(env), img_convert_ctx(NULL), content(content), /*encodeBarrier(2),*/ destructing(false)
 {
 
 	gettimeofday(&prevtime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
@@ -164,14 +159,6 @@ RawPixelSource::RawPixelSource(UsageEnvironment& env,
 
 	//std::cout << this << ": eventTriggerId: " << eventTriggerId  << std::endl;
 
-	
-	std::string mutexName = content->getMutexName().c_str();
-	int wcharsCount = MultiByteToWideChar(CP_UTF8, 0, mutexName.c_str(), -1, NULL, 0);
-	wchar_t* wstr = new wchar_t[wcharsCount];
-	MultiByteToWideChar(CP_UTF8, 0, mutexName.c_str(), -1, wstr, wcharsCount);
-	mutex = OpenMutex(SYNCHRONIZE, FALSE, wstr);
-	delete[] wstr;
-
 	frameContentThread = boost::thread(boost::bind(&RawPixelSource::frameContentLoop, this));
 
 	encodeFrameThread  = boost::thread(boost::bind(&RawPixelSource::encodeFrameLoop,  this));
@@ -223,23 +210,16 @@ void RawPixelSource::frameContentLoop()
 
 	while (!destructing)
 	{
-
-		/*while (!content->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
+		while (!content->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
 		{
 			if (destructing)
 			{
 				return;
 			}
-		}*/
+		}
 
-		DWORD dwWaitResult = WaitForSingleObject(
-			mutex,    // handle to mutex
-			INFINITE);
-
-		//std::cout << "lock " << face << std::endl;
-
-		/*boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(content->getMutex(),
-			boost::interprocess::accept_ownership);*/
+		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(content->getMutex(),
+			boost::interprocess::accept_ownership);
 
 		AVFrame* frame;
 		if (!framePool.wait_and_pop(frame))
@@ -265,12 +245,6 @@ void RawPixelSource::frameContentLoop()
         bc::microseconds presentationTimeSinceEpochMicroSec =
             bc::duration_cast<bc::microseconds>(content->getPresentationTime().time_since_epoch());
         
-
-		if (!ReleaseMutex(mutex))
-		{
-			abort();
-		}
-		//std::cout << "release " << face << std::endl;
         
 //        const time_t time = bc::system_clock::to_time_t(face->getPresentationTime());
 //
@@ -287,9 +261,6 @@ void RawPixelSource::frameContentLoop()
 
         // Make frame available to the encoder
         frameBuffer.push(frame);
-
-		boost::interprocess::interprocess_mutex mut ;
-		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(mut);
 
 		// Wait for new frame
 		while (!content->getNewPixelsCondition().timed_wait(lock,
@@ -327,17 +298,11 @@ void RawPixelSource::doGetNextFrame()
 
 void RawPixelSource::deliverFrame0(void* clientData)
 {
-	boost::mutex::scoped_lock lock(triggerEventMutex);
-	for (RawPixelSource* source : sourcesReadyForDelivery)
-	{
-		source->deliverFrame();
-	}
-	sourcesReadyForDelivery.clear();
 	//std::cout << "deliver frame: " << ((CubemapFaceSource*)clientData)->face->index << std::endl;
-	
+	((RawPixelSource*)clientData)->deliverFrame();
 }
 
-
+boost::mutex triggerEventMutex;
 
 void RawPixelSource::encodeFrameLoop()
 {
@@ -419,17 +384,14 @@ void RawPixelSource::encodeFrameLoop()
 		pkt.pts = xFrame->pts;
 
 		framePool.push(xFrame);
-		//pktPool.push(pkt);
 		pktBuffer.push(pkt);
-		//if (onSentNALU) onSentNALU(this, 0, 0);
 
 		//std::cout << this << ": encoded frame" << std::endl;
 
 		//if (!this->destructing && isCurrentlyAwaitingData())
 		{
 			boost::mutex::scoped_lock lock(triggerEventMutex);
-			sourcesReadyForDelivery.push_back(this);
-			envir().taskScheduler().triggerEvent(eventTriggerId, nullptr);
+			envir().taskScheduler().triggerEvent(eventTriggerId, this);
 			//std::cout << this << ": event triggered" << std::endl;
 		}
 
@@ -503,8 +465,6 @@ void RawPixelSource::deliverFrame()
 	fPresentationTime.tv_sec = av_rescale_q(pkt.pts, codecContext->time_base, secBase);
 	fPresentationTime.tv_usec = av_rescale_q(pkt.pts, codecContext->time_base, microSecBase) -
 		fPresentationTime.tv_sec * 1000000;
-
-	//std::cout << fPresentationTime.tv_sec << std::endl;
 
 	// Live555 does not like start codes.
 	// So, we remove the start code which is there in front of every nal unit.  

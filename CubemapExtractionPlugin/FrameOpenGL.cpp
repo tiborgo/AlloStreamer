@@ -7,14 +7,12 @@ FrameOpenGL::FrameOpenGL(boost::uint32_t                         width,
                          AVPixelFormat                           format,
                          boost::chrono::system_clock::time_point presentationTime,
                          GLuint                                  gpuTextureID,
-						 std::string&                            id,
                          Allocator&                              allocator)
 	:
 	Frame(width,
 	      height,
 		  format,
 		  presentationTime,
-		  id,
 		  allocator),
 	gpuTextureID(gpuTextureID)
 {
@@ -26,7 +24,6 @@ GLuint FrameOpenGL::getGPUTextureID()
 }
 
 FrameOpenGL* FrameOpenGL::create(GLuint     gpuTextureID,
-	                             std::string& id,
                                  Allocator& allocator)
 {
     glBindTexture(GL_TEXTURE_2D, gpuTextureID);
@@ -40,7 +37,6 @@ FrameOpenGL* FrameOpenGL::create(GLuint     gpuTextureID,
                                   AV_PIX_FMT_RGB24,
                                   boost::chrono::system_clock::time_point(),
                                   gpuTextureID,
-								  id,
                                   allocator);
 }
 

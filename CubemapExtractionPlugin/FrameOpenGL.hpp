@@ -10,9 +10,8 @@
     public:
         GLuint getGPUTextureID();
         
-        static FrameOpenGL* create(GLuint       gpuTextureID,
-			                       std::string& id,
-                                   Allocator&   allocator);
+        static FrameOpenGL* create(GLuint     gpuTextureID,
+                                   Allocator& allocator);
         
     protected:
         FrameOpenGL(boost::uint32_t                         width,
@@ -20,7 +19,6 @@
                     AVPixelFormat                           format,
                     boost::chrono::system_clock::time_point presentationTime,
                     GLuint                                  gpuTextureID,
-					std::string&                            id,
                     Allocator&                              allocator);
         
         GLuint gpuTextureID;
