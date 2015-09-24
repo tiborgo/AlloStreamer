@@ -394,9 +394,13 @@ std::string Stats::summary(bc::microseconds window)
 
 void Stats::autoSummaryLoop(boost::chrono::microseconds frequency)
 {
+	auto summaryTime = boost::chrono::system_clock::now();
+
     while (true)
     {
-        boost::this_thread::sleep(boost::posix_time::microseconds(frequency.count()));
+		summaryTime += frequency;
+		boost::this_thread::sleep_until(summaryTime);
+
 		if (stopAutoSummary_)
 		{
 			return;

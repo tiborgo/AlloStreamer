@@ -62,24 +62,21 @@ int main(int argc, char* argv[])
 {
 	try
 	{
-		if (argc < 4)
+		if (argc < 5)
 		{
-			std::cerr << "Usage: receiver <listen_address> <multicast_address> <port>+\n";
-			std::cerr << "  For IPv4, try:\n";
-			std::cerr << "    receiver 0.0.0.0 239.255.0.1 30001\n";
-			std::cerr << "  For IPv6, try:\n";
-			std::cerr << "    receiver 0::0 ff31::8000:1234 30001\n";
+			std::cerr << "Usage: receiver <listen_address> <multicast_address> <stats interval> <port>+" << std::endl;
 			return 1;
 		}
 
 		std::vector<short> ports;
-		for (int i = 3; i < argc; i++)
+		for (int i = 4; i < argc; i++)
 		{
 			ports.push_back(atoi(argv[i]));
 		}
 
 		boost::asio::ip::address listen_address    = boost::asio::ip::address::from_string(argv[1]);
 		boost::asio::ip::address multicast_address = boost::asio::ip::address::from_string(argv[2]);
+		size_t statsInterval = atoi(argv[3]);
 
 		std::stringstream ss;
 		std::copy(ports.begin(), ports.end(), std::ostream_iterator<short>(ss, ", "));
@@ -101,7 +98,7 @@ int main(int argc, char* argv[])
 				                         i));
 		}
 
-		stats.autoSummary(boost::chrono::seconds(10));
+		stats.autoSummary(boost::chrono::seconds(statsInterval));
 
 		std::vector<boost::thread> io_threads;
 
