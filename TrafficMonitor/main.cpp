@@ -88,14 +88,13 @@ int main(int argc, char* argv[])
 			" with port(s) " << ss.str().substr(0, ss.str().length() - 2) <<
 			" on interface address " << listen_address.to_string() << std::endl;
 
-		boost::asio::io_service io_service;
-
 		std::vector<receiver*> receivers;
-		
+		std::vector<boost::asio::io_service*> io_services;
 
 		for (int i = 0; i < ports.size(); i++)
 		{
-			receivers.push_back(new receiver(io_service,
+			io_services.push_back(new boost::asio::io_service());
+			receivers.push_back(new receiver(*io_services[i],
 				                         boost::asio::ip::address::from_string(argv[1]),
 				                         boost::asio::ip::address::from_string(argv[2]),
 				                         ports[i],
@@ -104,7 +103,17 @@ int main(int argc, char* argv[])
 
 		stats.autoSummary(boost::chrono::seconds(10));
 
-		io_service.run();
+		std::vector<boost::thread> io_threads;
+
+		for (boost::asio::io_service* io_service : io_services)
+		{
+			io_threads.push_back(boost::thread(boost::bind(&boost::asio::io_service::run, io_service)));
+		}
+
+		for (boost::thread& io_thread : io_threads)
+		{
+			io_thread.join();
+		}
 	}
 	catch (std::exception& e)
 	{
