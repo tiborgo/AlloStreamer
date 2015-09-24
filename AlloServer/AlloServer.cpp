@@ -111,7 +111,7 @@ void addFaceSubstreams0(void*)
 
 			state->sink->startPlaying(*state->source, NULL, NULL);
 
-			std::cout << "Streaming face " << i << " (" << ((j == 0) ? "left" : "right") << ") ..." << std::endl;
+			std::cout << "Streaming face " << i << " (" << ((j == 0) ? "left" : "right") << ") on port " << ntohs(rtpPort.num()) << " ..." << std::endl;
 		}
 	}
     
