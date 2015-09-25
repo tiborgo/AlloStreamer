@@ -8,14 +8,22 @@ fi
 
 commit=$(git log -n 1 --pretty=format:"%ci %H" | tr : - | tr \  _)
 
-
-echo "Uploading AlloUnity to Unity rendering machine ..."
-#ssh -p 60001 localhost "if not exist Desktop\\AlloUnity\\$commit mkdir Desktop\\AlloUnity\\$commit" > /dev/null
-#scp -P 60001 -r ${dir}/../Bin/* localhost:Desktop/AlloUnity/$commit/
-#ssh -p 60001 localhost "rmdir Desktop\\AlloUnity\\latest && mklink /D Desktop\\AlloUnity\\latest $commit" > /dev/null
-echo "Done!"
-echo "Uploading Unity builds to Unity rendering machine ..."
-ssh -p 60001 localhost "if not exist \"Desktop\\Unity\\ Builds\\$commit\" mkdir \"Desktop\\Unity Builds\\$commit\"" > /dev/null
-scp -P 60001 -r ${dir}/../../Unity\ Builds/* localhost:Desktop/Unity\\\ Builds/$commit/
-ssh -p 60001 localhost "rmdir \"Desktop\\Unity Builds\\latest\" && mklink /D \"Desktop\\Unity Builds\\latest\" $commit" > /dev/null
-echo "Done!"
+if [ "${OSTYPE}" = "msys" ]; then
+	echo "Uploading AlloUnity to Unity rendering machine ..."
+	ssh -p 60001 localhost "if not exist Desktop\\AlloUnity\\$commit mkdir Desktop\\AlloUnity\\$commit" > /dev/null
+	scp -P 60001 -r ${dir}/../Bin/* localhost:Desktop/AlloUnity/$commit/
+	ssh -p 60001 localhost "rmdir Desktop\\AlloUnity\\latest && mklink /D Desktop\\AlloUnity\\latest $commit" > /dev/null
+	echo "Done!"
+	echo "Uploading Unity builds to Unity rendering machine ..."
+	ssh -p 60001 localhost "if not exist \"Desktop\\Unity\\ Builds\\$commit\" mkdir \"Desktop\\Unity Builds\\$commit\"" > /dev/null
+	scp -P 60001 -r ${dir}/../../Unity\ Builds/* localhost:Desktop/Unity\\\ Builds/$commit/
+	ssh -p 60001 localhost "rmdir \"Desktop\\Unity Builds\\latest\" && mklink /D \"Desktop\\Unity Builds\\latest\" $commit" > /dev/null
+	echo "Done!"
+elif [ "${os}" = "Linux" ]; then
+	echo "Uploading AlloUnity to AlloSphere rendering machine ..."
+	ssh -p 60001 localhost "mkdir tibor/AlloUnity/${commit}" > /dev/null
+	scp -P 60001 -r ${dir}/../Bin/* localhost:tibor/AlloUnity/$commit/
+	ssh -p 60001 localhost "ln -fs tibor/AlloUnity/$commit/ tibor/AlloUnity/latest" > /dev/null
+	ssh -p 60001 localhost "tibor/tree_rsync.py tibor/AlloUnity" >> /dev/null
+	echo "Done!"
+fi
