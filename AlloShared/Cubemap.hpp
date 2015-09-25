@@ -49,7 +49,7 @@ class Cubemap
 public:
     typedef boost::interprocess::offset_ptr<Cubemap> Ptr;
 
-	static enum { MAX_FACES_COUNT = 6 };
+	enum { MAX_FACES_COUNT = 6 };
     
     CubemapFace* getFace(int index);
     int getFacesCount();
@@ -75,7 +75,7 @@ public:
     typedef boost::interprocess::offset_ptr<StereoCubemap> Ptr;
     //static const size_t MAX_EYES_COUNT;
     
-	static enum { MAX_EYES_COUNT = 2 };
+	enum { MAX_EYES_COUNT = 2 };
 
     Cubemap* getEye(int index);
     int getEyesCount();
