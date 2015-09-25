@@ -133,11 +133,10 @@ void Renderer::onDraw(al::Graphics& gl)
         m.vertex( 1, -1);
         
         // Add texture coordinates and flip cubemap
-        m.texCoord(1,0);
         m.texCoord(1,1);
-        m.texCoord(0,0);
+        m.texCoord(1,0);
         m.texCoord(0,1);
-        
+        m.texCoord(0,0);
         
         // We must tell the GPU to use the texture when rendering primitives
         tex->bind();
