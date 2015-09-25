@@ -19,4 +19,5 @@ private:
     boost::filesystem::path lockfilePath;
     boost::interprocess::file_lock* fileLock;
     std::ofstream* lockfile;
+	boost::mutex isAliveMutex;
 };

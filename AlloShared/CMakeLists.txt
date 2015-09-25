@@ -6,6 +6,7 @@ set(SOURCES
     Binoculars.cpp
 	Stats.cpp
 	to_human_readable_byte_count.cpp
+	Barrier.cpp
 )
 	
 set(HEADERS
@@ -18,6 +19,7 @@ set(HEADERS
     Binoculars.hpp
 	Stats.hpp
 	to_human_readable_byte_count.hpp
+	Barrier.hpp
 )
 
 find_package(Boost

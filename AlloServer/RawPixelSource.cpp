@@ -213,16 +213,6 @@ void RawPixelSource::frameContentLoop()
 
 	while (!destructing)
 	{
-		while (!content->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
-		{
-			if (destructing)
-			{
-				return;
-			}
-		}
-
-		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(content->getMutex(),
-			boost::interprocess::accept_ownership);
 
 		AVFrame* frame;
 		if (!framePool.wait_and_pop(frame))
@@ -230,23 +220,27 @@ void RawPixelSource::frameContentLoop()
 			return;
 		}
 
-		// barrier1  // barrier1
-		// barrier2
+		content->getBarrier().wait();
 
-		// Fill frame
-        avpicture_fill((AVPicture*)frame,
-			(uint8_t*)content->getPixels(),
-            content->getFormat(),
-            content->getWidth(),
-            content->getHeight());
-        
-        // barrier2
+		AVRational microSecBase = { 1, 1000000 };
+		bc::microseconds presentationTimeSinceEpochMicroSec;
 
-        // Set the actual presentation time
-        // It is in the past probably but we will try our best
-        AVRational microSecBase = { 1, 1000000 };
-        bc::microseconds presentationTimeSinceEpochMicroSec =
-            bc::duration_cast<bc::microseconds>(content->getPresentationTime().time_since_epoch());
+		{
+			boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(content->getMutex());
+
+			// Fill frame
+			avpicture_fill((AVPicture*)frame,
+				(uint8_t*)content->getPixels(),
+				content->getFormat(),
+				content->getWidth(),
+				content->getHeight());
+
+			// Set the actual presentation time
+			// It is in the past probably but we will try our best
+			
+			presentationTimeSinceEpochMicroSec =
+				bc::duration_cast<bc::microseconds>(content->getPresentationTime().time_since_epoch());
+		}
         
         
 //        const time_t time = bc::system_clock::to_time_t(face->getPresentationTime());
@@ -266,14 +260,14 @@ void RawPixelSource::frameContentLoop()
         frameBuffer.push(frame);
 
 		// Wait for new frame
-		while (!content->getNewPixelsCondition().timed_wait(lock,
+		/*while (!content->getNewPixelsCondition().timed_wait(lock,
 			boost::get_system_time() + boost::posix_time::milliseconds(100)))
 		{
 			if (destructing)
 			{
 				return;
 			}
-		}
+		}*/
 	}
 }
 

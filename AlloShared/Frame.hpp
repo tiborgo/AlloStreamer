@@ -7,6 +7,7 @@
 #include <libavutil/pixfmt.h>
 #include <boost/chrono/system_clocks.hpp>
 
+#include "Barrier.hpp"
 #include "Allocator.h"
 
 class Frame
@@ -20,8 +21,8 @@ public:
     AVPixelFormat                                getFormat();
     boost::chrono::system_clock::time_point      getPresentationTime();
 	void*                                        getPixels();
-    boost::interprocess::interprocess_mutex&     getMutex();
-    boost::interprocess::interprocess_condition& getNewPixelsCondition();
+	Barrier&                                     getBarrier();
+	boost::interprocess::interprocess_mutex&     getMutex();
     
     void setPresentationTime(boost::chrono::system_clock::time_point presentationTime);
     
@@ -46,6 +47,6 @@ protected:
     AVPixelFormat                               format;
     boost::chrono::system_clock::time_point     presentationTime;
 	boost::interprocess::offset_ptr<void>       pixels;
+	Barrier                                     barrier;
 	boost::interprocess::interprocess_mutex     mutex;
-    boost::interprocess::interprocess_condition newPixelsCondition;
 };

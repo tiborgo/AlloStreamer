@@ -517,9 +517,9 @@ std::string Stats::summary(bc::microseconds window)
         stream << ";" << std::endl;
     }
 
-    stream << "-------------------------------------------------------------------------------" << std::endl;
-    stream << "cubemap face 0-5 (left ) fps:";
-    for (int i = 0; i < 6; i++)
+	stream << "-------------------------------------------------------------------------------" << std::endl;
+	stream << "cubemap face 0-5 (left ) fps:"; 
+	for (int i = 0; i < 6; i++)
     {
         stream << "\t" << facesPSVal[i];
     }
