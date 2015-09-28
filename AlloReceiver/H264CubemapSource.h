@@ -4,6 +4,7 @@
 #include <GroupsockHelper.hh>
 #include <liveMedia.hh>
 #include <boost/filesystem/path.hpp>
+#include <map>
 
 #include "AlloReceiver.h"
 #include "H264RawPixelsSink.h"
@@ -26,13 +27,17 @@ protected:
     std::function<void (CubemapSource*, int, u_int8_t, size_t)>    onAddedNALU;
     
 private:
+    void getNextFramesLoop();
     void getNextCubemapLoop();
     void sinkOnDroppedNALU(H264RawPixelsSink* sink, u_int8_t type, size_t size);
     void sinkOnAddedNALU(H264RawPixelsSink* sink, u_int8_t type, size_t size);
-    
+  
+    boost::mutex frameMapMutex;
+    std::map<int64_t, std::vector<AVFrame*> > frameMap;
     std::vector<H264RawPixelsSink*> sinks;
     AVPixelFormat                   format;
     HeapAllocator                   heapAllocator;
     boost::thread                   getNextCubemapThread;
+    boost::thread                   getNextFramesThread;
 	StereoCubemap*                  oldCubemap;
 };

@@ -8,14 +8,21 @@ CubemapFace::CubemapFace(Frame* content,
     index(index),
     allocator(allocator)
 {
-
+	newFaceFlag = true;
 }
 
 CubemapFace::~CubemapFace()
 {
     Frame::destroy(content.get());
 }
-
+bool CubemapFace::getNewFaceFlag()
+{
+	return newFaceFlag;
+}
+void CubemapFace::setNewFaceFlag(bool b)
+{
+	newFaceFlag = b;
+}
 int CubemapFace::getIndex()
 {
     return index;
@@ -61,11 +68,26 @@ Cubemap::~Cubemap()
     }
 }
 
-CubemapFace* Cubemap::getFace(int index)
+CubemapFace* Cubemap::getFace(int index, bool force)
 {
-    return faces[index].get();
+	CubemapFace* temp = faces[index].get();
+	if (temp->getNewFaceFlag() || force)
+	{
+		return temp;
+	}
+	else
+	{
+		return NULL;
+	}
+		
 }
 
+/*void Cubemap::resetIsNewFace() {
+	for (int i = 0; i < faces.size(); i++) {
+		faces[i].get()->isNewFace = true;
+	}
+}
+*/
 int Cubemap::getFacesCount()
 {
     int count = 0;

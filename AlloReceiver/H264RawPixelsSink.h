@@ -26,11 +26,12 @@ public:
                                         unsigned long bufferSize,
                                         AVPixelFormat format);
 
-	AVFrame* getNextFrame(AVFrame* oldFrame);
+	AVFrame* getNextFrame();
+    void returnFrame(AVFrame* usedFrame);
     
     void setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t, size_t)>& callback);
     void setOnAddedNALU(std::function<void (H264RawPixelsSink*, u_int8_t, size_t)>& callback);
-
+	
 protected:
 	H264RawPixelsSink(UsageEnvironment& env,
                       unsigned int bufferSize,

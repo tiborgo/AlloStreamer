@@ -37,7 +37,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
     imageConvertCtx(NULL), lastIFramePkt(nullptr), gotFirstIFrame(false), format(format),
     counter(0), sumRelativePresentationTimeMicroSec(0), maxRelativePresentationTimeMicroSec(0)
 {
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 60; i++)
 	{
         AVPacket* pkt = new AVPacket;
         pktPool.push(pkt);
@@ -98,9 +98,7 @@ void H264RawPixelsSink::packageData(AVPacket* pkt, unsigned int frameSize, timev
     
     pkt->size = frameSize + sizeof(start_code);
     pkt->data = (uint8_t*)new char[frameSize + sizeof(start_code)];
-    pkt->pts = av_rescale_q(presentationTime.tv_sec * 1000000 + presentationTime.tv_usec,
-                            microSecBase,
-                            codecContext->time_base);
+    pkt->pts = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec;
     
     memcpy(pkt->data, start_code, sizeof(start_code));
     memcpy(pkt->data + sizeof(start_code), buffer, frameSize);
@@ -110,7 +108,15 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 	unsigned numTruncatedBytes,
 	timeval presentationTime)
 {
+    //std::cout << this << " " << presentationTime.tv_sec << " " << presentationTime.tv_usec << std::endl;
+    
     u_int8_t nal_unit_type = buffer[0] & 0x1F;
+
+	/*if (onDroppedNALU) onDroppedNALU(this, nal_unit_type, frameSize);
+
+	continuePlaying();
+	return;*/
+
     AVPacket* pkt = (pktPool.try_pop(pkt)) ? pkt : nullptr;
     
     if (pkt)
@@ -226,6 +232,16 @@ void H264RawPixelsSink::decodeFrameLoop()
             // We have decoded a frame :) ->
             // Make the frame available to the application
             frame->pts = pkt->pts;
+            
+            static uint64_t last = 0;
+            
+            uint64_t t = frame->pts;
+            
+            //std::cout << t - last << std::endl;
+            last = t;
+            
+            //std::cout << this << " " << frame->pts << std::endl;
+            
             frameBuffer.push(frame);
 		}
         else
@@ -323,6 +339,8 @@ void H264RawPixelsSink::convertFrameLoop()
         sws_scale(imageConvertCtx, frame->data, frame->linesize, 0, frame->height,
                   resizedFrame->data, resizedFrame->linesize);
         
+        resizedFrame->pts = frame->pts;
+        
         // continue decoding
         framePool.push(frame);
         
@@ -332,27 +350,23 @@ void H264RawPixelsSink::convertFrameLoop()
     }
 }
 
-AVFrame* H264RawPixelsSink::getNextFrame(AVFrame* oldFrame)
+AVFrame* H264RawPixelsSink::getNextFrame()
 {
     AVFrame* frame;
-    
-    if (resizedFrameBuffer.wait_and_pop(frame))
-    {
-        //AVFrame* clone = av_frame_clone(frame);
-        // av_frame_clone only copies properties and still references the sources data.
-        // Make full copy instead
-        //av_frame_copy(clone, frame);
-		
-		if (oldFrame)
-		{
-			resizedFramePool.push(oldFrame);
-		}
-		
-		//return clone;
-		return frame;
+	if (resizedFrameBuffer.try_pop(frame))
+	{
+        return frame;
 	}
     else
     {
         return NULL;
     }
+}
+
+void H264RawPixelsSink::returnFrame(AVFrame* frame)
+{
+	if (frame)
+    {
+		resizedFramePool.push(frame);
+	}
 }
