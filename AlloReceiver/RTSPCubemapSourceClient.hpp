@@ -21,8 +21,7 @@ public:
                                            portNumBits tunnelOverHTTPPortNum = 0,
                                            int socketNumToServer = -1);
     
-    std::function<std::vector<MediaSink*> (RTSPCubemapSourceClient*, std::vector<MediaSubsession*>&)> onGetSinksForSubsessions;
-    std::function<void (RTSPCubemapSourceClient*, CubemapSource*)> onDidConnect;
+    void setOnDidConnect(std::function<void (RTSPCubemapSourceClient*, CubemapSource*)>& onDidConnect);
     
 protected:
     RTSPCubemapSourceClient(UsageEnvironment& env,
@@ -59,6 +58,8 @@ protected:
     
     void createOutputFiles      (char const* periodicFilenameSuffix);
     void setupStreams           ();
+    
+    std::function<void (RTSPCubemapSourceClient*, CubemapSource*)> onDidConnect;
     
 private:
 	std::vector<BasicUsageEnvironment*> envs;

@@ -5,6 +5,10 @@
 #include "H264CubemapSource.h"
 #include "RTSPCubemapSourceClient.hpp"
 
+void RTSPCubemapSourceClient::setOnDidConnect(std::function<void (RTSPCubemapSourceClient*, CubemapSource*)>& onDidConnect)
+{
+    this->onDidConnect = onDidConnect;
+}
 
 void RTSPCubemapSourceClient::shutdown(int exitCode)
 {
@@ -153,14 +157,6 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
         
         subsessions.push_back(subsession);
     }*/
-    
-    if (onGetSinksForSubsessions)
-    {
-        std::vector<MediaSink*> sinks = onGetSinksForSubsessions(this, subsessions);
-        
-        
-        
-    }
     
     // Create CubemapSource based on discovered stream
     bool isH264 = true;

@@ -118,7 +118,8 @@ int main(int argc, char* argv[])
     }
     
     RTSPCubemapSourceClient* rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, interface);
-    rtspClient->onDidConnect = boost::bind(&onDidConnect, _1, _2);
+    std::function<void (RTSPCubemapSourceClient*, CubemapSource*)> callback(boost::bind(&onDidConnect, _1, _2));
+    rtspClient->setOnDidConnect(callback);
     rtspClient->connect();
     
     barrier.wait();
