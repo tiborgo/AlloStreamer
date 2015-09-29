@@ -109,6 +109,8 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 	unsigned numTruncatedBytes,
 	timeval presentationTime)
 {
+    std::cout << frameSize << std::endl;
+    
     //std::cout << this << " " << presentationTime.tv_sec << " " << presentationTime.tv_usec << std::endl;
     
     u_int8_t nal_unit_type = buffer[0] & 0x1F;

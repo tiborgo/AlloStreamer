@@ -52,6 +52,7 @@ protected:
     static void subsessionByeHandler   (void* self);
     static void subsessionAfterPlaying (void* self);
     static void checkForPacketArrival  (void* self);
+    static void periodicQOSMeasurement (void* self);
     
     void networkLoop            ();
     void shutdown               (int exitCode = 1);
@@ -69,4 +70,7 @@ private:
     MediaSubsession* subsession;
     unsigned int sinkBufferSize;
     AVPixelFormat format;
+    double lastTotalKBytes;
+    unsigned int lastTotalPacketsReceived;
+    unsigned int lastTotalPacketsExpected;
 };

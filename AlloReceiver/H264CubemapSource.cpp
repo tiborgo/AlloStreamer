@@ -247,7 +247,7 @@ void H264CubemapSource::getNextCubemapLoop()
             //std::cout << "sleep duration " << sleepDuration.count() << "ms" << ", faces " << count << ", pending cubemaps " << pendingCubemaps << std::endl;
             //std::cout << "pts diff " << ptsDiff << std::endl;
             
-            boost::this_thread::sleep_until(lastDisplayTime);
+            //boost::this_thread::sleep_until(lastDisplayTime);
             
             oldCubemap = onNextCubemap(this, cubemap);
 		}

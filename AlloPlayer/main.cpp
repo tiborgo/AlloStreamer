@@ -16,6 +16,7 @@ static Stats stats;
 static bool noDisplay;
 static boost::barrier barrier(2);
 static CubemapSource* cubemapSource;
+static RTSPCubemapSourceClient* rtspClient;
 
 StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
@@ -117,7 +118,7 @@ int main(int argc, char* argv[])
         noDisplay = false;
     }
     
-    RTSPCubemapSourceClient* rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, interface);
+    rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, interface);
     std::function<void (RTSPCubemapSourceClient*, CubemapSource*)> callback(boost::bind(&onDidConnect, _1, _2));
     rtspClient->setOnDidConnect(callback);
     rtspClient->connect();
