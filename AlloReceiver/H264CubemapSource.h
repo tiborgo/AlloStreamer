@@ -9,9 +9,8 @@
 #include "AlloReceiver.h"
 #include "H264RawPixelsSink.h"
 #include "RTSPCubemapSourceClient.hpp"
-#include "RTSPCubemapSource.hpp"
 
-class ALLORECEIVER_API H264CubemapSource : public RTSPCubemapSource
+class ALLORECEIVER_API H264CubemapSource : public CubemapSource
 {
 public:
 	virtual void setOnNextCubemap(std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)>& callback);
@@ -34,10 +33,11 @@ private:
   
     boost::mutex frameMapMutex;
     std::map<int64_t, std::vector<AVFrame*> > frameMap;
-    std::vector<H264RawPixelsSink*> sinks;
-    AVPixelFormat                   format;
-    HeapAllocator                   heapAllocator;
-    boost::thread                   getNextCubemapThread;
-    boost::thread                   getNextFramesThread;
-	StereoCubemap*                  oldCubemap;
+    std::vector<H264RawPixelsSink*>         sinks;
+    AVPixelFormat                           format;
+    HeapAllocator                           heapAllocator;
+    boost::thread                           getNextCubemapThread;
+    boost::thread                           getNextFramesThread;
+	StereoCubemap*                          oldCubemap;
+    int64_t                                 lastDisplayPTS;
 };

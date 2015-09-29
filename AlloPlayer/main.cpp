@@ -7,11 +7,15 @@
 
 #include "AlloShared/Stats.hpp"
 #include "AlloShared/to_human_readable_byte_count.hpp"
+#include "AlloReceiver/RTSPCubemapSourceClient.hpp"
 #include "AlloReceiver/AlloReceiver.h"
 
 const unsigned int DEFAULT_SINK_BUFFER_SIZE = 2000000000;
 
-Stats stats;
+static Stats stats;
+static bool noDisplay;
+static boost::barrier barrier(2);
+static CubemapSource* cubemapSource;
 
 StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
@@ -42,6 +46,20 @@ void onDisplayedCubemapFace(Renderer* renderer, int face)
 void onDisplayedFrame(Renderer* renderer)
 {
     stats.displayedFrame();
+}
+
+void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
+{
+    std::function<void (CubemapSource*, int, u_int8_t, size_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3, _4);
+    cubemapSource->setOnDroppedNALU(callback);
+    callback = boost::bind(&onAddedNALU, _1, _2, _3, _4);
+    cubemapSource->setOnAddedNALU(callback);
+    
+    stats.autoSummary(boost::chrono::seconds(10));
+    
+    ::cubemapSource = cubemapSource;
+    
+    barrier.wait();
 }
 
 int main(int argc, char* argv[])
@@ -88,23 +106,29 @@ int main(int argc, char* argv[])
     {
         bufferSize = DEFAULT_SINK_BUFFER_SIZE;
     }
-    
     std::cout << "Buffer size " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
 
-    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, interface);
-    
-    std::function<void (CubemapSource*, int, u_int8_t, size_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3, _4);
-    cubemapSource->setOnDroppedNALU(callback);
-    callback = boost::bind(&onAddedNALU, _1, _2, _3, _4);
-    cubemapSource->setOnAddedNALU(callback);
-    
-    stats.autoSummary(boost::chrono::seconds(10));
-    
     if (vm.count("no-display"))
+    {
+        noDisplay = true;
+    }
+    else
+    {
+        noDisplay = false;
+    }
+    
+    RTSPCubemapSourceClient* rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, interface);
+    rtspClient->onDidConnect = boost::bind(&onDidConnect, _1, _2);
+    rtspClient->connect();
+    
+    barrier.wait();
+    
+    if (noDisplay)
     {
         std::cout << "network only" << std::endl;
         std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)> callback = boost::bind(&onNextCubemap, _1, _2);
         cubemapSource->setOnNextCubemap(callback);
+        
         while(true)
         {
             boost::this_thread::yield();
@@ -119,6 +143,6 @@ int main(int argc, char* argv[])
         renderer.setOnDisplayedFrame(onDisplayedFrameCallback);
         renderer.start();
     }
-    
+
     CubemapSource::destroy(cubemapSource);
 }

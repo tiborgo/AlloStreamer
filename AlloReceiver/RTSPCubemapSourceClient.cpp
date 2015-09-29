@@ -1,7 +1,10 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string_regex.hpp>
 
+#include "H264RawPixelsSink.h"
+#include "H264CubemapSource.h"
 #include "RTSPCubemapSourceClient.hpp"
+
 
 void RTSPCubemapSourceClient::shutdown(int exitCode)
 {
@@ -154,18 +157,42 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
     if (onGetSinksForSubsessions)
     {
         std::vector<MediaSink*> sinks = onGetSinksForSubsessions(this, subsessions);
-        assert(sinks.size() == subsessions.size());
         
-
-		for (int i = 0; i < subsessions.size(); i++)
-		{
-			subsessions[i]->sink = sinks[i];
+        
+        
+    }
+    
+    // Create CubemapSource based on discovered stream
+    bool isH264 = true;
+    for (MediaSubsession* subsession : subsessions)
+    {
+        if (strcmp(subsession->mediumName(), "video") != 0 ||
+            strcmp(subsession->codecName(), "H264") != 0)
+        {
+            isH264 = false;
         }
     }
     
-    if (onDidIdentifyStreams)
+    if (isH264)
     {
-        onDidIdentifyStreams(this);
+        std::vector<H264RawPixelsSink*> h264Sinks;
+        std::vector<MediaSink*> sinks;
+        for (int i = 0; i < (std::min)(subsessions.size(), (size_t)(StereoCubemap::MAX_EYES_COUNT * Cubemap::MAX_FACES_COUNT)); i++)
+        {
+            H264RawPixelsSink* sink = H264RawPixelsSink::createNew(envir(),
+                                                                   sinkBufferSize,
+                                                                   format,
+                                                                   subsessions[i]);
+            subsessions[i]->sink = sink;
+            
+            h264Sinks.push_back(sink);
+            sinks.push_back(sink);
+        }
+        
+        if (onDidConnect)
+        {
+            onDidConnect(this, new H264CubemapSource(h264Sinks, format));
+        }
     }
     
     for (MediaSubsession* subsession : subsessions)
@@ -367,7 +394,7 @@ void RTSPCubemapSourceClient::continueAfterDESCRIBE(RTSPClient* self_, int resul
 					// Because we're saving the incoming data, rather than playing
 					// it in real time, allow an especially large time threshold
 					// (1 second) for reordering misordered incoming packets:
-					unsigned const thresh = 1000000; // 1 second
+					unsigned const thresh = 3000000; // 1 second
 					subsession->rtpSource()->setPacketReorderingThresholdTime(thresh);
 
 					// Set the RTP source's OS socket buffer size as appropriate - either if we were explicitly asked (using -B),
@@ -436,13 +463,23 @@ void RTSPCubemapSourceClient::connect()
     networkThread = boost::thread(boost::bind(&RTSPCubemapSourceClient::networkLoop, this));
 }
 
-RTSPCubemapSourceClient* RTSPCubemapSourceClient::createNew(char const* rtspURL,
-                                                            unsigned int sinkBufferSize,
-                                                            int verbosityLevel,
-                                                            char const* applicationName,
-                                                            portNumBits tunnelOverHTTPPortNum,
-                                                            int socketNumToServer)
+RTSPCubemapSourceClient* RTSPCubemapSourceClient::create(char const* rtspURL,
+                                                         unsigned int sinkBufferSize,
+                                                         AVPixelFormat format,
+                                                         const char* interfaceAddress,
+                                                         int verbosityLevel,
+                                                         char const* applicationName,
+                                                         portNumBits tunnelOverHTTPPortNum,
+                                                         int socketNumToServer)
 {
+    NetAddressList addresses(interfaceAddress);
+    if (addresses.numAddresses() == 0)
+    {
+        std::cout << "Inteface \"" << interfaceAddress << "\" does not exist" << std::endl;
+        return nullptr;
+    }
+    ReceivingInterfaceAddr = *(unsigned*)(addresses.firstAddress()->data());
+    
     // Begin by setting up our usage environment:
     TaskScheduler* scheduler = BasicTaskScheduler::createNew();
     BasicUsageEnvironment* env = BasicUsageEnvironment::createNew(*scheduler);
@@ -450,6 +487,7 @@ RTSPCubemapSourceClient* RTSPCubemapSourceClient::createNew(char const* rtspURL,
     return new RTSPCubemapSourceClient(*env,
                                        rtspURL,
                                        sinkBufferSize,
+                                       format,
                                        verbosityLevel,
                                        applicationName,
                                        tunnelOverHTTPPortNum,
@@ -459,12 +497,13 @@ RTSPCubemapSourceClient* RTSPCubemapSourceClient::createNew(char const* rtspURL,
 RTSPCubemapSourceClient::RTSPCubemapSourceClient(UsageEnvironment& env,
                                                  char const* rtspURL,
                                                  unsigned int sinkBufferSize,
+                                                 AVPixelFormat format,
                                                  int verbosityLevel,
                                                  char const* applicationName,
                                                  portNumBits tunnelOverHTTPPortNum,
                                                  int socketNumToServer)
     :
     RTSPClient(env, rtspURL, verbosityLevel, applicationName, tunnelOverHTTPPortNum, socketNumToServer),
-    sinkBufferSize(sinkBufferSize)
+    sinkBufferSize(sinkBufferSize), format(format)
 {
 }

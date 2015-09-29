@@ -34,7 +34,8 @@ struct RTSPHelper
         {
             H264RawPixelsSink* sink = H264RawPixelsSink::createNew(client->envir(),
 						                                           bufferSize,
-                                                                   format);
+                                                                   format,
+                                                                   subsessions[i]);
             h264Sinks.push_back(sink);
             sinks.push_back(sink);
         }
@@ -45,10 +46,25 @@ struct RTSPHelper
     }
 };
 
-RTSPCubemapSource* RTSPCubemapSource::create(const char* url,
-	                                         unsigned long bufferSize,
-                                             AVPixelFormat format,
-                                             const char* interfaceAddress)
+void RTSPCubemapSource::setOnNextCubemap(std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)>& callback)
+{
+    onNextCubemap = callback;
+}
+
+void RTSPCubemapSource::setOnDroppedNALU(std::function<void (CubemapSource*, int face, u_int8_t type, size_t)>& callback)
+{
+    onDroppedNALU = callback;
+}
+
+void RTSPCubemapSource::setOnAddedNALU(std::function<void (CubemapSource*, int face, u_int8_t type, size_t)>& callback)
+{
+    onAddedNALU = callback;
+}
+
+RTSPCubemapSource* RTSPCubemapSource::createFromRTSP(const char*   url,
+	                                                 unsigned long bufferSize,
+                                                     AVPixelFormat format,
+                                                     const char*   interfaceAddress)
 {
     NetAddressList addresses(interfaceAddress);
     if (addresses.numAddresses() == 0)
@@ -58,7 +74,7 @@ RTSPCubemapSource* RTSPCubemapSource::create(const char* url,
     }
     ReceivingInterfaceAddr = *(unsigned*)(addresses.firstAddress()->data());
 
-    RTSPCubemapSourceClient* client = RTSPCubemapSourceClient::createNew(url, bufferSize);
+    //RTSPCubemapSourceClient* client = RTSPCubemapSourceClient::createNew(url, bufferSize);
     RTSPHelper helper;
     helper.format = format;
 	helper.bufferSize = bufferSize;
@@ -66,5 +82,10 @@ RTSPCubemapSource* RTSPCubemapSource::create(const char* url,
     client->connect();
     // wait until streams are identified
     helper.didCreateCubemapSource.wait();
-    return helper.cubemapSource;
+    return new RTSPCubemapSource(client, helper.cubemapSource);
+}
+
+const RTSPCubemapSourceClient* RTSPCubemapSource::getClient()
+{
+    return client;
 }

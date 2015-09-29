@@ -21,7 +21,6 @@
 
 class CubemapFace
 {
-
 public:
 	bool getNewFaceFlag();
 	void setNewFaceFlag(bool);

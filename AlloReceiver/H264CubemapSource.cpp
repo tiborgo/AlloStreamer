@@ -21,16 +21,31 @@ void H264CubemapSource::getNextFramesLoop()
 {
 	std::vector<AVFrame*> frames(sinks.size(), nullptr);
 	
+    int64_t lastPTS = 0;
     while (true)
     {
         // Get all the decoded frames
         for (int i = 0; i < sinks.size(); i++)
         {
+            
 			frames[i] = sinks[i]->getNextFrame();
+            
+            
             
             if (frames[i])
             {
+                //std::cout << "PTS diff " << frames[i]->pts - lastPTS << std::endl;
+                lastPTS = frames[i]->pts;
+                
                 boost::mutex::scoped_lock lock(frameMapMutex);
+                
+                //
+                if (std::abs(lastDisplayPTS - frames[i]->pts) < 3000 || frames[i]->pts < lastDisplayPTS)
+                {
+                    std::cout << "frame comes too late" << std::endl;
+                    sinks[i]->returnFrame(frames[i]);
+                    continue;
+                }
                 
                 // The pts get changed a little by live555.
                 // Find a pts that is close enough so that we can put it in the container
@@ -56,7 +71,7 @@ void H264CubemapSource::getNextFramesLoop()
                 {
                     // Matches should not happen here.
                     // If it happens give back frame immediately
-                    //std::cout << "match!? (" << i << ")" << bucketFrames[i]->pts << " " << frames[i]->pts << std::endl;
+                    std::cout << "match!? (" << i << ")" << bucketFrames[i]->pts << " " << frames[i]->pts << std::endl;
                     sinks[i]->returnFrame(frames[i]);
                 }
                 else
@@ -72,8 +87,13 @@ void H264CubemapSource::getNextFramesLoop()
 
 void H264CubemapSource::getNextCubemapLoop()
 {
+    int64_t lastPTS = 0;
+    boost::chrono::system_clock::time_point lastDisplayTime(boost::chrono::microseconds(0));
+    
     while (true)
     {
+        uint64_t pts;
+        size_t pendingCubemaps;
         // Get frames with the oldest pts and remove the associated bucket
         std::vector<AVFrame*> frames;
         {
@@ -83,8 +103,11 @@ void H264CubemapSource::getNextCubemapLoop()
             {
                 continue;
             }
+            pendingCubemaps = frameMap.size();
             
             std::map<int64_t, std::vector<AVFrame*>>::iterator it = frameMap.begin();
+            pts = it->first;
+            lastDisplayPTS = it->first;
             frames = it->second;
             frameMap.erase(it);
         }
@@ -122,9 +145,7 @@ void H264CubemapSource::getNextCubemapLoop()
                                                             heapAllocator);
                     
                     faces.push_back(face);
-                    
                 }
-                
                 
                 eyes.push_back(Cubemap::create(faces, heapAllocator));
             }
@@ -193,6 +214,41 @@ void H264CubemapSource::getNextCubemapLoop()
         // Give it to the user of this library (AlloPlayer etc.)
         if (onNextCubemap)
         {
+            if (lastPTS == 0)
+            {
+                lastPTS = pts;
+            }
+            
+            if (lastDisplayTime.time_since_epoch().count() == 0)
+            {
+                lastDisplayTime = boost::chrono::system_clock::now();
+                lastDisplayTime += boost::chrono::seconds(5);
+            }
+            
+            // Wait until frame should be displayed
+            if (lastPTS == 0)
+            {
+                lastPTS = pts;
+            }
+            
+            uint64_t ptsDiff = pts - lastPTS;
+            lastDisplayTime += boost::chrono::microseconds(ptsDiff);
+            lastPTS = pts;
+            
+            boost::chrono::milliseconds sleepDuration = boost::chrono::duration_cast<boost::chrono::milliseconds>(lastDisplayTime - boost::chrono::system_clock::now());
+            
+//            if (sleepDuration.count() < 80)
+//            {
+//                lastDisplayTime += (boost::chrono::milliseconds(80) - sleepDuration);
+//            }
+//            
+//            sleepDuration = boost::chrono::duration_cast<boost::chrono::milliseconds>(lastDisplayTime - boost::chrono::system_clock::now());
+            
+            //std::cout << "sleep duration " << sleepDuration.count() << "ms" << ", faces " << count << ", pending cubemaps " << pendingCubemaps << std::endl;
+            //std::cout << "pts diff " << ptsDiff << std::endl;
+            
+            boost::this_thread::sleep_until(lastDisplayTime);
+            
             oldCubemap = onNextCubemap(this, cubemap);
 		}
     }
@@ -200,7 +256,7 @@ void H264CubemapSource::getNextCubemapLoop()
 
 H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks, AVPixelFormat format)
     :
-	sinks(sinks), format(format), oldCubemap(nullptr)
+sinks(sinks), format(format), oldCubemap(nullptr), lastDisplayPTS(0)
 {
     av_log_set_level(AV_LOG_WARNING);
     for (H264RawPixelsSink* sink : sinks)

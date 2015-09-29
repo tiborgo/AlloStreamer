@@ -11,22 +11,24 @@ class ALLORECEIVER_API RTSPCubemapSourceClient : public RTSPClient
 {
 public:
     void connect();
-    static RTSPCubemapSourceClient* create();
-    
-    static RTSPCubemapSourceClient* createNew(char const* rtspURL,
-                                              unsigned int sinkBufferSize,
-                                              int verbosityLevel = 0,
-                                              char const* applicationName = NULL,
-                                              portNumBits tunnelOverHTTPPortNum = 0,
-                                              int socketNumToServer = -1);
+
+    static RTSPCubemapSourceClient* create(char const* rtspURL,
+                                           unsigned int sinkBufferSize,
+                                           AVPixelFormat format,
+                                           const char* interface = "0.0.0.0",
+                                           int verbosityLevel = 0,
+                                           char const* applicationName = NULL,
+                                           portNumBits tunnelOverHTTPPortNum = 0,
+                                           int socketNumToServer = -1);
     
     std::function<std::vector<MediaSink*> (RTSPCubemapSourceClient*, std::vector<MediaSubsession*>&)> onGetSinksForSubsessions;
-    std::function<void (RTSPCubemapSourceClient*)> onDidIdentifyStreams;
+    std::function<void (RTSPCubemapSourceClient*, CubemapSource*)> onDidConnect;
     
 protected:
     RTSPCubemapSourceClient(UsageEnvironment& env,
                             char const* rtspURL,
                             unsigned int sinkBufferSize,
+                            AVPixelFormat format,
                             int verbosityLevel,
                             char const* applicationName,
                             portNumBits tunnelOverHTTPPortNum,
@@ -65,4 +67,5 @@ private:
 	std::vector<MediaSubsession*> subsessions;
     MediaSubsession* subsession;
     unsigned int sinkBufferSize;
+    AVPixelFormat format;
 };

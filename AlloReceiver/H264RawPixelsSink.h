@@ -9,6 +9,7 @@ extern "C"
 	#include <libavutil/time.h>
 	#include <libswscale/swscale.h>
 	#include <x264.h>
+    #include <libavformat/avformat.h>
 }
 #include <MediaSink.hh>
 #include <MediaSession.hh>
@@ -24,7 +25,8 @@ class ALLORECEIVER_API H264RawPixelsSink : public MediaSink
 public:
 	static H264RawPixelsSink* createNew(UsageEnvironment& env,
                                         unsigned long bufferSize,
-                                        AVPixelFormat format);
+                                        AVPixelFormat format,
+                                        MediaSubsession* subsession);
 
 	AVFrame* getNextFrame();
     void returnFrame(AVFrame* usedFrame);
@@ -35,7 +37,8 @@ public:
 protected:
 	H264RawPixelsSink(UsageEnvironment& env,
                       unsigned int bufferSize,
-                      AVPixelFormat format);
+                      AVPixelFormat format,
+                      MediaSubsession* subsession);
 
 	virtual void afterGettingFrame(unsigned frameSize,
 		unsigned numTruncatedBytes,
@@ -77,6 +80,9 @@ private:
 	int counter;
 	long sumRelativePresentationTimeMicroSec;
 	long maxRelativePresentationTimeMicroSec;
+    
+    MediaSubsession* subsession;
+    int lastTotal;
     
     void packageData(AVPacket* pkt, unsigned int frameSize, timeval presentationTime);
 };

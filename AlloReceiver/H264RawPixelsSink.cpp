@@ -2,21 +2,21 @@
 
 #include <iostream>
 #include <map>
-#include "H264RawPixelsSink.h"
 #include <boost/thread.hpp>
 #include <GroupsockHelper.hh>
 
-#include "CubemapSource.hpp"
+#include "H264RawPixelsSink.h"
 
 namespace bc = boost::chrono;
 
 H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
                                                 unsigned long bufferSize,
-                                                AVPixelFormat format)
+                                                AVPixelFormat format,
+                                                MediaSubsession* subsession)
 {
     avcodec_register_all();
     avformat_network_init();
-	return new H264RawPixelsSink(env, bufferSize, format);
+	return new H264RawPixelsSink(env, bufferSize, format, subsession);
 }
 
 void H264RawPixelsSink::setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type, size_t)>& callback)
@@ -31,11 +31,12 @@ void H264RawPixelsSink::setOnAddedNALU(std::function<void (H264RawPixelsSink*, u
 
 H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
                                      unsigned int bufferSize,
-                                     AVPixelFormat format)
+                                     AVPixelFormat format,
+                                     MediaSubsession* subsession)
     :
     MediaSink(env), bufferSize(bufferSize), buffer(new unsigned char[bufferSize]),
     imageConvertCtx(NULL), lastIFramePkt(nullptr), gotFirstIFrame(false), format(format),
-    counter(0), sumRelativePresentationTimeMicroSec(0), maxRelativePresentationTimeMicroSec(0)
+    counter(0), sumRelativePresentationTimeMicroSec(0), maxRelativePresentationTimeMicroSec(0), subsession(subsession), lastTotal(0)
 {
 	for (int i = 0; i < 60; i++)
 	{
@@ -116,7 +117,18 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 
 	continuePlaying();
 	return;*/
+    
+    RTPReceptionStatsDB::Iterator statsIter(subsession->rtpSource()->receptionStatsDB());
+    RTPReceptionStats* stats = statsIter.next(True);
+    
+    int lostPacketsNum = stats->totNumPacketsExpected() - stats->totNumPacketsReceived();
+    //std::cout << "lost packets " << lostPacketsNum << std::endl;
+    
+    int bytesReceived = stats->totNumKBytesReceived() - lastTotal;
+    lastTotal = stats->totNumKBytesReceived();
 
+    
+    
     AVPacket* pkt = (pktPool.try_pop(pkt)) ? pkt : nullptr;
     
     if (pkt)
@@ -228,7 +240,7 @@ void H264RawPixelsSink::decodeFrameLoop()
 		pktPool.push(pkt);
 
         if (got_frame == 1)
-		{
+        {
             // We have decoded a frame :) ->
             // Make the frame available to the application
             frame->pts = pkt->pts;
