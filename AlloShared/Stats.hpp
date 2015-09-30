@@ -7,11 +7,41 @@
 #include <boost/function.hpp>
 #include <initializer_list>
 #include <boost/thread.hpp>
+#include <boost/any.hpp>
 
 class Stats
 {
 public:
-	  
+    class TimeValueDatum
+    {
+    public:
+        TimeValueDatum(const boost::any& value) : timeSinceEpoch(boost::chrono::microseconds(boost::chrono::system_clock::now().time_since_epoch().count())), value(value) {}
+        const boost::chrono::microseconds timeSinceEpoch;
+        const boost::any value;
+    };
+    
+    class NALU
+    {
+    public:
+        enum Status {DROPPED, ADDED, PROCESSED, SENT};
+        
+        NALU(int type, size_t size, int face, Status status) : type(type), size(size), face(face), status(status) {}
+        int type;
+        size_t size;
+        int face;
+        Status status;
+    };
+    
+    class CubemapFace
+    {
+    public:
+        CubemapFace(int face) : face(face) {}
+        int face;
+    };
+
+    class Cubemap
+    {
+    };
 
     // events
     void droppedNALU(int type, size_t size, int face);
@@ -53,42 +83,23 @@ public:
 
 private:
     
-    template <typename ValueType>
-    class TimeValueDatum
-    {
-    public:
-        TimeValueDatum(ValueType value);
-        const boost::chrono::microseconds timeSinceEpoch;
-        const ValueType value;
-    };
+    
+    
+    std::list<TimeValueDatum> storage;
 
-	class NALU
-	{
-	public:
-		NALU(int type, size_t size, int face);
-		int type;
-		size_t size;
-		int face;
-	};
+	
     
-	std::vector<TimeValueDatum<NALU> > droppedNALUs;
-	std::vector<TimeValueDatum<NALU> > addedNALUs;
-	std::vector<TimeValueDatum<NALU> > sentNALUs;
-    std::vector<TimeValueDatum<int> > displayedCubemapFaces;
-    std::vector<TimeValueDatum<int> > displayedFrames;
+	template <typename Features>
+    boost::accumulators::accumulator_set<double, Features> filter(std::initializer_list<boost::function<bool (TimeValueDatum)> > filters,
+                                                                   boost::function<double (TimeValueDatum)> accExtractor);
     
-	template <typename Features, typename ValueType, typename AccType>
-    boost::accumulators::accumulator_set<AccType, Features> filter(
-       std::vector<TimeValueDatum<ValueType> >& data,
-       std::initializer_list<boost::function<bool (TimeValueDatum<ValueType>)> > filters,
-	   boost::function<AccType(ValueType)> accExtractor);
-    
-    template <typename ValueType>
-    boost::function<bool (TimeValueDatum<ValueType>)> timeFilter(
+    boost::function<bool (TimeValueDatum)> timeFilter(
         boost::chrono::microseconds window,
         boost::chrono::microseconds nowSinceEpoch);
+    
+    boost::function<bool (TimeValueDatum)> typeFilter(const std::type_info& type);
 
-	boost::function<bool(TimeValueDatum<NALU>)> faceFilter(int face);
+	boost::function<bool(TimeValueDatum)> faceFilter(int face);
     
     boost::chrono::microseconds nowSinceEpoch();
     
