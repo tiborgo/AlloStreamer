@@ -83,17 +83,20 @@ private:
 
 	
     
-	template <typename Features>
-    boost::accumulators::accumulator_set<double, Features> filter(std::initializer_list<boost::function<bool (TimeValueDatum)> > filters,
-                                                                   boost::function<double (TimeValueDatum)> accExtractor);
+	template <typename Feature>
+    double filter(std::initializer_list<boost::function<bool (TimeValueDatum)> > filters,
+                  const Feature& accumulator,
+                  boost::function<double (TimeValueDatum)> accExtractor);
     
     boost::function<bool (TimeValueDatum)> timeFilter(
         boost::chrono::microseconds window,
         boost::chrono::microseconds nowSinceEpoch);
     
     boost::function<bool (TimeValueDatum)> typeFilter(const std::type_info& type);
+    
+    boost::function<bool (TimeValueDatum)> andFilter(std::initializer_list<boost::function<bool (TimeValueDatum)> > filters);
 
-	boost::function<bool(TimeValueDatum)> faceFilter(int face);
+	//boost::function<bool(TimeValueDatum)> faceFilter(int face);
     
     boost::chrono::microseconds nowSinceEpoch();
     
