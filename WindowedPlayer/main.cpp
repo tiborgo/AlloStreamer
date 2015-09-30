@@ -1,46 +1,65 @@
 
-#include "Renderer.hpp"
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <boost/ref.hpp>
 
+#include "AlloReceiver/RTSPCubemapSourceClient.hpp"
 #include "AlloShared/Stats.hpp"
 #include "AlloReceiver/AlloReceiver.h"
 #include "AlloShared/to_human_readable_byte_count.hpp"
 
+#include "Renderer.hpp"
+
 const unsigned int DEFAULT_SINK_BUFFER_SIZE = 200000000;
 
-Stats stats;
+static Stats stats;
+static boost::barrier barrier(2);
+static CubemapSource* cubemapSource;
+static RTSPCubemapSourceClient* rtspClient;
 
-void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
+StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
     for (int i = 0; i < cubemap->getEye(0)->getFacesCount(); i++)
     {
-        stats.displayedCubemapFace(i);
+        stats.store(Stats::CubemapFace(i));
     }
-    stats.displayedFrame();
-    StereoCubemap::destroy(cubemap);
+    stats.store(Stats::Cubemap());
+    return cubemap;
 }
 
-void onDroppedNALU(CubemapSource* source, int face, uint8_t type, size_t size)
+void onDroppedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
 {
-    stats.droppedNALU(type, size, face);
+    stats.store(Stats::NALU(type, size, face, Stats::NALU::DROPPED));
 }
 
-void onAddedNALU(CubemapSource* source, int face, uint8_t type, size_t size)
+void onAddedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
 {
-    stats.addedNALU(type, size, face);
+    stats.store(Stats::NALU(type, size, face, Stats::NALU::ADDED));
 }
 
 void onDisplayedCubemapFace(Renderer* renderer, int face)
 {
-    stats.displayedCubemapFace(face);
+    stats.store(Stats::CubemapFace(face));
 }
 
 void onDisplayedFrame(Renderer* renderer)
 {
-    stats.displayedFrame();
+    stats.store(Stats::Cubemap());
+}
+
+void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
+{
+    std::function<void (CubemapSource*, int, u_int8_t, size_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3, _4);
+    cubemapSource->setOnDroppedNALU(callback);
+    callback = boost::bind(&onAddedNALU, _1, _2, _3, _4);
+    cubemapSource->setOnAddedNALU(callback);
+    
+    stats.autoSummary(boost::chrono::seconds(10));
+    
+    ::cubemapSource = cubemapSource;
+    
+    barrier.wait();
 }
 
 int main(int argc, char* argv[])
@@ -89,16 +108,13 @@ int main(int argc, char* argv[])
 
 	std::cout << "Buffer size " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
 
-	CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, interface);
+    rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, interface);
+    std::function<void (RTSPCubemapSourceClient*, CubemapSource*)> callback(boost::bind(&onDidConnect, _1, _2));
+    rtspClient->setOnDidConnect(callback);
+    rtspClient->connect();
     
-    std::function<void (CubemapSource*, int, uint8_t, size_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3, _4);
-    cubemapSource->setOnDroppedNALU(callback);
-    callback = boost::bind(&onAddedNALU, _1, _2, _3, _4);
-    cubemapSource->setOnAddedNALU(callback);
+    barrier.wait();
     
-    stats.autoSummary(boost::chrono::seconds(10));
-    
-   
     Renderer renderer(cubemapSource);
     std::function<void (Renderer*, int)> onDisplayedCubemapFaceCallback = boost::bind(&onDisplayedCubemapFace, _1, _2);
     renderer.setOnDisplayedCubemapFace(onDisplayedCubemapFaceCallback);

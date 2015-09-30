@@ -40,7 +40,7 @@ public:
 	{
 		if (!error)
 		{
-			stats.addedNALU(face, bytes_recvd, face);
+            stats.store(Stats::NALU(face, bytes_recvd, face, Stats::NALU::SENT));
 
 			socket_.async_receive_from(
 				boost::asio::buffer(data_, max_length), sender_endpoint_,

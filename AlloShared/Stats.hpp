@@ -44,13 +44,7 @@ public:
     };
 
     // events
-    void droppedNALU(int type, size_t size, int face);
-    void addedNALU(int type, size_t size, int face);
-	void sentNALU(int type, size_t size, int face);
-	/*void decodedNALU(int type);
-    void failedToDecodeNALU(int type);*/
-    void displayedCubemapFace(int face);
-    void displayedFrame();
+    void store(const boost::any& datum);
     
     // statistical values
     double naluDropRate(boost::chrono::microseconds window,

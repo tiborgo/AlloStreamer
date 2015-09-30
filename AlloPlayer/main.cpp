@@ -22,31 +22,30 @@ StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
     for (int i = 0; i < cubemap->getEye(0)->getFacesCount(); i++)
     {
-        stats.displayedCubemapFace(i);
+        stats.store(Stats::CubemapFace(i));
     }
-    stats.displayedFrame();
-    StereoCubemap::destroy(cubemap);
-    return nullptr;
+    stats.store(Stats::Cubemap());
+    return cubemap;
 }
 
 void onDroppedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
 {
-    stats.droppedNALU(type, size, face);
+    stats.store(Stats::NALU(type, size, face, Stats::NALU::DROPPED));
 }
 
 void onAddedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
 {
-    stats.addedNALU(type, size, face);
+    stats.store(Stats::NALU(type, size, face, Stats::NALU::ADDED));
 }
 
 void onDisplayedCubemapFace(Renderer* renderer, int face)
 {
-    stats.displayedCubemapFace(face);
+    stats.store(Stats::CubemapFace(face));
 }
 
 void onDisplayedFrame(Renderer* renderer)
 {
-    stats.displayedFrame();
+    stats.store(Stats::Cubemap());
 }
 
 void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)

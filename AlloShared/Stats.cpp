@@ -132,39 +132,10 @@ std::string Stats::formatDuration(bc::microseconds duration)
 
 // ###### EVENTS ######
 
-void Stats::droppedNALU(int type, size_t size, int face)
+void Stats::store(const boost::any& datum)
 {
     boost::mutex::scoped_lock lock(mutex);
-
-    storage.push_back(TimeValueDatum(NALU(type, size, face, NALU::DROPPED)));
-}
-
-void Stats::addedNALU(int type, size_t size, int face)
-{
-    boost::mutex::scoped_lock lock(mutex);
-
-    storage.push_back(TimeValueDatum(NALU(type, size, face, NALU::ADDED)));
-}
-
-void Stats::sentNALU(int type, size_t size, int face)
-{
-    boost::mutex::scoped_lock lock(mutex);
-
-    storage.push_back(TimeValueDatum(NALU(type, size, face, NALU::SENT)));
-}
-
-void Stats::displayedCubemapFace(int face)
-{
-    boost::mutex::scoped_lock lock(mutex);
-
-    storage.push_back(TimeValueDatum(CubemapFace(face)));
-}
-
-void Stats::displayedFrame()
-{
-    boost::mutex::scoped_lock lock(mutex);
-
-    storage.push_back(TimeValueDatum(Cubemap()));
+    storage.push_back(TimeValueDatum(datum));
 }
 
 // ###### STATISTICAL VALUES ######
