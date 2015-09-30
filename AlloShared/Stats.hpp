@@ -7,96 +7,96 @@
 #include <boost/function.hpp>
 #include <initializer_list>
 #include <boost/thread.hpp>
+#include <boost/any.hpp>
+
+
 
 class Stats
 {
 public:
-	  
-
-    // events
-    void droppedNALU(int type, size_t size, int face);
-    void addedNALU(int type, size_t size, int face);
-	void sentNALU(int type, size_t size, int face);
-	/*void decodedNALU(int type);
-    void failedToDecodeNALU(int type);*/
-    void displayedCubemapFace(int face);
-    void displayedFrame();
+    // PARAMETERS
+    class CubemapFace
+    {
+    public:
+        CubemapFace(int face) : face(face) {}
+        int face;
+    };
     
-    // statistical values
-    double naluDropRate(boost::chrono::microseconds window,
-                        boost::chrono::microseconds nowSinceEpoch);
-    double facesPS(int face,
-                   boost::chrono::microseconds window,
-				   boost::chrono::microseconds nowSinceEpoch);
-    double fps(boost::chrono::microseconds window,
-		       boost::chrono::microseconds nowSinceEpoch);
-    double receivedNALUsPS(int face,
-		                   boost::chrono::microseconds window,
-		                   boost::chrono::microseconds nowSinceEpoch);
-	double processedNALUsPS(int face,
-	                        boost::chrono::microseconds window,
-		                    boost::chrono::microseconds nowSinceEpoch);
-	double sentNALUsPS(int face,
-		               boost::chrono::microseconds window,
-		               boost::chrono::microseconds nowSinceEpoch);
-	double receivedNALUsBitRate(boost::chrono::microseconds window,
-		                        boost::chrono::microseconds nowSinceEpoch);
-	double processedNALUsBitRate(boost::chrono::microseconds window,
-		                         boost::chrono::microseconds nowSinceEpoch);
-	double sentNALUsBitRate(boost::chrono::microseconds window,
-		                    boost::chrono::microseconds nowSinceEpoch);
+    class NALU
+    {
+    public:
+        enum Status {DROPPED, ADDED, PROCESSED};
+        
+        NALU(int type, size_t size, int face, Status status) : type(type), size(size), face(face), status(status) {}
+        int type;
+        size_t size;
+        int face;
+        Status status;
+    };
     
-    // utility
-    std::string summary(boost::chrono::microseconds window);
-    void autoSummary(boost::chrono::microseconds frequency);
-	void stopAutoSummary();
-
-private:
+    class Cubemap
+    {
+    };
     
-    template <typename ValueType>
+    // QUERYING
     class TimeValueDatum
     {
     public:
-        TimeValueDatum(ValueType value);
+        TimeValueDatum(const boost::any& value) : timeSinceEpoch(boost::chrono::duration_cast<boost::chrono::microseconds>(boost::chrono::system_clock::now().time_since_epoch())),
+                                                  value(value) {}
         const boost::chrono::microseconds timeSinceEpoch;
-        const ValueType value;
+        const boost::any value;
     };
-
-	class NALU
-	{
-	public:
-		NALU(int type, size_t size, int face);
-		int type;
-		size_t size;
-		int face;
-	};
     
-	std::vector<TimeValueDatum<NALU> > droppedNALUs;
-	std::vector<TimeValueDatum<NALU> > addedNALUs;
-	std::vector<TimeValueDatum<NALU> > sentNALUs;
-    std::vector<TimeValueDatum<int> > displayedCubemapFaces;
-    std::vector<TimeValueDatum<int> > displayedFrames;
+    std::vector<double> query(const std::vector<boost::function<bool   (TimeValueDatum&)> >& filters,
+                              const std::vector<boost::function<double (TimeValueDatum&)> >& accumulators);
+    std::vector<double> query(std::initializer_list<boost::function<bool   (TimeValueDatum&)> > filters,
+                              std::initializer_list<boost::function<double (TimeValueDatum&)> > accumulators);
     
-	template <typename Features, typename ValueType, typename AccType>
-    boost::accumulators::accumulator_set<AccType, Features> filter(
-       std::vector<TimeValueDatum<ValueType> >& data,
-       std::initializer_list<boost::function<bool (TimeValueDatum<ValueType>)> > filters,
-	   boost::function<AccType(ValueType)> accExtractor);
     
-    template <typename ValueType>
-    boost::function<bool (TimeValueDatum<ValueType>)> timeFilter(
-        boost::chrono::microseconds window,
-        boost::chrono::microseconds nowSinceEpoch);
-
-	boost::function<bool(TimeValueDatum<NALU>)> faceFilter(int face);
+    // EVENTS
+    void store(const boost::any& datum);
     
-    boost::chrono::microseconds nowSinceEpoch();
+    // FILTERS
+    boost::function<bool (TimeValueDatum&)> timeFilter(boost::chrono::microseconds window,
+                                                       boost::chrono::microseconds nowSinceEpoch);
     
-    std::string formatDuration(boost::chrono::microseconds duration);
+    // ACCUMULATORS
+    boost::function<double (TimeValueDatum&)> averageAcc();
+    boost::function<double (TimeValueDatum&)> minAcc();
+    boost::function<double (TimeValueDatum&)> maxAcc();
     
+    // UTILITY
+    std::string summary(std::initializer_list</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
+                        std::initializer_list</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+                        const std::string&                                                                                   format,
+                        boost::chrono::microseconds                                                                          window,
+                        boost::chrono::microseconds                                                                          nowSinceEpoch);
+    std::string summary(std::vector</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
+                        std::vector</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+                        const std::string&                                                                                   format,
+                        boost::chrono::microseconds                                                                          window,
+                        boost::chrono::microseconds                                                                          nowSinceEpoch);
+    
+    void startAutoSummary(std::initializer_list</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
+                          std::initializer_list</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+                          const std::string&                                                                                   format,
+                          boost::chrono::microseconds                                                                          interval);
+    void startAutoSummary(std::vector</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
+                          std::vector</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+                          const std::string&                                                                                   format,
+                          boost::chrono::microseconds                                                                          interval);
+	void stopAutoSummary();
+    
+private:
+    std::list<TimeValueDatum> storage;
     boost::mutex mutex;
     boost::thread autoSummaryThread;
 	bool stopAutoSummary_;
-    void autoSummaryLoop(boost::chrono::microseconds frequency);
+    void autoSummaryLoop(std::vector</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >    filters,
+                         std::vector</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+                         std::string                                                                                   format,
+                         boost::chrono::microseconds                                                                          interval);
+    std::string formatDuration(boost::chrono::microseconds duration);
 };
 

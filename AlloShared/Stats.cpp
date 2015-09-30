@@ -6,6 +6,7 @@
 #include <boost/range/adaptors.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/thread/thread.hpp>
+#include <boost/format.hpp>
 
 #include "to_human_readable_byte_count.hpp"
 #include "Stats.hpp"
@@ -15,81 +16,58 @@ namespace ba = boost::accumulators;
 namespace bad = boost::adaptors;
 namespace bf = boost::fusion;
 
-template <typename ValueType>
-Stats::TimeValueDatum<ValueType>::TimeValueDatum(ValueType value)
-:
-timeSinceEpoch(bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch())),
-value(value)
+boost::function<bool (Stats::TimeValueDatum&)> Stats::timeFilter(bc::microseconds window,
+                                                                 bc::microseconds nowSinceEpoch)
 {
-}
-
-Stats::NALU::NALU(int type, size_t size, int face)
-	:
-	type(type),
-	size(size),
-	face(face)
-{
-}
-
-template <typename ValueType>
-boost::function<bool (Stats::TimeValueDatum<ValueType>)> Stats::timeFilter(
-    bc::microseconds window,
-    bc::microseconds nowSinceEpoch)
-{
-    return [window, nowSinceEpoch](Stats::TimeValueDatum<ValueType> datum)
+    return [window, nowSinceEpoch](Stats::TimeValueDatum& datum)
     {
         return (nowSinceEpoch - datum.timeSinceEpoch) < window;
     };
 }
 
-boost::function<bool (Stats::TimeValueDatum<Stats::NALU>)> Stats::faceFilter(int face)
+std::vector<double> Stats::query(const std::vector<boost::function<bool   (TimeValueDatum&)> >& filters,
+                                 const std::vector<boost::function<double (TimeValueDatum&)> >& accumulators)
 {
-	return [face](TimeValueDatum<NALU> nalu)
-	{
-		if (face == -1)
-		{
-			return true;
-		}
-		else
-		{
-			return nalu.value.face == face;
-		}
-	};
-}
-
-template <typename Features, typename ValueType, typename AccType>
-ba::accumulator_set<AccType, Features> Stats::filter(
-    std::vector<TimeValueDatum<ValueType> >& data,
-    std::initializer_list<boost::function<bool (TimeValueDatum<ValueType>)> > filters,
-	boost::function<AccType(ValueType)> accExtractor)
-{
-	ba::accumulator_set<AccType, Features> acc;
+    std::vector<double> accumulations(accumulators.size(), 0.0);
     
-	auto filterAcc = [filters, &acc, accExtractor](TimeValueDatum<ValueType> datum) {
-		bool passed = true;
-		for (auto filter : filters)
-		{
-			if (!filter(datum))
-			{
-				passed = false;
-				break;
-			}
-		}
-		if (passed)
-		{
-			acc(accExtractor(datum.value));
-		}
-	};
-
-	std::for_each(data.begin(), data.end(), filterAcc);
-
-    return acc;
+    for (TimeValueDatum& datum : storage)
+    {
+        bool passed = true;
+        for (auto filter : filters)
+        {
+            if (!filter(datum))
+            {
+                passed = false;
+                break;
+            }
+        }
+        if (passed)
+        {
+            size_t i = 0;
+            for (auto accumulator : accumulators)
+            {
+                accumulations[i] = accumulator(datum);
+                i++;
+            }
+        }
+    }
+    
+    return accumulations;
 }
 
-
-bc::microseconds Stats::nowSinceEpoch()
+std::vector<double> Stats::query(std::initializer_list<boost::function<bool   (TimeValueDatum&)> > filters,
+                                 std::initializer_list<boost::function<double (TimeValueDatum&)> > accumulators)
 {
-    return bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
+    std::vector<boost::function<bool   (TimeValueDatum&)> > filtersVector;
+    std::vector<boost::function<double (TimeValueDatum&)> > accumulatorsVector;
+    std::copy(filters.begin(), filters.end(), filtersVector.end());
+    std::copy(accumulators.begin(), accumulators.end(), accumulatorsVector.end());
+    return query(filtersVector, accumulatorsVector);
+}
+
+void Stats::store(const boost::any& datum)
+{
+    storage.push_back(TimeValueDatum(datum));
 }
 
 std::string Stats::formatDuration(bc::microseconds duration)
@@ -138,7 +116,7 @@ std::string Stats::formatDuration(bc::microseconds duration)
 
 // ###### EVENTS ######
 
-void Stats::droppedNALU(int type, size_t size, int face)
+/*void Stats::droppedNALU(int type, size_t size, int face)
 {
     boost::mutex::scoped_lock lock(mutex);
     droppedNALUs.push_back(TimeValueDatum<NALU>(NALU(type, size, face)));
@@ -166,11 +144,11 @@ void Stats::displayedFrame()
 {
     boost::mutex::scoped_lock lock(mutex);
     displayedFrames.push_back(TimeValueDatum<int>(0));
-}
+}*/
 
 // ###### STATISTICAL VALUES ######
 
-double Stats::naluDropRate(bc::microseconds window, bc::microseconds nowSinceEpoch)
+/*double Stats::naluDropRate(bc::microseconds window, bc::microseconds nowSinceEpoch)
 {
     boost::mutex::scoped_lock lock(mutex);
     
@@ -305,114 +283,193 @@ double Stats::sentNALUsBitRate(boost::chrono::microseconds window,
 	                                                             [](NALU nalu) { return nalu.size; });
 
 	return (double)ba::sum(sentSum) * 8. / bc::duration_cast<bc::seconds>(window).count();
-}
+}*/
 
 // ###### UTILITY ######
 
-std::string Stats::summary(bc::microseconds window)
+std::string Stats::summary(std::initializer_list</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
+                           std::initializer_list</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+                           const std::string&                                                                                   format,
+                           boost::chrono::microseconds                                                               window,
+                           boost::chrono::microseconds                                                               nowSinceEpoch)
 {
-    bc::microseconds nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
-    double receivedNALUsPSVal = receivedNALUsPS(-1, window, nowSinceEpoch);
-    double processedNALUsPSVal = processedNALUsPS(-1, window, nowSinceEpoch);
-	double sentNALUsPSVal = sentNALUsPS(-1, window, nowSinceEpoch);
-	double receivedNALUsBitRateVal = receivedNALUsBitRate(window, nowSinceEpoch);
-	double processedNALUsBitRateVal = processedNALUsBitRate(window, nowSinceEpoch);
-	double sentNALUsBitRateVal = sentNALUsBitRate(window, nowSinceEpoch);
-    int faceCount = 12;
-	std::vector<double> facesPSVal(faceCount);
-	std::vector<double> receivedNALUsPFPSVal(faceCount);
-	std::vector<double> processedNALUsPFPSVal(faceCount);
-	std::vector<double> sentNALUsPFPSVal(faceCount);
-    for (int i = 0; i < faceCount; i++)
-    {
-		facesPSVal[i]            = facesPS(i, window, nowSinceEpoch);
-		receivedNALUsPFPSVal[i]  = receivedNALUsPS(i, window, nowSinceEpoch);
-		processedNALUsPFPSVal[i] = processedNALUsPS(i, window, nowSinceEpoch);
-		sentNALUsPFPSVal[i]      = sentNALUsPS(i, window, nowSinceEpoch);
-    }
-    double fpsVal = fps(window, nowSinceEpoch);
-    
-    std::stringstream stream;
-    stream << "===============================================================================" << std::endl;
-    stream << "Stats for last " << formatDuration(window) << ": " << std::endl;
-
-	stream << "-------------------------------------------------------------------------------" << std::endl;
-	stream << "received NALUs/s: " << receivedNALUsPSVal << "; " << to_human_readable_byte_count(receivedNALUsBitRateVal, true, false) << "/s;" << std::endl;
-	for (int j = 0; j < (std::min)(2, faceCount); j++)
-	{
-		stream << "recvd NALUs/s per face (" << ((j == 0) ? "left" : "right") << "):";
-		for (int i = 0; i < (std::min)(6, faceCount - j * 6); i++)
-		{
-			stream << "\t" << receivedNALUsPFPSVal[j*6+i];
-		}
-		stream << ";" << std::endl;
-	}
-
-	stream << "-------------------------------------------------------------------------------" << std::endl;
-	stream << "processed NALUs/s: " << processedNALUsPSVal << "; " << to_human_readable_byte_count(processedNALUsBitRateVal, true, false) << "/s;" << std::endl;
-	for (int j = 0; j < (std::min)(2, faceCount); j++)
-	{
-		stream << "prced NALUs/s per face (" << ((j == 0) ? "left" : "right") << "):";
-		for (int i = 0; i < (std::min)(6, faceCount - j * 6); i++)
-		{
-			stream << "\t" << processedNALUsPFPSVal[j * 6 + i];
-		}
-		stream << ";" << std::endl;
-	}
-
-	stream << "-------------------------------------------------------------------------------" << std::endl;
-	stream << "sent NALUs/s: " << sentNALUsPSVal << "; " << to_human_readable_byte_count(sentNALUsBitRateVal, true, false) << "/s;" << std::endl;
-	for (int j = 0; j < (std::min)(2, faceCount); j++)
-	{
-		stream << "sent NALUs/s per face (" << ((j == 0) ? "left" : "right") << "):";
-		for (int i = 0; i < (std::min)(6, faceCount - j * 6); i++)
-		{
-			stream << "\t" << sentNALUsPFPSVal[j * 6 + i];
-		}
-		stream << ";" << std::endl;
-	}
-
-	stream << "-------------------------------------------------------------------------------" << std::endl;
-	stream << "cubemap face 0-5 (left ) fps:";
-	for (int i = 0; i < 6; i++)
-    {
-		stream << "\t" << facesPSVal[i];
-    }
-	stream << ";" << std::endl;
-    
-	stream << "cubemap face 0-5 (right) fps:";
-	for (int i = 6; i < 12; i++)
-	{
-		stream << "\t" << facesPSVal[i];
-	}
-	stream << ";" << std::endl;
-	stream << "fps: " << fpsVal << std::endl;
-    
-    std::string result = stream.str();
-    return result;
+    std::vector<boost::function<bool   (TimeValueDatum&)> > filtersVector;
+    std::vector<boost::function<double (TimeValueDatum&)> > accumulatorsVector;
+    std::copy(filters.begin(), filters.end(), filtersVector.end());
+    std::copy(accumulators.begin(), accumulators.end(), accumulatorsVector.end());
+    summary(filtersVector, accumulatorsVector, format, window, nowSinceEpoch);
 }
 
-void Stats::autoSummaryLoop(boost::chrono::microseconds frequency)
+std::string Stats::summary(std::vector</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
+                           std::vector</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+                           const std::string&                                                                                   format,
+                           boost::chrono::microseconds                                                               window,
+                           boost::chrono::microseconds                                                               nowSinceEpoch)
 {
-	auto summaryTime = boost::chrono::system_clock::now();
+    std::vector<double> accumulations;
+    
+    assert(filters.size() == accumulators.size());
+    
+    auto filterIt = filters.begin();
+    auto accumulatorIt = accumulators.begin();
+    
+    /*for (;
+     filterIt != filters.end() && accumulatorIt != accumulators.end();
+     ++filterIt, ++accumulatorIt)*/
+    {
+        /*std::vector<boost::function<bool   (TimeValueDatum&)> > filtersVector;
+         std::vector<boost::function<double (TimeValueDatum&)> > accumulatorsVector;
+         filtersVector.push_back(timeFilter(window, nowSinceEpoch));
+         for (auto filter : pair.first)
+         {
+         filtersVector.push_back(filter);
+         }
+         for (auto accumulator : pair.second)
+         {
+         accumulatorsVector.push_back(accumulator);
+         }*/
+        
+        /*std::vector<double> pairAccumulations = query(*filterIt,
+         *accumulatorIt);*/
+        
+        std::vector<double> pairAccumulations = query(filters,
+                                                      accumulators);
+        
+        accumulations.insert(accumulations.end(), pairAccumulations.begin(), pairAccumulations.end());
+    }
+    
+    
+    /*double receivedNALUsPSVal = receivedNALUsPS(-1, window, nowSinceEpoch);
+     double processedNALUsPSVal = processedNALUsPS(-1, window, nowSinceEpoch);
+     double sentNALUsPSVal = sentNALUsPS(-1, window, nowSinceEpoch);
+     double receivedNALUsBitRateVal = receivedNALUsBitRate(window, nowSinceEpoch);
+     double processedNALUsBitRateVal = processedNALUsBitRate(window, nowSinceEpoch);
+     double sentNALUsBitRateVal = sentNALUsBitRate(window, nowSinceEpoch);
+     int faceCount = 12;
+     std::vector<double> facesPSVal(faceCount);
+     std::vector<double> receivedNALUsPFPSVal(faceCount);
+     std::vector<double> processedNALUsPFPSVal(faceCount);
+     std::vector<double> sentNALUsPFPSVal(faceCount);
+     for (int i = 0; i < faceCount; i++)
+     {
+     facesPSVal[i]            = facesPS(i, window, nowSinceEpoch);
+     receivedNALUsPFPSVal[i]  = receivedNALUsPS(i, window, nowSinceEpoch);
+     processedNALUsPFPSVal[i] = processedNALUsPS(i, window, nowSinceEpoch);
+     sentNALUsPFPSVal[i]      = sentNALUsPS(i, window, nowSinceEpoch);
+     }
+     double fpsVal = fps(window, nowSinceEpoch);*/
+    
+    boost::format formatter(format.c_str());
+    for (double accumulation : accumulations)
+    {
+        formatter % accumulation;
+    }
+    
+    return formatter.str();
+    
+    /*std::stringstream stream;
+     stream << "===============================================================================" << std::endl;
+     stream << "Stats for last " << formatDuration(window) << ": " << std::endl;
+     
+     stream << "-------------------------------------------------------------------------------" << std::endl;
+     stream << "received NALUs/s: " << receivedNALUsPSVal << "; " << to_human_readable_byte_count(receivedNALUsBitRateVal, true, false) << "/s;" << std::endl;
+     for (int j = 0; j < (std::min)(2, faceCount); j++)
+     {
+     stream << "recvd NALUs/s per face (" << ((j == 0) ? "left" : "right") << "):";
+     for (int i = 0; i < (std::min)(6, faceCount - j * 6); i++)
+     {
+     stream << "\t" << receivedNALUsPFPSVal[j*6+i];
+     }
+     stream << ";" << std::endl;
+     }
+     
+     stream << "-------------------------------------------------------------------------------" << std::endl;
+     stream << "processed NALUs/s: " << processedNALUsPSVal << "; " << to_human_readable_byte_count(processedNALUsBitRateVal, true, false) << "/s;" << std::endl;
+     for (int j = 0; j < (std::min)(2, faceCount); j++)
+     {
+     stream << "prced NALUs/s per face (" << ((j == 0) ? "left" : "right") << "):";
+     for (int i = 0; i < (std::min)(6, faceCount - j * 6); i++)
+     {
+     stream << "\t" << processedNALUsPFPSVal[j * 6 + i];
+     }
+     stream << ";" << std::endl;
+     }
+     
+     stream << "-------------------------------------------------------------------------------" << std::endl;
+     stream << "sent NALUs/s: " << sentNALUsPSVal << "; " << to_human_readable_byte_count(sentNALUsBitRateVal, true, false) << "/s;" << std::endl;
+     for (int j = 0; j < (std::min)(2, faceCount); j++)
+     {
+     stream << "sent NALUs/s per face (" << ((j == 0) ? "left" : "right") << "):";
+     for (int i = 0; i < (std::min)(6, faceCount - j * 6); i++)
+     {
+     stream << "\t" << sentNALUsPFPSVal[j * 6 + i];
+     }
+     stream << ";" << std::endl;
+     }
+     
+     stream << "-------------------------------------------------------------------------------" << std::endl;
+     stream << "cubemap face 0-5 (left ) fps:";
+     for (int i = 0; i < 6; i++)
+     {
+     stream << "\t" << facesPSVal[i];
+     }
+     stream << ";" << std::endl;
+     
+     stream << "cubemap face 0-5 (right) fps:";
+     for (int i = 6; i < 12; i++)
+     {
+     stream << "\t" << facesPSVal[i];
+     }
+     stream << ";" << std::endl;
+     stream << "fps: " << fpsVal << std::endl;
+     
+     std::string result = stream.str();
+     return result;*/
+}
 
+void Stats::autoSummaryLoop(std::vector</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
+                            std::vector</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+                            std::string                                                                                   format,
+                            boost::chrono::microseconds                                                                          interval)
+{
+    auto summaryTime = boost::chrono::system_clock::now();
+    
     while (true)
     {
-		summaryTime += frequency;
-		boost::this_thread::sleep_until(summaryTime);
-
-		if (stopAutoSummary_)
-		{
-			return;
-		}
-        std::cout << summary(frequency);
+        summaryTime += interval;
+        boost::this_thread::sleep_until(summaryTime);
+        
+        if (stopAutoSummary_)
+        {
+            return;
+        }
+        std::cout << summary(filters,
+                             accumulators,
+                             format,
+                             interval,
+                             boost::chrono::duration_cast<boost::chrono::microseconds>(summaryTime.time_since_epoch()));
     }
 }
 
-void Stats::autoSummary(boost::chrono::microseconds frequency)
+void Stats::startAutoSummary(std::initializer_list</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
+                             std::initializer_list</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+                             const std::string&                                                                                   format,
+                             boost::chrono::microseconds                                                                          interval)
 {
-	stopAutoSummary_ = false;
-    autoSummaryThread = boost::thread(boost::bind(&Stats::autoSummaryLoop, this, frequency));
+    std::vector<boost::function<bool   (TimeValueDatum&)> > filtersVector(filters.size());
+    std::vector<boost::function<double (TimeValueDatum&)> > accumulatorsVector(accumulators.size());
+    std::copy(filters.begin(), filters.end(), filtersVector.begin());
+    std::copy(accumulators.begin(), accumulators.end(), accumulatorsVector.begin());
+    startAutoSummary(filtersVector, accumulatorsVector, format, interval);
+}
+
+void Stats::startAutoSummary(std::vector</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
+                             std::vector</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+                             const std::string&                                                                                   format,
+                             boost::chrono::microseconds                                                                          interval)
+{
+    stopAutoSummary_ = false;
+    autoSummaryThread = boost::thread(boost::bind(&Stats::autoSummaryLoop, this, filters, accumulators, format, interval));
 }
 
 void Stats::stopAutoSummary()
