@@ -13,7 +13,6 @@
 
 namespace bc = boost::chrono;
 namespace ba = boost::accumulators;
-namespace bad = boost::adaptors;
 namespace bf = boost::fusion;
 
 boost::function<bool (Stats::TimeValueDatum&)> Stats::timeFilter(bc::microseconds window,
@@ -25,10 +24,38 @@ boost::function<bool (Stats::TimeValueDatum&)> Stats::timeFilter(bc::microsecond
     };
 }
 
+boost::function<double (Stats::TimeValueDatum&, void*&)> Stats::sumAcc(boost::function<double (TimeValueDatum&)> accessor)
+{
+    /*struct SumAccHelper
+    {
+        double sum;
+        boost::function<double (TimeValueDatum&)> accessor;
+        SumAccHelper(boost::function<double (TimeValueDatum&)> accessor) : sum(0.0), accessor(accessor) {}
+        double operator()(TimeValueDatum& datum)
+        {
+            sum += accessor(datum);
+            return sum;
+        }
+    };
+    return SumAccHelper(accessor);*/
+    
+    return [accessor](Stats::TimeValueDatum& datum, void*& state)
+    {
+        if (!state)
+        {
+            state = new ba::accumulator_set<double, ba::features<ba::tag::sum> >();
+        }
+        auto acc = (ba::accumulator_set<double, ba::features<ba::tag::sum> >*)state;
+        (*acc)(accessor(datum));
+        return ba::sum(*acc);
+    };
+}
+
 std::vector<double> Stats::query(const std::vector<boost::function<bool   (TimeValueDatum&)> >& filters,
-                                 const std::vector<boost::function<double (TimeValueDatum&)> >& accumulators)
+                                 const std::vector<boost::function<double (TimeValueDatum&, void*&)> >& accumulators)
 {
     std::vector<double> accumulations(accumulators.size(), 0.0);
+    std::vector<void*>  states(accumulators.size(), nullptr);
     
     for (TimeValueDatum& datum : storage)
     {
@@ -46,23 +73,19 @@ std::vector<double> Stats::query(const std::vector<boost::function<bool   (TimeV
             size_t i = 0;
             for (auto accumulator : accumulators)
             {
-                accumulations[i] = accumulator(datum);
+                accumulations[i] = accumulator(datum, states[i]);
                 i++;
             }
         }
     }
     
+    // Delete states
+    for (void* state : states)
+    {
+        delete state;
+    }
+    
     return accumulations;
-}
-
-std::vector<double> Stats::query(std::initializer_list<boost::function<bool   (TimeValueDatum&)> > filters,
-                                 std::initializer_list<boost::function<double (TimeValueDatum&)> > accumulators)
-{
-    std::vector<boost::function<bool   (TimeValueDatum&)> > filtersVector;
-    std::vector<boost::function<double (TimeValueDatum&)> > accumulatorsVector;
-    std::copy(filters.begin(), filters.end(), filtersVector.end());
-    std::copy(accumulators.begin(), accumulators.end(), accumulatorsVector.end());
-    return query(filtersVector, accumulatorsVector);
 }
 
 void Stats::store(const boost::any& datum)
@@ -287,8 +310,8 @@ double Stats::sentNALUsBitRate(boost::chrono::microseconds window,
 
 // ###### UTILITY ######
 
-std::string Stats::summary(std::initializer_list</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
-                           std::initializer_list</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+/*std::string Stats::summary(std::initializer_list<std::initializer_list<boost::function<bool   (TimeValueDatum&)> > >     filters,
+                           std::initializer_list<std::initializer_list<boost::function<double (TimeValueDatum&)> > >     accumulators,
                            const std::string&                                                                                   format,
                            boost::chrono::microseconds                                                               window,
                            boost::chrono::microseconds                                                               nowSinceEpoch)
@@ -298,13 +321,14 @@ std::string Stats::summary(std::initializer_list</*std::initializer_list<*/boost
     std::copy(filters.begin(), filters.end(), filtersVector.end());
     std::copy(accumulators.begin(), accumulators.end(), accumulatorsVector.end());
     summary(filtersVector, accumulatorsVector, format, window, nowSinceEpoch);
-}
+}*/
 
-std::string Stats::summary(std::vector</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
-                           std::vector</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
-                           const std::string&                                                                                   format,
-                           boost::chrono::microseconds                                                               window,
-                           boost::chrono::microseconds                                                               nowSinceEpoch)
+std::string Stats::summary(std::vector<std::vector<boost::function<bool   (TimeValueDatum&)> > >      filters,
+                           std::vector<std::vector<boost::function<double (TimeValueDatum&)> > >      accumulators,
+                           const std::string&                                                         format,
+                           std::vector<boost::function<std::string (double)> >                        formatters,
+                           boost::chrono::microseconds                                                window,
+                           boost::chrono::microseconds                                                nowSinceEpoch)
 {
     std::vector<double> accumulations;
     
@@ -313,9 +337,9 @@ std::string Stats::summary(std::vector</*std::initializer_list<*/boost::function
     auto filterIt = filters.begin();
     auto accumulatorIt = accumulators.begin();
     
-    /*for (;
+    for (;
      filterIt != filters.end() && accumulatorIt != accumulators.end();
-     ++filterIt, ++accumulatorIt)*/
+     ++filterIt, ++accumulatorIt)
     {
         /*std::vector<boost::function<bool   (TimeValueDatum&)> > filtersVector;
          std::vector<boost::function<double (TimeValueDatum&)> > accumulatorsVector;
@@ -329,11 +353,11 @@ std::string Stats::summary(std::vector</*std::initializer_list<*/boost::function
          accumulatorsVector.push_back(accumulator);
          }*/
         
-        /*std::vector<double> pairAccumulations = query(*filterIt,
-         *accumulatorIt);*/
+        std::vector<double> pairAccumulations = query(*filterIt,
+                                                      *accumulatorIt);
         
-        std::vector<double> pairAccumulations = query(filters,
-                                                      accumulators);
+        /*std::vector<double> pairAccumulations = query(filters,
+                                                      accumulators);*/
         
         accumulations.insert(accumulations.end(), pairAccumulations.begin(), pairAccumulations.end());
     }
@@ -359,10 +383,17 @@ std::string Stats::summary(std::vector</*std::initializer_list<*/boost::function
      }
      double fpsVal = fps(window, nowSinceEpoch);*/
     
+    assert(accumulations.size() == formatters.size());
+    
     boost::format formatter(format.c_str());
-    for (double accumulation : accumulations)
+    auto formattersIt = formatters.begin();
+    auto accumulationsIt = accumulations.begin();
+    
+    for (;
+         formattersIt != formatters.end() && accumulationsIt != accumulations.end();
+         ++formattersIt, ++accumulationsIt)
     {
-        formatter % accumulation;
+        formatter % (*formattersIt)(*accumulationsIt);
     }
     
     return formatter.str();
@@ -427,9 +458,10 @@ std::string Stats::summary(std::vector</*std::initializer_list<*/boost::function
      return result;*/
 }
 
-void Stats::autoSummaryLoop(std::vector</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
-                            std::vector</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+void Stats::autoSummaryLoop(std::vector<std::vector<boost::function<bool   (TimeValueDatum&)> > >     filters,
+                            std::vector<std::vector<boost::function<double (TimeValueDatum&)> > >     accumulators,
                             std::string                                                                                   format,
+                            std::vector<boost::function<std::string (double)> >                       formatters,
                             boost::chrono::microseconds                                                                          interval)
 {
     auto summaryTime = boost::chrono::system_clock::now();
@@ -446,30 +478,48 @@ void Stats::autoSummaryLoop(std::vector</*std::initializer_list<*/boost::functio
         std::cout << summary(filters,
                              accumulators,
                              format,
+                             formatters,
                              interval,
                              boost::chrono::duration_cast<boost::chrono::microseconds>(summaryTime.time_since_epoch()));
     }
 }
 
-void Stats::startAutoSummary(std::initializer_list</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
-                             std::initializer_list</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+void Stats::startAutoSummary(std::initializer_list<std::initializer_list<boost::function<bool   (TimeValueDatum&)> > >     filters,
+                             std::initializer_list<std::initializer_list<boost::function<double (TimeValueDatum&)> > >     accumulators,
                              const std::string&                                                                                   format,
+                             std::initializer_list<boost::function<std::string (double)> >                       formatters,
                              boost::chrono::microseconds                                                                          interval)
 {
-    std::vector<boost::function<bool   (TimeValueDatum&)> > filtersVector(filters.size());
-    std::vector<boost::function<double (TimeValueDatum&)> > accumulatorsVector(accumulators.size());
-    std::copy(filters.begin(), filters.end(), filtersVector.begin());
-    std::copy(accumulators.begin(), accumulators.end(), accumulatorsVector.begin());
-    startAutoSummary(filtersVector, accumulatorsVector, format, interval);
+    std::vector<std::vector<boost::function<bool (TimeValueDatum&)> > > filtersVector(filters.size());
+    for (auto filter : filters)
+    {
+        std::vector<boost::function<bool (TimeValueDatum&)> > filterVector(filter.size());
+        std::copy(filter.begin(), filter.end(), filterVector.begin());
+        filtersVector.push_back(filterVector);
+    }
+    
+    std::vector<std::vector<boost::function<double (TimeValueDatum&)> > > accumulatorsVector(accumulators.size());
+    for (auto accumulator : accumulators)
+    {
+        std::vector<boost::function<double (TimeValueDatum&)> > accumulatorVector(accumulator.size());
+        std::copy(accumulator.begin(), accumulator.end(), accumulatorVector.begin());
+        accumulatorsVector.push_back(accumulatorVector);
+    }
+    
+    std::vector<boost::function<std::string (double)> > formattersVector(formatters.size());
+    std::copy(formatters.begin(), formatters.end(), formattersVector.begin());
+    
+    startAutoSummary(filtersVector, accumulatorsVector, format, formattersVector, interval);
 }
 
-void Stats::startAutoSummary(std::vector</*std::initializer_list<*/boost::function<bool   (TimeValueDatum&)> /*>*/ >     filters,
-                             std::vector</*std::initializer_list<*/boost::function<double (TimeValueDatum&)> /*>*/ >     accumulators,
+void Stats::startAutoSummary(std::vector<std::vector<boost::function<bool   (TimeValueDatum&)> > >     filters,
+                             std::vector<std::vector<boost::function<double (TimeValueDatum&)> > >     accumulators,
                              const std::string&                                                                                   format,
+                             std::vector<boost::function<std::string (double)> >                       formatters,
                              boost::chrono::microseconds                                                                          interval)
 {
     stopAutoSummary_ = false;
-    autoSummaryThread = boost::thread(boost::bind(&Stats::autoSummaryLoop, this, filters, accumulators, format, interval));
+    autoSummaryThread = boost::thread(boost::bind(&Stats::autoSummaryLoop, this, filters, accumulators, format, formatters, interval));
 }
 
 void Stats::stopAutoSummary()

@@ -57,10 +57,11 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
     callback = boost::bind(&onAddedNALU, _1, _2, _3, _4);
     cubemapSource->setOnAddedNALU(callback);
 
-    size_t sum = 0;
+    size_t sum1 = 0;
+    size_t sum2 = 0;
 
     stats.startAutoSummary({
-        //{
+        {
                             [](Stats::TimeValueDatum& datum)
                             {
                                 return datum.value.type() == typeid(Stats::NALU) &&
@@ -68,19 +69,44 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
                                  boost::any_cast<Stats::NALU>(datum.value).status == Stats::NALU::DROPPED);
                             }
 
-                        //}
+                        },
+        {
+            [](Stats::TimeValueDatum& datum)
+            {
+                return datum.value.type() == typeid(Stats::NALU) && boost::any_cast<Stats::NALU>(datum.value).status == Stats::NALU::ADDED;
+            }
+        }
     },
                            {
-                        //{
-                            [&sum](Stats::TimeValueDatum& datum)
+                        {
+                            [&sum1](Stats::TimeValueDatum& datum)
                             {
-                                sum += boost::any_cast<Stats::NALU>(datum.value).size;
-                                return sum * 8. / boost::chrono::duration_cast<boost::chrono::seconds>(boost::chrono::seconds(10)).count();
+                                sum1 += boost::any_cast<Stats::NALU>(datum.value).size;
+                                size_t x = sum1;
+                                return sum1;// * 8. / boost::chrono::duration_cast<boost::chrono::seconds>(boost::chrono::seconds(10)).count();
                             }
 
-                        //}
+                        },
+                               {
+                                   [&sum2](Stats::TimeValueDatum& datum)
+                                   {
+                                       sum2 += boost::any_cast<Stats::NALU>(datum.value).size;
+                                       return sum2 * 8. / boost::chrono::duration_cast<boost::chrono::seconds>(boost::chrono::seconds(10)).count();
+                                   }
+                                   
+                               }
                            },
-                           "received NALUs/s: %1% MBit/s\n",
+                           "received NALUs/s: %1%/s\n %2%/s\n",
+                           {
+                               [](double value)
+                               {
+                                   return to_human_readable_byte_count(value, true, false);
+                               },
+                               [](double value)
+                               {
+                                   return to_human_readable_byte_count(value, true, false);
+                               },
+                           },
                            boost::chrono::seconds(10));
 
     ::cubemapSource = cubemapSource;
