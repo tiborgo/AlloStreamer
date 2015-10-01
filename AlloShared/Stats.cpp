@@ -51,13 +51,11 @@ boost::function<bool (Stats::TimeValueDatum)> Stats::andFilter(std::initializer_
     };
 }
 
-std::list<void*> accs;
-//std::list<boost::function<double ()>> extractors;
-
 template <typename Feature>
 std::pair<std::list<boost::function<void (Stats::TimeValueDatum)> >,
           std::list<boost::function<double ()                   > > > makeFilterAccs(std::list<boost::function<bool (Stats::TimeValueDatum) > > filters,
                                                                                      boost::function<double (Stats::TimeValueDatum)> accExtractor,
+                                                                                     std::list<boost::any> accs,
                                                                                      const Feature& feature)
 {
     auto acc = new ba::accumulator_set<double, ba::features<Feature> >();
@@ -79,9 +77,6 @@ std::pair<std::list<boost::function<void (Stats::TimeValueDatum)> >,
         return ex(*acc);
     };
     
-    
-    
-    
     std::list<boost::function<void (Stats::TimeValueDatum)> > filterAccs;
     filterAccs.push_back(filterAcc);
     std::list<boost::function<double ()> > extractors;
@@ -94,14 +89,15 @@ template <typename Feature, typename... Features>
 std::pair<std::list<boost::function<void (Stats::TimeValueDatum)> >,
           std::list<boost::function<double ()                   > > > makeFilterAccs(std::list<boost::function<bool (Stats::TimeValueDatum) > > filters,
                                                                                      boost::function<double (Stats::TimeValueDatum)> accExtractor,
+                                                                                     std::list<boost::any> accs,
                                                                                      const Feature& feature,
                                                                                      const Features&... features)
 {
     std::list<boost::function<bool (Stats::TimeValueDatum) > > filter;
     filter.push_back(filters.front());
     filters.pop_front();
-    auto filterAccExtractor1 = makeFilterAccs(filter, accExtractor, feature);
-    auto filterAccExtractors = makeFilterAccs(filters, accExtractor, features...);
+    auto filterAccExtractor1 = makeFilterAccs(filter, accExtractor, accs, feature);
+    auto filterAccExtractors = makeFilterAccs(filters, accExtractor, accs, features...);
     filterAccExtractors.first.push_front(filterAccExtractor1.first.front());
     filterAccExtractors.second.push_front(filterAccExtractor1.second.front());
     return filterAccExtractors;
@@ -113,9 +109,11 @@ std::vector<double> Stats::query(std::initializer_list<boost::function<bool (Tim
                                  boost::function<double (TimeValueDatum)> accExtractor,
                                  const Features&... accumulators)
 {
+    std::list<boost::any> accs;
+    
     std::list<boost::function<bool (TimeValueDatum)> > filters(filtersList.begin(), filtersList.end());
     
-    auto filterAccExtractors = makeFilterAccs(filters, accExtractor, accumulators...);
+    auto filterAccExtractors = makeFilterAccs(filters, accExtractor, accs, accumulators...);
     
     for (auto datum : storage)
     {
