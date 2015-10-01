@@ -49,7 +49,7 @@ public:
     // statistical values
     double naluDropRate(boost::chrono::microseconds window,
                         boost::chrono::microseconds nowSinceEpoch);
-    double facesPS(int face,
+    /*double facesPS(int face,
                    boost::chrono::microseconds window,
 				   boost::chrono::microseconds nowSinceEpoch);
     double fps(boost::chrono::microseconds window,
@@ -68,7 +68,7 @@ public:
 	double processedNALUsBitRate(boost::chrono::microseconds window,
 		                         boost::chrono::microseconds nowSinceEpoch);
 	double sentNALUsBitRate(boost::chrono::microseconds window,
-		                    boost::chrono::microseconds nowSinceEpoch);
+		                    boost::chrono::microseconds nowSinceEpoch);*/
     
     // utility
     std::string summary(boost::chrono::microseconds window);
@@ -76,17 +76,12 @@ public:
 	void stopAutoSummary();
 
 private:
-    
-    
-    
     std::list<TimeValueDatum> storage;
-
-	
     
-	template <typename Feature>
-    double filter(std::initializer_list<boost::function<bool (TimeValueDatum)> > filters,
-                  const Feature& accumulator,
-                  boost::function<double (TimeValueDatum)> accExtractor);
+	template <typename... Features>
+    std::vector<double> query(std::initializer_list<boost::function<bool (TimeValueDatum)> > filters,
+                              boost::function<double (TimeValueDatum)> accExtractor,
+                              const Features& ... accumulators);
     
     boost::function<bool (TimeValueDatum)> timeFilter(
         boost::chrono::microseconds window,
@@ -95,8 +90,6 @@ private:
     boost::function<bool (TimeValueDatum)> typeFilter(const std::type_info& type);
     
     boost::function<bool (TimeValueDatum)> andFilter(std::initializer_list<boost::function<bool (TimeValueDatum)> > filters);
-
-	//boost::function<bool(TimeValueDatum)> faceFilter(int face);
     
     boost::chrono::microseconds nowSinceEpoch();
     
