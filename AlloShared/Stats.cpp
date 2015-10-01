@@ -115,11 +115,14 @@ std::vector<double> Stats::query(std::initializer_list<boost::function<bool (Tim
     
     auto filterAccExtractors = makeFilterAccs(filters, accExtractor, accs, accumulators...);
     
-    for (auto datum : storage)
     {
-        for (auto filterAcc : filterAccExtractors.first)
+        boost::mutex::scoped_lock lock(mutex);
+        for (auto datum : storage)
         {
-            filterAcc(datum);
+            for (auto filterAcc : filterAccExtractors.first)
+            {
+                filterAcc(datum);
+            }
         }
     }
     
@@ -195,8 +198,6 @@ void Stats::store(const boost::any& datum)
 
 double Stats::naluDropRate(bc::microseconds window, bc::microseconds nowSinceEpoch)
 {
-    boost::mutex::scoped_lock lock(mutex);
-
     auto accs = query(
     {
         andFilter(
@@ -233,8 +234,6 @@ double Stats::facesPS(int face,
     boost::chrono::microseconds window,
     boost::chrono::microseconds nowSinceEpoch)
 {
-    boost::mutex::scoped_lock lock(mutex);
-
     auto accDisplayedCubemapFaces = query(
     {
         andFilter(
@@ -260,8 +259,6 @@ double Stats::facesPS(int face,
 double Stats::fps(boost::chrono::microseconds window,
     boost::chrono::microseconds nowSinceEpoch)
 {
-    boost::mutex::scoped_lock lock(mutex);
-
     auto accDisplayedFrames = query(
     {
         andFilter(
@@ -284,8 +281,6 @@ double Stats::receivedNALUsPS(int face,
     boost::chrono::microseconds window,
     boost::chrono::microseconds nowSinceEpoch)
 {
-    boost::mutex::scoped_lock lock(mutex);
-
     auto accs = query(
     {
         andFilter(
@@ -322,8 +317,6 @@ double Stats::processedNALUsPS(int face,
     boost::chrono::microseconds window,
     boost::chrono::microseconds nowSinceEpoch)
 {
-    boost::mutex::scoped_lock lock(mutex);
-
     auto accAdded = query(
     {
         andFilter(
@@ -350,8 +343,6 @@ double Stats::sentNALUsPS(int face,
     boost::chrono::microseconds window,
     boost::chrono::microseconds nowSinceEpoch)
 {
-    boost::mutex::scoped_lock lock(mutex);
-
     auto countSent = query(
     {
         andFilter(
@@ -377,8 +368,6 @@ double Stats::sentNALUsPS(int face,
 double Stats::receivedNALUsBitRate(boost::chrono::microseconds window,
     boost::chrono::microseconds nowSinceEpoch)
 {
-    boost::mutex::scoped_lock lock(mutex);
-
     auto sums = query(
     {
         andFilter(
@@ -414,8 +403,6 @@ double Stats::receivedNALUsBitRate(boost::chrono::microseconds window,
 double Stats::processedNALUsBitRate(boost::chrono::microseconds window,
     boost::chrono::microseconds nowSinceEpoch)
 {
-    boost::mutex::scoped_lock lock(mutex);
-
     auto sumAdded = query(
     {
         andFilter(
@@ -441,8 +428,6 @@ double Stats::processedNALUsBitRate(boost::chrono::microseconds window,
 double Stats::sentNALUsBitRate(boost::chrono::microseconds window,
     boost::chrono::microseconds nowSinceEpoch)
 {
-    boost::mutex::scoped_lock lock(mutex);
-
     auto sumSent = query(
     {
         andFilter(
