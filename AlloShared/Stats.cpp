@@ -52,12 +52,13 @@ boost::function<bool (Stats::TimeValueDatum)> Stats::andFilter(std::initializer_
 }
 
 std::list<void*> accs;
-std::list<boost::function<double ()>> extractors;
+//std::list<boost::function<double ()>> extractors;
 
 template <typename Feature>
-std::list<boost::function<void (Stats::TimeValueDatum)> > makeFilterAccs(std::list<boost::function<bool (Stats::TimeValueDatum) > > filters,
-                                                                         boost::function<double (Stats::TimeValueDatum)> accExtractor,
-                                                                         const Feature& feature)
+std::pair<std::list<boost::function<void (Stats::TimeValueDatum)> >,
+          std::list<boost::function<double ()                   > > > makeFilterAccs(std::list<boost::function<bool (Stats::TimeValueDatum) > > filters,
+                                                                                     boost::function<double (Stats::TimeValueDatum)> accExtractor,
+                                                                                     const Feature& feature)
 {
     auto acc = new ba::accumulator_set<double, ba::features<Feature> >();
     accs.push_back(acc);
@@ -78,26 +79,32 @@ std::list<boost::function<void (Stats::TimeValueDatum)> > makeFilterAccs(std::li
         return ex(*acc);
     };
     
+    
+    
+    
+    std::list<boost::function<void (Stats::TimeValueDatum)> > filterAccs;
+    filterAccs.push_back(filterAcc);
+    std::list<boost::function<double ()> > extractors;
     extractors.push_back(extractor);
     
-    std::list<boost::function<void (Stats::TimeValueDatum)> > result;
-    result.push_back(filterAcc);
-    return result;
+    return std::make_pair(filterAccs, extractors);
 }
 
 template <typename Feature, typename... Features>
-std::list<boost::function<void (Stats::TimeValueDatum)> > makeFilterAccs(std::list<boost::function<bool (Stats::TimeValueDatum) > > filters,
-                                                                         boost::function<double (Stats::TimeValueDatum)> accExtractor,
-                                                                         const Feature& feature,
-                                                                         const Features&... features)
+std::pair<std::list<boost::function<void (Stats::TimeValueDatum)> >,
+          std::list<boost::function<double ()                   > > > makeFilterAccs(std::list<boost::function<bool (Stats::TimeValueDatum) > > filters,
+                                                                                     boost::function<double (Stats::TimeValueDatum)> accExtractor,
+                                                                                     const Feature& feature,
+                                                                                     const Features&... features)
 {
     std::list<boost::function<bool (Stats::TimeValueDatum) > > filter;
     filter.push_back(filters.front());
     filters.pop_front();
-    auto filterAcc = makeFilterAccs(filter, accExtractor, feature);
-    auto result = makeFilterAccs(filters, accExtractor, features...);
-    result.push_front(filterAcc.front());
-    return result;
+    auto filterAccExtractor1 = makeFilterAccs(filter, accExtractor, feature);
+    auto filterAccExtractors = makeFilterAccs(filters, accExtractor, features...);
+    filterAccExtractors.first.push_front(filterAccExtractor1.first.front());
+    filterAccExtractors.second.push_front(filterAccExtractor1.second.front());
+    return filterAccExtractors;
 }
 
 
@@ -108,42 +115,18 @@ std::vector<double> Stats::query(std::initializer_list<boost::function<bool (Tim
 {
     std::list<boost::function<bool (TimeValueDatum)> > filters(filtersList.begin(), filtersList.end());
     
-    auto filterAccs = makeFilterAccs(filters, accExtractor, accumulators...);
-    
-    //ba::accumulator_set<double, ba::features<Features...> > acc;
-    
-    //boost::function<void (TimeValueDatum)> filterAndAcc;
+    auto filterAccExtractors = makeFilterAccs(filters, accExtractor, accumulators...);
     
     for (auto datum : storage)
     {
-        for (auto filterAcc : filterAccs)
+        for (auto filterAcc : filterAccExtractors.first)
         {
             filterAcc(datum);
         }
     }
-
-    /*auto filterAcc = [filters, &acc, accExtractor](TimeValueDatum datum)
-    {
-        bool passed = true;
-
-        for (auto filter : filters)
-        {
-            if (!filter(datum))
-            {
-                passed = false;
-                break;
-            }
-        }
-        if (passed)
-        {
-            acc(accExtractor(datum.value));
-        }
-    };
-
-    std::for_each(storage.begin(), storage.end(), filterAcc);*/
     
     std::vector<double> results;
-    for (auto extractor : extractors)
+    for (auto extractor : filterAccExtractors.second)
     {
         results.push_back(extractor());
     }
@@ -248,29 +231,32 @@ double Stats::naluDropRate(bc::microseconds window, bc::microseconds nowSinceEpo
     return accs[0] / accs[1];
 }
 
-/*double Stats::facesPS(int face,
+double Stats::facesPS(int face,
     boost::chrono::microseconds window,
     boost::chrono::microseconds nowSinceEpoch)
 {
     boost::mutex::scoped_lock lock(mutex);
 
-    auto accDisplayedCubemapFaces = filter(
+    auto accDisplayedCubemapFaces = query(
     {
-        timeFilter(window,
-                   nowSinceEpoch),
-        typeFilter(typeid(CubemapFace)),
-        [face](TimeValueDatum datum)
+        andFilter(
         {
-            return boost::any_cast<CubemapFace>(datum.value).face == face;
-        }
+            timeFilter(window,
+                       nowSinceEpoch),
+            typeFilter(typeid(CubemapFace)),
+            [face](TimeValueDatum datum)
+            {
+                return boost::any_cast<CubemapFace>(datum.value).face == face;
+            }
+        })
     },
-    ba::tag::count(),
     [](TimeValueDatum datum)
     {
         return 0.0;
-    });
+    },
+    ba::tag::count());
 
-    return accDisplayedCubemapFaces / bc::duration_cast<bc::seconds>(window).count();
+    return accDisplayedCubemapFaces[0] / bc::duration_cast<bc::seconds>(window).count();
 }
 
 double Stats::fps(boost::chrono::microseconds window,
@@ -278,19 +264,22 @@ double Stats::fps(boost::chrono::microseconds window,
 {
     boost::mutex::scoped_lock lock(mutex);
 
-    auto accDisplayedFrames = filter(
+    auto accDisplayedFrames = query(
     {
-        timeFilter(window,
-                   nowSinceEpoch),
-        typeFilter(typeid(Cubemap)),
+        andFilter(
+        {
+            timeFilter(window,
+                       nowSinceEpoch),
+            typeFilter(typeid(Cubemap))
+        })
     },
-    ba::tag::count(),
     [](TimeValueDatum datum)
     {
         return 0.0;
-    });
+    },
+    ba::tag::count());
 
-    return accDisplayedFrames / bc::duration_cast<bc::seconds>(window).count();
+    return accDisplayedFrames[0] / bc::duration_cast<bc::seconds>(window).count();
 }
 
 double Stats::receivedNALUsPS(int face,
@@ -299,36 +288,36 @@ double Stats::receivedNALUsPS(int face,
 {
     boost::mutex::scoped_lock lock(mutex);
 
-    auto accDropped = filter({
-        timeFilter(window,
-                   nowSinceEpoch),
-        typeFilter(typeid(NALU)),
-        [](TimeValueDatum datum)
+    auto accs = query(
+    {
+        andFilter(
         {
-            return boost::any_cast<NALU>(datum.value).status == NALU::DROPPED;
-        }
+            timeFilter(window,
+                       nowSinceEpoch),
+            typeFilter(typeid(NALU)),
+            [](TimeValueDatum datum)
+            {
+                return boost::any_cast<NALU>(datum.value).status == NALU::DROPPED;
+            }
+        }),
+        andFilter(
+        {
+            timeFilter(window,
+                       nowSinceEpoch),
+            typeFilter(typeid(NALU)),
+            [](TimeValueDatum datum)
+            {
+                return boost::any_cast<NALU>(datum.value).status == NALU::ADDED;
+            }
+        })
     },
-    ba::tag::count(),
     [](TimeValueDatum datum)
     {
         return 0.0;
-    });
-    auto accAdded = filter({
-        timeFilter(window,
-                   nowSinceEpoch),
-        typeFilter(typeid(NALU)),
-        [](TimeValueDatum datum)
-        {
-            return boost::any_cast<NALU>(datum.value).status == NALU::ADDED;
-        }
     },
-    ba::tag::count(),
-    [](TimeValueDatum datum)
-    {
-        return 0.0;
-    });
+    ba::tag::count(), ba::tag::count());
 
-    return (accDropped + accAdded) / bc::duration_cast<bc::seconds>(window).count();
+    return (accs[0] + accs[1]) / bc::duration_cast<bc::seconds>(window).count();
 }
 
 double Stats::processedNALUsPS(int face,
@@ -337,22 +326,26 @@ double Stats::processedNALUsPS(int face,
 {
     boost::mutex::scoped_lock lock(mutex);
 
-    auto accAdded = filter({
-        timeFilter(window,
-                   nowSinceEpoch),
-        typeFilter(typeid(NALU)),
-        [](TimeValueDatum datum)
+    auto accAdded = query(
+    {
+        andFilter(
         {
-            return boost::any_cast<NALU>(datum.value).status == NALU::ADDED;
-        }
+            timeFilter(window,
+                       nowSinceEpoch),
+            typeFilter(typeid(NALU)),
+            [](TimeValueDatum datum)
+            {
+                return boost::any_cast<NALU>(datum.value).status == NALU::ADDED;
+            }
+        })
     },
-    ba::tag::count(),
     [](TimeValueDatum datum)
     {
         return 0.0;
-    });
+    },
+    ba::tag::count());
 
-    return accAdded / bc::duration_cast<bc::seconds>(window).count();
+    return accAdded[0] / bc::duration_cast<bc::seconds>(window).count();
 }
 
 double Stats::sentNALUsPS(int face,
@@ -361,23 +354,26 @@ double Stats::sentNALUsPS(int face,
 {
     boost::mutex::scoped_lock lock(mutex);
 
-    auto countSent = filter(
+    auto countSent = query(
     {
-        timeFilter(window,
-                   nowSinceEpoch),
-        typeFilter(typeid(NALU)),
-        [](TimeValueDatum datum)
+        andFilter(
         {
-            return boost::any_cast<NALU>(datum.value).status == NALU::SENT;
-        }
+            timeFilter(window,
+                       nowSinceEpoch),
+            typeFilter(typeid(NALU)),
+            [](TimeValueDatum datum)
+            {
+                return boost::any_cast<NALU>(datum.value).status == NALU::SENT;
+            }
+        })
     },
-    ba::tag::count(),
     [](TimeValueDatum datum)
     {
         return 0.0;
-    });
+    },
+    ba::tag::count());
 
-    return countSent / bc::duration_cast<bc::seconds>(window).count();
+    return countSent[0] / bc::duration_cast<bc::seconds>(window).count();
 }
 
 double Stats::receivedNALUsBitRate(boost::chrono::microseconds window,
@@ -385,39 +381,36 @@ double Stats::receivedNALUsBitRate(boost::chrono::microseconds window,
 {
     boost::mutex::scoped_lock lock(mutex);
 
-    auto sumDropped = filter(
+    auto sums = query(
     {
-        timeFilter(window,
-                   nowSinceEpoch),
-        typeFilter(typeid(NALU)),
-        [](TimeValueDatum datum)
+        andFilter(
         {
-            return boost::any_cast<NALU>(datum.value).status == NALU::DROPPED;
-        }
+            timeFilter(window,
+                       nowSinceEpoch),
+            typeFilter(typeid(NALU)),
+            [](TimeValueDatum datum)
+            {
+                return boost::any_cast<NALU>(datum.value).status == NALU::DROPPED;
+            }
+        }),
+        andFilter(
+        {
+            timeFilter(window,
+                       nowSinceEpoch),
+            typeFilter(typeid(NALU)),
+            [](TimeValueDatum datum)
+            {
+                return boost::any_cast<NALU>(datum.value).status == NALU::ADDED;
+            }
+        })
     },
-    ba::tag::sum(),
     [](TimeValueDatum datum)
     {
         return boost::any_cast<NALU>(datum.value).size;
-    });
-
-    auto sumAdded = filter(
-    {
-        timeFilter(window,
-                   nowSinceEpoch),
-        typeFilter(typeid(NALU)),
-        [](TimeValueDatum datum)
-        {
-            return boost::any_cast<NALU>(datum.value).status == NALU::ADDED;
-        }
     },
-    ba::tag::sum(),
-    [](TimeValueDatum datum)
-    {
-        return boost::any_cast<NALU>(datum.value).size;
-    });
+    ba::tag::sum(), ba::tag::sum());
 
-    return (sumDropped + sumAdded) * 8. / bc::duration_cast<bc::seconds>(window).count();
+    return (sums[0] + sums[1]) * 8. / bc::duration_cast<bc::seconds>(window).count();
 }
 
 double Stats::processedNALUsBitRate(boost::chrono::microseconds window,
@@ -425,15 +418,18 @@ double Stats::processedNALUsBitRate(boost::chrono::microseconds window,
 {
     boost::mutex::scoped_lock lock(mutex);
 
-    auto sumAdded = filter(
+    auto sumAdded = query(
     {
-        timeFilter(window,
-                   nowSinceEpoch),
-        typeFilter(typeid(NALU)),
-        [](TimeValueDatum datum)
+        andFilter(
         {
-            return boost::any_cast<NALU>(datum.value).status == NALU::ADDED;
-        }
+            timeFilter(window,
+                       nowSinceEpoch),
+            typeFilter(typeid(NALU)),
+            [](TimeValueDatum datum)
+            {
+                return boost::any_cast<NALU>(datum.value).status == NALU::ADDED;
+            }
+        })
     },
     [](TimeValueDatum datum)
     {
@@ -441,7 +437,7 @@ double Stats::processedNALUsBitRate(boost::chrono::microseconds window,
     },
     ba::tag::sum());
 
-    return sumAdded * 8. / bc::duration_cast<bc::seconds>(window).count();
+    return sumAdded[0] * 8. / bc::duration_cast<bc::seconds>(window).count();
 }
 
 double Stats::sentNALUsBitRate(boost::chrono::microseconds window,
@@ -449,24 +445,27 @@ double Stats::sentNALUsBitRate(boost::chrono::microseconds window,
 {
     boost::mutex::scoped_lock lock(mutex);
 
-    auto sumSent = filter(
+    auto sumSent = query(
     {
-        timeFilter(window,
-                   nowSinceEpoch),
-        typeFilter(typeid(NALU)),
-        [](TimeValueDatum datum)
+        andFilter(
         {
-            return boost::any_cast<NALU>(datum.value).status == NALU::SENT;
-        }
+            timeFilter(window,
+                       nowSinceEpoch),
+            typeFilter(typeid(NALU)),
+            [](TimeValueDatum datum)
+            {
+                return boost::any_cast<NALU>(datum.value).status == NALU::SENT;
+            }
+        })
     },
-    ba::tag::sum(),
     [](TimeValueDatum datum)
     {
         return boost::any_cast<NALU>(datum.value).size;
-    });
+    },
+    ba::tag::sum());
 
-    return sumSent * 8. / bc::duration_cast<bc::seconds>(window).count();
-}*/
+    return sumSent[0] * 8. / bc::duration_cast<bc::seconds>(window).count();
+}
 
 // ###### UTILITY ######
 
@@ -474,12 +473,12 @@ std::string Stats::summary(bc::microseconds window)
 {
     bc::microseconds nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
     double naluDropRateVal = naluDropRate(window, nowSinceEpoch);
-    double receivedNALUsPSVal = 0.0;//receivedNALUsPS(-1, window, nowSinceEpoch);
-    double processedNALUsPSVal = 0.0;//processedNALUsPS(-1, window, nowSinceEpoch);
-    double sentNALUsPSVal = 0.0;//sentNALUsPS(-1, window, nowSinceEpoch);
-    double receivedNALUsBitRateVal = 0.0;//receivedNALUsBitRate(window, nowSinceEpoch);
-    double processedNALUsBitRateVal = 0.0;//processedNALUsBitRate(window, nowSinceEpoch);
-    double sentNALUsBitRateVal = 0.0;//sentNALUsBitRate(window, nowSinceEpoch);
+    double receivedNALUsPSVal = receivedNALUsPS(-1, window, nowSinceEpoch);
+    double processedNALUsPSVal = processedNALUsPS(-1, window, nowSinceEpoch);
+    double sentNALUsPSVal = sentNALUsPS(-1, window, nowSinceEpoch);
+    double receivedNALUsBitRateVal = receivedNALUsBitRate(window, nowSinceEpoch);
+    double processedNALUsBitRateVal = processedNALUsBitRate(window, nowSinceEpoch);
+    double sentNALUsBitRateVal = sentNALUsBitRate(window, nowSinceEpoch);
     int faceCount = 12;
     std::vector<double> facesPSVal(faceCount);
     std::vector<double> receivedNALUsPFPSVal(faceCount);
@@ -488,12 +487,12 @@ std::string Stats::summary(bc::microseconds window)
 
     for (int i = 0; i < faceCount; i++)
     {
-        facesPSVal[i]            = 0.0;//facesPS(i, window, nowSinceEpoch);
-        receivedNALUsPFPSVal[i]  = 0.0;//receivedNALUsPS(i, window, nowSinceEpoch);
-        processedNALUsPFPSVal[i] = 0.0;//processedNALUsPS(i, window, nowSinceEpoch);
-        sentNALUsPFPSVal[i]      = 0.0;//sentNALUsPS(i, window, nowSinceEpoch);
+        facesPSVal[i]            = facesPS(i, window, nowSinceEpoch);
+        receivedNALUsPFPSVal[i]  = receivedNALUsPS(i, window, nowSinceEpoch);
+        processedNALUsPFPSVal[i] = processedNALUsPS(i, window, nowSinceEpoch);
+        sentNALUsPFPSVal[i]      = sentNALUsPS(i, window, nowSinceEpoch);
     }
-    double fpsVal = 0.0;//fps(window, nowSinceEpoch);
+    double fpsVal = fps(window, nowSinceEpoch);
 
     std::stringstream stream;
     stream << "===============================================================================" << std::endl;

@@ -49,7 +49,7 @@ public:
     // statistical values
     double naluDropRate(boost::chrono::microseconds window,
                         boost::chrono::microseconds nowSinceEpoch);
-    /*double facesPS(int face,
+    double facesPS(int face,
                    boost::chrono::microseconds window,
 				   boost::chrono::microseconds nowSinceEpoch);
     double fps(boost::chrono::microseconds window,
@@ -68,7 +68,7 @@ public:
 	double processedNALUsBitRate(boost::chrono::microseconds window,
 		                         boost::chrono::microseconds nowSinceEpoch);
 	double sentNALUsBitRate(boost::chrono::microseconds window,
-		                    boost::chrono::microseconds nowSinceEpoch);*/
+		                    boost::chrono::microseconds nowSinceEpoch);
     
     // utility
     std::string summary(boost::chrono::microseconds window);
