@@ -58,9 +58,9 @@ struct timeval prevtime;
 
 RawPixelSource::RawPixelSource(UsageEnvironment& env,
                                Frame* content,
-                               int avgBitRate)
+							   int avgBitRate)
 	:
-	FramedSource(env), img_convert_ctx(NULL), content(content), /*encodeBarrier(2),*/ destructing(false)
+	FramedSource(env), img_convert_ctx(NULL), content(content), /*encodeBarrier(2),*/ destructing(false), lastPTS(0)
 {
 
 	gettimeofday(&prevtime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
@@ -220,11 +220,16 @@ void RawPixelSource::frameContentLoop()
 			return;
 		}
 
-		content->getBarrier().wait();
+		// End this thread when CubemapExtractionPlugin closes
+		while (!content->getBarrier().timedWait(boost::chrono::milliseconds(100)) && destructing)
+		{
+			return;
+		}
 
 		AVRational microSecBase = { 1, 1000000 };
 		bc::microseconds presentationTimeSinceEpochMicroSec;
 
+		int_least64_t x;
 		{
 			boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(content->getMutex());
 
@@ -240,9 +245,12 @@ void RawPixelSource::frameContentLoop()
 			
 			presentationTimeSinceEpochMicroSec =
 				bc::duration_cast<bc::microseconds>(content->getPresentationTime().time_since_epoch());
+
+			x = content->getPresentationTime().time_since_epoch().count();
 		}
         
-        
+		
+
 //        const time_t time = bc::system_clock::to_time_t(face->getPresentationTime());
 //
 //        // Maybe the put_time will be implemented later?
@@ -254,7 +262,16 @@ void RawPixelSource::frameContentLoop()
         //std::cout << this << " frame" << std::endl;
 
 
-        frame->pts = av_rescale_q(presentationTimeSinceEpochMicroSec.count(), microSecBase, codecContext->time_base);
+		frame->pts = presentationTimeSinceEpochMicroSec.count();// av_rescale_q(presentationTimeSinceEpochMicroSec.count(), microSecBase, codecContext->time_base);
+
+		if (x == lastPTS)
+		{
+			std::cout << "match!?" << std::endl;
+		}
+
+		lastPTS = frame->pts;
+
+		//std::cout << presentationTimeSinceEpochMicroSec.count() << " " << x << " " << frame->pts << std::endl;
 
         // Make frame available to the encoder
         frameBuffer.push(frame);
@@ -344,8 +361,6 @@ void RawPixelSource::encodeFrameLoop()
 			yuv420pFrame->width = xFrame->width;
 			yuv420pFrame->height = xFrame->height;
 
-
-
 			/* the image can be allocated by any means and av_image_alloc() is
 			* just the most convenient way if av_malloc() is to be used */
 			if (av_image_alloc(yuv420pFrame->data, yuv420pFrame->linesize, yuv420pFrame->width, yuv420pFrame->height,
@@ -368,6 +383,10 @@ void RawPixelSource::encodeFrameLoop()
 
 		//mutex.lock();
 		int ret = avcodec_encode_video2(codecContext, &pkt, yuv420pFrame, &got_output);
+		
+		//static int64_t lastPTS = 0;
+		//std::cout << pkt.pts << " " << pkt.dts << " " << pkt.pts - lastPTS << " " << got_output << " " << pkt.pts - xFrame->pts << std::endl;
+		//lastPTS = pkt.pts;
 		//mutex.unlock();
 
 		// std::cout << "encoded frame" << std::endl;
@@ -463,9 +482,10 @@ void RawPixelSource::deliverFrame()
 	// Set the presentation time of this frame
 	AVRational secBase = { 1, 1 };
 	AVRational microSecBase = { 1, 1000000 };
-	fPresentationTime.tv_sec = av_rescale_q(pkt.pts, codecContext->time_base, secBase);
-	fPresentationTime.tv_usec = av_rescale_q(pkt.pts, codecContext->time_base, microSecBase) -
-		fPresentationTime.tv_sec * 1000000;
+	fPresentationTime.tv_sec = pkt.pts / 1000000; //av_rescale_q(pkt.pts, codecContext->time_base, secBase);
+	fPresentationTime.tv_usec = pkt.pts % 1000000; // av_rescale_q(pkt.pts, codecContext->time_base, microSecBase) -
+
+	//std::cout << fPresentationTime.tv_sec << " " << fPresentationTime.tv_usec << std::endl;
 
 	// Live555 does not like start codes.
 	// So, we remove the start code which is there in front of every nal unit.  
@@ -535,8 +555,12 @@ void RawPixelSource::deliverFrame()
 		std::cout << this << ": truncated " << fNumTruncatedBytes << " bytes" << std::endl;
 	}
 
+	std::cout << fFrameSize << std::endl;
+
 	// Tell live555 that a new frame is available
 	FramedSource::afterGetting(this);
+
+	//std::cout << pkt.pts << std::endl;
 
 	if (onSentNALU) onSentNALU(this, nal_unit_type, fFrameSize);
 

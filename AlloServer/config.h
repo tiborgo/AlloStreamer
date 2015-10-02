@@ -11,4 +11,4 @@
 #define DEFAULT_BUFFER_SIZE     40000000
 #define PRESET_VAL				"ultrafast"
 #define TUNE_VAL				"zerolatency:fastdecode"
-#define FPS						30
+#define FPS						120

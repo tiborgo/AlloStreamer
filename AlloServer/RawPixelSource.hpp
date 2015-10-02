@@ -80,4 +80,6 @@ private:
 	bool destructing;
 
 	int64_t lastFrameTime;
+
+	int_least64_t lastPTS;
 };
