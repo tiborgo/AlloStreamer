@@ -15,7 +15,7 @@ public:
     static RTSPCubemapSourceClient* create(char const* rtspURL,
                                            unsigned int sinkBufferSize,
                                            AVPixelFormat format,
-                                           const char* interface = "0.0.0.0",
+                                           const char* interfaceAddress = "0.0.0.0",
                                            int verbosityLevel = 0,
                                            char const* applicationName = NULL,
                                            portNumBits tunnelOverHTTPPortNum = 0,

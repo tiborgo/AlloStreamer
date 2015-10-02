@@ -86,14 +86,14 @@ int main(int argc, char* argv[])
               options(desc).positional(p).run(), vm);
     boost::program_options::notify(vm);
     
-    const char* interface;
+    const char* interfaceAddress;
     if (vm.count("interface"))
     {
-        interface = vm["interface"].as<std::string>().c_str();
+		interfaceAddress = vm["interface"].as<std::string>().c_str();
     }
     else
     {
-        interface = "0.0.0.0";
+		interfaceAddress = "0.0.0.0";
     }
 
 	unsigned long bufferSize;
@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
 
 	std::cout << "Buffer size " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
 
-    rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, interface);
+	rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, interfaceAddress);
     std::function<void (RTSPCubemapSourceClient*, CubemapSource*)> callback(boost::bind(&onDidConnect, _1, _2));
     rtspClient->setOnDidConnect(callback);
     rtspClient->connect();

@@ -555,7 +555,7 @@ void RawPixelSource::deliverFrame()
 		std::cout << this << ": truncated " << fNumTruncatedBytes << " bytes" << std::endl;
 	}
 
-	std::cout << fFrameSize << std::endl;
+	//std::cout << fFrameSize << std::endl;
 
 	// Tell live555 that a new frame is available
 	FramedSource::afterGetting(this);

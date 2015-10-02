@@ -15,9 +15,9 @@ public:
     class TimeValueDatum
     {
     public:
-        TimeValueDatum(const boost::any& value) : timeSinceEpoch(boost::chrono::microseconds(boost::chrono::system_clock::now().time_since_epoch().count())), value(value) {}
-        const boost::chrono::microseconds timeSinceEpoch;
-        const boost::any value;
+        TimeValueDatum(const boost::any& value) : time(boost::chrono::steady_clock::now()), value(value) {}
+		const boost::chrono::steady_clock::time_point time;
+		const boost::any value;
     };
     
     class NALU
@@ -48,27 +48,27 @@ public:
     
     // statistical values
     double naluDropRate(boost::chrono::microseconds window,
-                        boost::chrono::microseconds nowSinceEpoch);
+		boost::chrono::steady_clock::time_point now);
     double facesPS(int face,
                    boost::chrono::microseconds window,
-				   boost::chrono::microseconds nowSinceEpoch);
+				   boost::chrono::steady_clock::time_point now);
     double fps(boost::chrono::microseconds window,
-		       boost::chrono::microseconds nowSinceEpoch);
+		boost::chrono::steady_clock::time_point now);
     double receivedNALUsPS(int face,
 		                   boost::chrono::microseconds window,
-		                   boost::chrono::microseconds nowSinceEpoch);
+						   boost::chrono::steady_clock::time_point now);
 	double processedNALUsPS(int face,
 	                        boost::chrono::microseconds window,
-		                    boost::chrono::microseconds nowSinceEpoch);
+							boost::chrono::steady_clock::time_point now);
 	double sentNALUsPS(int face,
 		               boost::chrono::microseconds window,
-		               boost::chrono::microseconds nowSinceEpoch);
+					   boost::chrono::steady_clock::time_point now);
 	double receivedNALUsBitRate(boost::chrono::microseconds window,
-		                        boost::chrono::microseconds nowSinceEpoch);
+		boost::chrono::steady_clock::time_point now);
 	double processedNALUsBitRate(boost::chrono::microseconds window,
-		                         boost::chrono::microseconds nowSinceEpoch);
+		boost::chrono::steady_clock::time_point now);
 	double sentNALUsBitRate(boost::chrono::microseconds window,
-		                    boost::chrono::microseconds nowSinceEpoch);
+		boost::chrono::steady_clock::time_point now);
     
     // utility
     std::string summary(boost::chrono::microseconds window);
@@ -85,9 +85,10 @@ private:
     
     boost::function<bool (TimeValueDatum)> timeFilter(
         boost::chrono::microseconds window,
-        boost::chrono::microseconds nowSinceEpoch);
+        boost::chrono::steady_clock::time_point now);
     
     boost::function<bool (TimeValueDatum)> typeFilter(const std::type_info& type);
+	boost::function<bool (TimeValueDatum)> naluFaceFilter(int face);
     
     boost::function<bool (TimeValueDatum)> andFilter(std::initializer_list<boost::function<bool (TimeValueDatum)> > filters);
     

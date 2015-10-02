@@ -15,13 +15,13 @@ namespace ba = boost::accumulators;
 namespace bad = boost::adaptors;
 namespace bf = boost::fusion;
 
-boost::function<bool (Stats::TimeValueDatum)> Stats::timeFilter(bc::microseconds window,
-    bc::microseconds nowSinceEpoch)
+boost::function<bool (Stats::TimeValueDatum)> Stats::timeFilter(boost::chrono::microseconds window,
+	boost::chrono::steady_clock::time_point now)
 {
-    return [window, nowSinceEpoch](Stats::TimeValueDatum datum)
-           {
-               return (nowSinceEpoch - datum.timeSinceEpoch) < window;
-           };
+    return [window, now](Stats::TimeValueDatum datum)
+    {
+		return (now - datum.time) < window;
+    };
 }
 
 boost::function<bool (Stats::TimeValueDatum)> Stats::typeFilter(const std::type_info& type)
@@ -30,6 +30,14 @@ boost::function<bool (Stats::TimeValueDatum)> Stats::typeFilter(const std::type_
     {
         return datum.value.type() == type;
     };
+}
+
+boost::function<bool (Stats::TimeValueDatum)> Stats::naluFaceFilter(int face)
+{
+	return [face](TimeValueDatum datum)
+	{
+		return boost::any_cast<NALU>(datum.value).face == face;
+	};
 }
 
 boost::function<bool (Stats::TimeValueDatum)> Stats::andFilter(std::initializer_list<boost::function<bool (TimeValueDatum)> > filtersList)
@@ -196,14 +204,14 @@ void Stats::store(const boost::any& datum)
 
 // ###### STATISTICAL VALUES ######
 
-double Stats::naluDropRate(bc::microseconds window, bc::microseconds nowSinceEpoch)
+double Stats::naluDropRate(bc::microseconds window, boost::chrono::steady_clock::time_point now)
 {
     auto accs = query(
     {
         andFilter(
         {
             timeFilter(window,
-                       nowSinceEpoch),
+                       now),
             typeFilter(typeid(NALU)),
             [](TimeValueDatum datum)
             {
@@ -213,7 +221,7 @@ double Stats::naluDropRate(bc::microseconds window, bc::microseconds nowSinceEpo
         andFilter(
         {
             timeFilter(window,
-                     nowSinceEpoch),
+                       now),
             typeFilter(typeid(NALU)),
             [](TimeValueDatum datum)
             {
@@ -232,14 +240,14 @@ double Stats::naluDropRate(bc::microseconds window, bc::microseconds nowSinceEpo
 
 double Stats::facesPS(int face,
     boost::chrono::microseconds window,
-    boost::chrono::microseconds nowSinceEpoch)
+	boost::chrono::steady_clock::time_point now)
 {
     auto accDisplayedCubemapFaces = query(
     {
         andFilter(
         {
             timeFilter(window,
-                       nowSinceEpoch),
+                       now),
             typeFilter(typeid(CubemapFace)),
             [face](TimeValueDatum datum)
             {
@@ -257,14 +265,14 @@ double Stats::facesPS(int face,
 }
 
 double Stats::fps(boost::chrono::microseconds window,
-    boost::chrono::microseconds nowSinceEpoch)
+	boost::chrono::steady_clock::time_point now)
 {
     auto accDisplayedFrames = query(
     {
         andFilter(
         {
             timeFilter(window,
-                       nowSinceEpoch),
+                       now),
             typeFilter(typeid(Cubemap))
         })
     },
@@ -279,24 +287,25 @@ double Stats::fps(boost::chrono::microseconds window,
 
 double Stats::receivedNALUsPS(int face,
     boost::chrono::microseconds window,
-    boost::chrono::microseconds nowSinceEpoch)
+	boost::chrono::steady_clock::time_point now)
 {
     auto accs = query(
     {
         andFilter(
         {
             timeFilter(window,
-                       nowSinceEpoch),
+                       now),
             typeFilter(typeid(NALU)),
             [](TimeValueDatum datum)
             {
                 return boost::any_cast<NALU>(datum.value).status == NALU::DROPPED;
-            }
+            },
+			naluFaceFilter(face)
         }),
         andFilter(
         {
             timeFilter(window,
-                       nowSinceEpoch),
+                       now),
             typeFilter(typeid(NALU)),
             [](TimeValueDatum datum)
             {
@@ -315,19 +324,20 @@ double Stats::receivedNALUsPS(int face,
 
 double Stats::processedNALUsPS(int face,
     boost::chrono::microseconds window,
-    boost::chrono::microseconds nowSinceEpoch)
+	boost::chrono::steady_clock::time_point now)
 {
     auto accAdded = query(
     {
         andFilter(
         {
             timeFilter(window,
-                       nowSinceEpoch),
+                       now),
             typeFilter(typeid(NALU)),
             [](TimeValueDatum datum)
             {
                 return boost::any_cast<NALU>(datum.value).status == NALU::ADDED;
-            }
+            },
+			naluFaceFilter(face)
         })
     },
     [](TimeValueDatum datum)
@@ -341,39 +351,40 @@ double Stats::processedNALUsPS(int face,
 
 double Stats::sentNALUsPS(int face,
     boost::chrono::microseconds window,
-    boost::chrono::microseconds nowSinceEpoch)
+	boost::chrono::steady_clock::time_point now)
 {
     auto countSent = query(
     {
         andFilter(
         {
             timeFilter(window,
-                       nowSinceEpoch),
+                       now),
             typeFilter(typeid(NALU)),
             [](TimeValueDatum datum)
             {
                 return boost::any_cast<NALU>(datum.value).status == NALU::SENT;
-            }
+            },
+			naluFaceFilter(face),
         })
     },
     [](TimeValueDatum datum)
     {
         return 0.0;
     },
-    ba::tag::count());
+	ba::tag::count());
 
     return countSent[0] / bc::duration_cast<bc::seconds>(window).count();
 }
 
 double Stats::receivedNALUsBitRate(boost::chrono::microseconds window,
-    boost::chrono::microseconds nowSinceEpoch)
+	boost::chrono::steady_clock::time_point now)
 {
     auto sums = query(
     {
         andFilter(
         {
             timeFilter(window,
-                       nowSinceEpoch),
+                       now),
             typeFilter(typeid(NALU)),
             [](TimeValueDatum datum)
             {
@@ -383,7 +394,7 @@ double Stats::receivedNALUsBitRate(boost::chrono::microseconds window,
         andFilter(
         {
             timeFilter(window,
-                       nowSinceEpoch),
+                       now),
             typeFilter(typeid(NALU)),
             [](TimeValueDatum datum)
             {
@@ -401,14 +412,14 @@ double Stats::receivedNALUsBitRate(boost::chrono::microseconds window,
 }
 
 double Stats::processedNALUsBitRate(boost::chrono::microseconds window,
-    boost::chrono::microseconds nowSinceEpoch)
+	boost::chrono::steady_clock::time_point now)
 {
     auto sumAdded = query(
     {
         andFilter(
         {
             timeFilter(window,
-                       nowSinceEpoch),
+                       now),
             typeFilter(typeid(NALU)),
             [](TimeValueDatum datum)
             {
@@ -426,14 +437,14 @@ double Stats::processedNALUsBitRate(boost::chrono::microseconds window,
 }
 
 double Stats::sentNALUsBitRate(boost::chrono::microseconds window,
-    boost::chrono::microseconds nowSinceEpoch)
+	boost::chrono::steady_clock::time_point now)
 {
     auto sumSent = query(
     {
         andFilter(
         {
             timeFilter(window,
-                       nowSinceEpoch),
+                       now),
             typeFilter(typeid(NALU)),
             [](TimeValueDatum datum)
             {
@@ -454,14 +465,14 @@ double Stats::sentNALUsBitRate(boost::chrono::microseconds window,
 
 std::string Stats::summary(bc::microseconds window)
 {
-    bc::microseconds nowSinceEpoch = bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
-    double naluDropRateVal = naluDropRate(window, nowSinceEpoch);
-    double receivedNALUsPSVal = receivedNALUsPS(-1, window, nowSinceEpoch);
-    double processedNALUsPSVal = processedNALUsPS(-1, window, nowSinceEpoch);
-    double sentNALUsPSVal = sentNALUsPS(-1, window, nowSinceEpoch);
-    double receivedNALUsBitRateVal = receivedNALUsBitRate(window, nowSinceEpoch);
-    double processedNALUsBitRateVal = processedNALUsBitRate(window, nowSinceEpoch);
-    double sentNALUsBitRateVal = sentNALUsBitRate(window, nowSinceEpoch);
+	boost::chrono::steady_clock::time_point now = boost::chrono::steady_clock::now();
+	double naluDropRateVal = naluDropRate(window, now);
+	double receivedNALUsPSVal = receivedNALUsPS(-1, window, now);
+	double processedNALUsPSVal = processedNALUsPS(-1, window, now);
+	double sentNALUsPSVal = sentNALUsPS(-1, window, now);
+	double receivedNALUsBitRateVal = receivedNALUsBitRate(window, now);
+	double processedNALUsBitRateVal = processedNALUsBitRate(window, now);
+	double sentNALUsBitRateVal = sentNALUsBitRate(window, now);
     int faceCount = 12;
     std::vector<double> facesPSVal(faceCount);
     std::vector<double> receivedNALUsPFPSVal(faceCount);
@@ -470,12 +481,12 @@ std::string Stats::summary(bc::microseconds window)
 
     for (int i = 0; i < faceCount; i++)
     {
-        facesPSVal[i]            = facesPS(i, window, nowSinceEpoch);
-        receivedNALUsPFPSVal[i]  = receivedNALUsPS(i, window, nowSinceEpoch);
-        processedNALUsPFPSVal[i] = processedNALUsPS(i, window, nowSinceEpoch);
-        sentNALUsPFPSVal[i]      = sentNALUsPS(i, window, nowSinceEpoch);
+		facesPSVal[i] = facesPS(i, window, now);
+		receivedNALUsPFPSVal[i] = receivedNALUsPS(i, window, now);
+		processedNALUsPFPSVal[i] = processedNALUsPS(i, window, now);
+		sentNALUsPFPSVal[i] = sentNALUsPS(i, window, now);
     }
-    double fpsVal = fps(window, nowSinceEpoch);
+	double fpsVal = fps(window, now);
 
     std::stringstream stream;
     stream << "===============================================================================" << std::endl;
