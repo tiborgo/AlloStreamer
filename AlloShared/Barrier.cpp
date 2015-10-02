@@ -1,5 +1,6 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread_time.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
 
 #include "Barrier.hpp"
 
