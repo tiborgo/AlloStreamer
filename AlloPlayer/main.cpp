@@ -30,6 +30,7 @@ StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 
 void onDroppedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
 {
+    //std::cout << "dropped NALU " << size << std::endl;
     stats.store(Stats::NALU(type, size, face, Stats::NALU::DROPPED));
 }
 

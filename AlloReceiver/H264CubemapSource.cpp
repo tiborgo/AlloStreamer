@@ -71,7 +71,7 @@ void H264CubemapSource::getNextFramesLoop()
                 {
                     // Matches should not happen here.
                     // If it happens give back frame immediately
-                    std::cout << "match!? (" << i << ")" << bucketFrames[i]->pts << " " << frames[i]->pts << std::endl;
+                    //std::cout << "match!? (" << i << ")" << bucketFrames[i]->pts << " " << frames[i]->pts << std::endl;
                     sinks[i]->returnFrame(frames[i]);
                 }
                 else

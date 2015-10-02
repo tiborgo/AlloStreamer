@@ -109,7 +109,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 	unsigned numTruncatedBytes,
 	timeval presentationTime)
 {
-    std::cout << frameSize << std::endl;
+    //std::cout << "Received NALU" << std::endl;
     
     //std::cout << this << " " << presentationTime.tv_sec << " " << presentationTime.tv_usec << std::endl;
     
