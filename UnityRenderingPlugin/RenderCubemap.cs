@@ -9,13 +9,14 @@ public class RenderCubemap : MonoBehaviour
 {
 
     // Parameters
-    public int resolution = 1024;
+    public int width  = 1024;
+    public int height = 1024;
     public int faceCount = 6;
     public bool extract = true;
     public int fps = -1;
 
     [DllImport("CubemapExtractionPlugin")]
-    private static extern void ConfigureCubemapFromUnity(System.IntPtr[] texturePtrs, int cubemapFacesCount, int resolution);
+    private static extern void ConfigureCubemapFromUnity(System.IntPtr[] texturePtrs, int cubemapFacesCount, int width, int height);
     [DllImport("CubemapExtractionPlugin")]
     private static extern void StopFromUnity();
 
@@ -84,12 +85,12 @@ public class RenderCubemap : MonoBehaviour
             Camera cam = go.AddComponent<Camera>();
 
             // Set render texture
-            RenderTexture inTex = new RenderTexture(resolution, resolution, 1, RenderTextureFormat.ARGB32);
+            RenderTexture inTex = new RenderTexture(width, height, 1, RenderTextureFormat.ARGB32);
             inTex.Create();
             inTextures[i] = inTex;
 
             cam.targetTexture = inTex;
-            cam.aspect = 1;
+            cam.aspect = (float)width / height;
 
             // Set orientation
             cam.fieldOfView = 90;
@@ -99,7 +100,7 @@ public class RenderCubemap : MonoBehaviour
             // Move the cubemap to the origin of the parent cam
             cam.transform.localPosition = Vector3.zero;
 
-            RenderTexture outTex = new RenderTexture(resolution, resolution, 1, RenderTextureFormat.ARGB32);
+            RenderTexture outTex = new RenderTexture(width, height, 1, RenderTextureFormat.ARGB32);
             outTex.enableRandomWrite = true;
             outTex.Create();
             outTextures[i] = outTex;
@@ -108,7 +109,7 @@ public class RenderCubemap : MonoBehaviour
         }
 
         // Tell native plugin that rendering has started
-        ConfigureCubemapFromUnity(texturePtrs, faceCount, resolution);
+        ConfigureCubemapFromUnity(texturePtrs, faceCount, width, height);
 
         yield return StartCoroutine("CallPluginAtEndOfFrames");
     }
@@ -131,10 +132,11 @@ public class RenderCubemap : MonoBehaviour
                     RenderTexture inTex = inTextures[i];
                     RenderTexture outTex = outTextures[i];
 
-                    shader.SetInt("Pitch", resolution);
+                    shader.SetInt("Width", width);
+                    shader.SetInt("Height", height);
                     shader.SetTexture(shader.FindKernel("Convert"), "In", inTex);
                     shader.SetTexture(shader.FindKernel("Convert"), "Out", outTex);
-                    shader.Dispatch(shader.FindKernel("Convert"), (resolution/8) * (resolution/2), 1, 1);
+                    shader.Dispatch(shader.FindKernel("Convert"), (width/8) * (height/2), 1, 1);
                 }
 
                 GL.IssuePluginEvent(1);

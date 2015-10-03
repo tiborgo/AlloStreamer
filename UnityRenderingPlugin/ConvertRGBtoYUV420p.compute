@@ -5,14 +5,15 @@
 Texture2D<float4> In;
 RWTexture2D<float4> Out;
 
-uint Pitch;
+uint Width;
+uint Height;
 
 [numthreads(1,1,1)]
 void Convert (uint3 id : SV_DispatchThreadID) 
 {
 	uint2 pixelPos;
-	pixelPos.x = (id.x * 8) % Pitch;
-	pixelPos.y = Pitch - 2 - ((id.x * 8) / Pitch) * 2;
+	pixelPos.x = (id.x * 8) % Width;
+	pixelPos.y = Height - 2 - ((id.x * 8) / Width) * 2;
 
     float4 yuv[8][2];
 	for (int x = 0; x < 8; x++)
@@ -37,8 +38,8 @@ void Convert (uint3 id : SV_DispatchThreadID)
 		for (int y = 0; y < 2; y++)
 		{
 			uint2 yPos;
-			yPos.x = (2 * id.x + x + y * Pitch / 4 + (id.x * 8 / Pitch) * Pitch / 4) % Pitch;
-			yPos.y = (4 * id.x) / Pitch;
+			yPos.x = (2 * id.x + x + y * Width / 4 + (id.x * 8 / Width) * Width / 4) % Width;
+			yPos.y = (4 * id.x) / Width;
 
 			float4 yPlane;
 			for (int i = 0; i < 4; i++)
@@ -53,8 +54,8 @@ void Convert (uint3 id : SV_DispatchThreadID)
 	for (int j = 0; j < 2; j++)
 	{
 		uint2 uvPos;
-		uvPos.x = id.x % Pitch;
-		uvPos.y = id.x / Pitch + Pitch / 4 + Pitch / 16 * j;
+		uvPos.x = id.x % Width;
+		uvPos.y = id.x / Width + Height / 4 + Height / 16 * j;
 
 		float4 uvPlane;
 		for (int i = 0; i < 4; i++)

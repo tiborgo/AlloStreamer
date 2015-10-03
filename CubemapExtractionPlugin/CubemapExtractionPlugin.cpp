@@ -35,7 +35,8 @@ struct CubemapConfig
 {
     void** texturePtrs;
     size_t facesCount;
-    int resolution;
+    int width;
+	int height;
 };
 static CubemapConfig* cubemapConfig = nullptr;
 
@@ -117,7 +118,7 @@ void allocateSHM(CubemapConfig* cubemapConfig, BinocularsConfig* binocularsConfi
     unsigned long shmSize = 65536;
     if (cubemapConfig)
     {
-        shmSize += cubemapConfig->resolution * cubemapConfig->resolution * 4 * cubemapConfig->facesCount +
+        shmSize += cubemapConfig->width * cubemapConfig->height * 4 * cubemapConfig->facesCount +
                    sizeof(Cubemap) + cubemapConfig->facesCount * sizeof(CubemapFace);
     }
     if (binocularsConfig)
@@ -446,7 +447,7 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 // --------------------------------------------------------------------------
 // Start stop management
 
-extern "C" void EXPORT_API ConfigureCubemapFromUnity(void** texturePtrs, int cubemapFacesCount, int resolution)
+extern "C" void EXPORT_API ConfigureCubemapFromUnity(void** texturePtrs, int cubemapFacesCount, int width, int height)
 {
     
     
@@ -459,7 +460,8 @@ extern "C" void EXPORT_API ConfigureCubemapFromUnity(void** texturePtrs, int cub
     cubemapConfig              = new CubemapConfig;
     cubemapConfig->texturePtrs = texturePtrs;
     cubemapConfig->facesCount  = cubemapFacesCount;
-    cubemapConfig->resolution  = resolution;
+    cubemapConfig->width       = width;
+	cubemapConfig->height      = height;
 }
 
 extern "C" void EXPORT_API ConfigureBinocularsFromUnity(void* texturePtr, int width, int height)
