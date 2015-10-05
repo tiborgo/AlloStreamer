@@ -221,10 +221,15 @@ void RawPixelSource::frameContentLoop()
 		}
 
 		// End this thread when CubemapExtractionPlugin closes
-		while (!content->getBarrier().timedWait(boost::chrono::milliseconds(100)) && destructing)
+		while (!content->getBarrier().timedWait(boost::chrono::milliseconds(100)))
 		{
-			return;
+			if (destructing)
+			{
+				return;
+			}
 		}
+
+		//content->getBarrier().wait();
 
 		AVRational microSecBase = { 1, 1000000 };
 		bc::microseconds presentationTimeSinceEpochMicroSec;
@@ -239,6 +244,8 @@ void RawPixelSource::frameContentLoop()
 				content->getFormat(),
 				content->getWidth(),
 				content->getHeight());
+
+			std::cout << "framed" << std::endl;
 
 			// Set the actual presentation time
 			// It is in the past probably but we will try our best
@@ -400,6 +407,20 @@ void RawPixelSource::encodeFrameLoop()
 			return;
 		}
 
+		size_t counter = 0;
+		for (size_t i = 0; i < pkt.size; i++)
+		{
+			if (pkt.data[i] == 0 &&
+				pkt.data[i+1] == 0 &&
+				pkt.data[i+2] == 0 &&
+				pkt.data[i+3] == 1)
+			{
+				counter++;
+				i += 3;
+			}
+		}
+		//std::cout << "num nalus " << counter << std::endl;
+
 		pkt.pts = xFrame->pts;
 
 		framePool.push(xFrame);
@@ -447,7 +468,7 @@ void RawPixelSource::deliverFrame()
 	//         to set this variable, because - in this case - data will never arrive 'early'.
 	// Note the code below.
 
-
+	//std::cout << "available size: " << fMaxSize << std::endl;
 
 	if (!isCurrentlyAwaitingData())
 	{
@@ -507,8 +528,8 @@ void RawPixelSource::deliverFrame()
 		truncateBytes = 3;
 	}
 
-	u_int8_t* newFrameDataStart = (u_int8_t*)(pkt.data + truncateBytes);
-	unsigned newFrameSize = pkt.size - truncateBytes;
+	u_int8_t* newFrameDataStart = (u_int8_t*)(pkt.data /*+ truncateBytes*/);
+	unsigned newFrameSize = pkt.size/* - truncateBytes*/;
 
 	u_int8_t nal_unit_type = newFrameDataStart[0] & 0x1F;
 
