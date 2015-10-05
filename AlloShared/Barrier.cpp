@@ -31,14 +31,28 @@ bool Barrier::timedWait(boost::chrono::microseconds timeout)
 		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(mutex,
 			                                                                           boost::interprocess::accept_ownership);
 
-		if (!step() && !condition.timed_wait(lock,
-				                             boost::get_system_time() + boost::posix_time::microseconds(timeout.count())))
+		if (counter == 1)
 		{
-			return false;
+			counter = number;
+			condition.notify_all();
+			return true;
+		}
+		else
+		{
+			counter--;
+			if (!condition.timed_wait(lock,
+				                      boost::get_system_time() + boost::posix_time::microseconds(timeout.count())))
+			{
+				// No other thread reached barrier while we were waiting -> restore barrier and exit
+				counter++;
+				return false;
+			}
+			else
+			{
+				return true;
+			}
 		}
 	}
-
-	return true;
 }
 
 bool Barrier::step()
