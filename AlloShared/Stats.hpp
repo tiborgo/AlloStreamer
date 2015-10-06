@@ -95,6 +95,25 @@ public:
 
     
     Stats();
+    
+    // #### STAT VALS ####
+    StatVal nalusBitSum       (const std::string&                      name,
+                               int                                     face,
+                               NALU::Status                            status,
+                               boost::chrono::microseconds             window,
+                               boost::chrono::steady_clock::time_point now);
+    StatVal nalusCount        (const std::string&                      name,
+                               int                                     face,
+                               NALU::Status                            status,
+                               boost::chrono::microseconds             window,
+                               boost::chrono::steady_clock::time_point now);
+    StatVal cubemapsCount     (const std::string&                      name,
+                               boost::chrono::microseconds             window,
+                               boost::chrono::steady_clock::time_point now);
+    StatVal facesCount        (const std::string&                      name,
+                               int                                     face,
+                               boost::chrono::microseconds             window,
+                               boost::chrono::steady_clock::time_point now);
 
     // events
     void store(const boost::any& datum);
@@ -113,7 +132,7 @@ public:
 	double processedNALUsPS(int face,
 	                        boost::chrono::microseconds window,
 							boost::chrono::steady_clock::time_point now);
-	double sentNALUsPS(int face,
+    double sentNALUsPS(int face,
 		               boost::chrono::microseconds window,
 					   boost::chrono::steady_clock::time_point now);
 	double receivedNALUsBitRate(boost::chrono::microseconds window,
@@ -135,12 +154,8 @@ private:
     std::list<TimeValueDatum> storage1;
     std::list<TimeValueDatum> storage2;
     
-	template <typename... Features>
-    std::vector<double> query(std::initializer_list<boost::function<bool (TimeValueDatum)> > filters,
-                              boost::function<double (TimeValueDatum)> accExtractor,
-                              const Features& ... accumulators);
-    
-    std::map<std::string, double> query(std::initializer_list<StatVal> statVals);
+    std::map<std::string, double> query(std::initializer_list<StatVal>                         statVals,
+                                        boost::function<void (std::map<std::string, double>&)> postCalculator);
     
     boost::function<bool (TimeValueDatum)> timeFilter(
         boost::chrono::microseconds window,
@@ -148,7 +163,7 @@ private:
     
     boost::function<bool (TimeValueDatum)> typeFilter(const std::type_info& type);
 	boost::function<bool (TimeValueDatum)> naluFaceFilter(int face);
-    
+    boost::function<bool (TimeValueDatum)> naluStatusFilter(NALU::Status status);
     boost::function<bool (TimeValueDatum)> andFilter(std::initializer_list<boost::function<bool (TimeValueDatum)> > filters);
     
     boost::chrono::microseconds nowSinceEpoch();
