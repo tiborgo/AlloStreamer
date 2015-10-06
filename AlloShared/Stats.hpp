@@ -119,27 +119,27 @@ public:
     void store(const boost::any& datum);
     
     // statistical values
-    double naluDropRate(boost::chrono::microseconds window,
+    std::map<std::string, double> naluDropRate(boost::chrono::microseconds window,
 		boost::chrono::steady_clock::time_point now);
-    double facesPS(int face,
+    std::map<std::string, double> facesPS(int face,
                    boost::chrono::microseconds window,
 				   boost::chrono::steady_clock::time_point now);
-    double fps(boost::chrono::microseconds window,
+    std::map<std::string, double> fps(boost::chrono::microseconds window,
 		boost::chrono::steady_clock::time_point now);
-    double receivedNALUsPS(int face,
+    std::map<std::string, double> receivedNALUsPS(int face,
 		                   boost::chrono::microseconds window,
 						   boost::chrono::steady_clock::time_point now);
-	double processedNALUsPS(int face,
+	std::map<std::string, double> processedNALUsPS(int face,
 	                        boost::chrono::microseconds window,
 							boost::chrono::steady_clock::time_point now);
-    double sentNALUsPS(int face,
+    std::map<std::string, double> sentNALUsPS(int face,
 		               boost::chrono::microseconds window,
 					   boost::chrono::steady_clock::time_point now);
-	double receivedNALUsBitRate(boost::chrono::microseconds window,
+	std::map<std::string, double> receivedNALUsBitRate(boost::chrono::microseconds window,
 		boost::chrono::steady_clock::time_point now);
-	double processedNALUsBitRate(boost::chrono::microseconds window,
+	std::map<std::string, double> processedNALUsBitRate(boost::chrono::microseconds window,
 		boost::chrono::steady_clock::time_point now);
-	double sentNALUsBitRate(boost::chrono::microseconds window,
+	std::map<std::string, double> sentNALUsBitRate(boost::chrono::microseconds window,
 		boost::chrono::steady_clock::time_point now);
     
     // utility
