@@ -245,8 +245,6 @@ void RawPixelSource::frameContentLoop()
 				content->getWidth(),
 				content->getHeight());
 
-			std::cout << "framed" << std::endl;
-
 			// Set the actual presentation time
 			// It is in the past probably but we will try our best
 			
@@ -282,16 +280,6 @@ void RawPixelSource::frameContentLoop()
 
         // Make frame available to the encoder
         frameBuffer.push(frame);
-
-		// Wait for new frame
-		/*while (!content->getNewPixelsCondition().timed_wait(lock,
-			boost::get_system_time() + boost::posix_time::milliseconds(100)))
-		{
-			if (destructing)
-			{
-				return;
-			}
-		}*/
 	}
 }
 
@@ -330,116 +318,143 @@ void RawPixelSource::deliverFrame0(void* clientData)
 
 void RawPixelSource::encodeFrameLoop()
 {
-
-
 	while (!this->destructing)
 	{
-		// Pop frame ptr from buffer
-		AVFrame* xFrame;
-		AVFrame* yuv420pFrame;
 		AVPacket pkt;
+		int64_t pts;
 
-
-
-
-		if (!frameBuffer.wait_and_pop(xFrame))
 		{
-			// queue did close
-			return;
-		}
+			// Pop frame ptr from buffer
+			AVFrame* xFrame;
+			AVFrame* yuv420pFrame;
 
-		if (!pktPool.wait_and_pop(pkt))
-		{
-			// queue did close
-			return;
-		}
-
-        //std::cout << this << " encode" << std::endl;
-        
-		if (xFrame->format != AV_PIX_FMT_YUV420P)
-		{
-			yuv420pFrame = av_frame_alloc();
-			if (!yuv420pFrame)
+			if (!frameBuffer.wait_and_pop(xFrame))
 			{
-				fprintf(stderr, "Could not allocate video frame\n");
+				// queue did close
 				return;
 			}
-			yuv420pFrame->format = AV_PIX_FMT_YUV420P;
-			yuv420pFrame->width = xFrame->width;
-			yuv420pFrame->height = xFrame->height;
 
-			/* the image can be allocated by any means and av_image_alloc() is
-			* just the most convenient way if av_malloc() is to be used */
-			if (av_image_alloc(yuv420pFrame->data, yuv420pFrame->linesize, yuv420pFrame->width, yuv420pFrame->height,
-				AV_PIX_FMT_YUV420P, 32) < 0)
+			pts = xFrame->pts;
+
+			//std::cout << this << " encode" << std::endl;
+
+			if (xFrame->format != AV_PIX_FMT_YUV420P)
 			{
-				fprintf(stderr, "Could not allocate raw picture buffer\n");
-				abort();
+				yuv420pFrame = av_frame_alloc();
+				if (!yuv420pFrame)
+				{
+					fprintf(stderr, "Could not allocate video frame\n");
+					return;
+				}
+				yuv420pFrame->format = AV_PIX_FMT_YUV420P;
+				yuv420pFrame->width = xFrame->width;
+				yuv420pFrame->height = xFrame->height;
+
+				/* the image can be allocated by any means and av_image_alloc() is
+				* just the most convenient way if av_malloc() is to be used */
+				if (av_image_alloc(yuv420pFrame->data, yuv420pFrame->linesize, yuv420pFrame->width, yuv420pFrame->height,
+					AV_PIX_FMT_YUV420P, 32) < 0)
+				{
+					fprintf(stderr, "Could not allocate raw picture buffer\n");
+					abort();
+				}
+
+				x2yuv(xFrame, yuv420pFrame, codecContext);
+			}
+			else
+			{
+				yuv420pFrame = xFrame;
 			}
 
-			x2yuv(xFrame, yuv420pFrame, codecContext);
-		}
-		else
-		{
-			yuv420pFrame = xFrame;
-		}
+			av_init_packet(&pkt);
+			pkt.data = NULL; // packet data will be allocated by the encoder
+			pkt.size = 0;
+			int got_output = 0;
 
-		pkt.data = NULL; // packet data will be allocated by the encoder
-		pkt.size = 0;
-		int got_output = 0;
-
-		//mutex.lock();
-		int ret = avcodec_encode_video2(codecContext, &pkt, yuv420pFrame, &got_output);
-		
-		//static int64_t lastPTS = 0;
-		//std::cout << pkt.pts << " " << pkt.dts << " " << pkt.pts - lastPTS << " " << got_output << " " << pkt.pts - xFrame->pts << std::endl;
-		//lastPTS = pkt.pts;
-		//mutex.unlock();
-
-		// std::cout << "encoded frame" << std::endl;
-
-//		fprintf(myfile, "packet size: %i \n", pkt.size);
-	//	fflush(myfile);
-
-		if (ret < 0)
-		{
-			fprintf(stderr, "Error encoding frame\n");
-			return;
-		}
-
-		size_t counter = 0;
-		for (size_t i = 0; i < pkt.size; i++)
-		{
-			if (pkt.data[i] == 0 &&
-				pkt.data[i+1] == 0 &&
-				pkt.data[i+2] == 0 &&
-				pkt.data[i+3] == 1)
+			//mutex.lock();
+			int ret = avcodec_encode_video2(codecContext, &pkt, yuv420pFrame, &got_output);
+			if (ret < 0)
 			{
-				counter++;
-				i += 3;
+				fprintf(stderr, "Error encoding frame\n");
+				return;
+			}
+
+			framePool.push(xFrame);
+
+			if (xFrame->format != AV_PIX_FMT_YUV420P)
+			{
+				av_freep(&yuv420pFrame->data[0]);
+				av_frame_free(&yuv420pFrame);
 			}
 		}
-		//std::cout << "num nalus " << counter << std::endl;
-
-		pkt.pts = xFrame->pts;
-
-		framePool.push(xFrame);
-		pktBuffer.push(pkt);
-
-		//std::cout << this << ": encoded frame" << std::endl;
-
-		//if (!this->destructing && isCurrentlyAwaitingData())
+	
 		{
-			boost::mutex::scoped_lock lock(triggerEventMutex);
-			sourcesReadyForDelivery.push_back(this);
-			envir().taskScheduler().triggerEvent(eventTriggerId, nullptr);
-			//std::cout << this << ": event triggered" << std::endl;
-		}
+			// pair.first: pos if first byte of NALU; pair.second: pos of last byte of NALU
+			std::queue<std::pair<size_t, size_t> > naluPoses;
 
-		if (xFrame->format != AV_PIX_FMT_YUV420P)
-		{
-			av_freep(&yuv420pFrame->data[0]);
-			av_frame_free(&yuv420pFrame);
+			// Parse package for all NALUs
+			size_t naluStartPos = 0;
+			for (size_t i = 0; i < pkt.size - 3; i++)
+			{
+				if (pkt.data[i] == 0 &&
+					pkt.data[i + 1] == 0)
+				{
+					if (pkt.data[i + 2] == 0 &&
+						pkt.data[i + 3] == 1)
+					{
+						if (i != 0)
+						{
+							naluPoses.push(std::make_pair(naluStartPos, i - 1));
+						}
+
+						naluStartPos = i + 4;
+						i += 3;
+					}
+					else if (pkt.data[i + 2] == 1)
+					{
+						if (i != 0)
+						{
+							naluPoses.push(std::make_pair(naluStartPos, i - 1));
+						}
+
+						naluStartPos = i + 3;
+						i += 2;
+					}
+				}
+			}
+			naluPoses.push(std::make_pair(naluStartPos, pkt.size - 1));
+
+
+			size_t naluCount = naluPoses.size();
+
+
+			AVPacket dummy;
+			if (!pktPool.wait_and_pop(dummy))
+			{
+				// queue did close
+				return;
+			}
+
+			for (size_t i = 0; i < naluCount; i++)
+			{
+				std::pair<size_t, size_t> naluPos = naluPoses.front();
+				naluPoses.pop();
+
+				AVPacket naluPkt;
+				av_new_packet(&naluPkt, naluPos.second - naluPos.first + 1);
+				memcpy(naluPkt.data, pkt.data + naluPos.first, naluPkt.size);
+				naluPkt.pts = pts;
+
+				pktBuffer.push(naluPkt);
+
+				{
+					boost::mutex::scoped_lock lock(triggerEventMutex);
+					sourcesReadyForDelivery.push_back(this);
+					envir().taskScheduler().triggerEvent(eventTriggerId, nullptr);
+				}
+			}
+
+			av_free_packet(&pkt);
 		}
 	}
 }
@@ -497,6 +512,12 @@ void RawPixelSource::deliverFrame()
 		// queue did close
 		return;
 	}
+
+	if (pktBuffer.size() == 0)
+	{
+		AVPacket dummy;
+		pktPool.push(dummy);
+	}
     
     //std::cout << this << " send" << std::endl;
 
@@ -532,6 +553,8 @@ void RawPixelSource::deliverFrame()
 	unsigned newFrameSize = pkt.size/* - truncateBytes*/;
 
 	u_int8_t nal_unit_type = newFrameDataStart[0] & 0x1F;
+
+	//std::cout << "sent NALU type " << (int)nal_unit_type << " (" << newFrameSize << ")" << std::endl;
 
 	//if (nal_unit_type == 8) // PPS
 	//{
@@ -569,7 +592,7 @@ void RawPixelSource::deliverFrame()
 
 
 	av_free_packet(&pkt);
-	pktPool.push(pkt);
+	//pktPool.push(pkt);
 
 	if (fNumTruncatedBytes > 0)
 	{
@@ -590,4 +613,6 @@ void RawPixelSource::deliverFrame()
 	lastFrameTime = thisTime;
 
 	//std::cout << this << ": delivered" << std::endl;
+
+	//boost::this_thread::sleep_for(boost::chrono::microseconds((size_t)(1 * fFrameSize)));
 }
