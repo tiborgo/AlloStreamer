@@ -110,7 +110,7 @@ void addFaceSubstreams0(void*)
 				size_t size)> callback(boost::bind(&onSentNALU, _1, _2, _3, j, i));
 			source->setOnSentNALU(callback);
 
-			state->source = H264VideoStreamFramer::createNew(*env,
+			state->source = H264VideoStreamDiscreteFramer::createNew(*env,
 				source);
 
 			state->sink->startPlaying(*state->source, NULL, NULL);
@@ -157,10 +157,10 @@ void addBinocularsSubstream0(void*)
     
     binocularsSMS->addSubsession(subsession);
     
-    binocularsStream->source = H264VideoStreamFramer::createNew(*env,
-                                                                RawPixelSource::createNew(*env,
-                                                                                          binocularsStream->content,
-                                                                                          avgBitRate));
+    binocularsStream->source = H264VideoStreamDiscreteFramer::createNew(*env,
+                                                                        RawPixelSource::createNew(*env,
+                                                                                                  binocularsStream->content,
+                                                                                                  avgBitRate));
     binocularsStream->sink->startPlaying(*binocularsStream->source, NULL, NULL);
     
     std::cout << "Streaming binoculars ..." << std::endl;
