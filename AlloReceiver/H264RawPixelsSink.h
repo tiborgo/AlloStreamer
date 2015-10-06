@@ -67,9 +67,10 @@ private:
     concurrent_queue<AVFrame*> resizedFramePool;
 
 	SwsContext* imageConvertCtx;
-
-    AVPacket* lastIFramePkt;
-    bool gotFirstIFrame;
+    
+    std::queue<AVPacket*> priorityPackages; // SPS, PPS, IDR-slice NAL
+    bool receivedFirstPriorityPackages; // first sequence of SPS, PPS and IDR-slice NALUs has been received
+    
     AVPixelFormat format;
     
 	void decodeFrameLoop();

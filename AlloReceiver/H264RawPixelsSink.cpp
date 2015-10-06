@@ -35,7 +35,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
                                      MediaSubsession* subsession)
     :
     MediaSink(env), bufferSize(bufferSize), buffer(new unsigned char[bufferSize]),
-    imageConvertCtx(NULL), lastIFramePkt(nullptr), gotFirstIFrame(false), format(format),
+    imageConvertCtx(NULL), receivedFirstPriorityPackages(false), format(format),
     counter(0), sumRelativePresentationTimeMicroSec(0), maxRelativePresentationTimeMicroSec(0), subsession(subsession), lastTotal(0)
 {
 	for (int i = 0; i < 60; i++)
@@ -92,6 +92,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 void H264RawPixelsSink::packageData(AVPacket* pkt, unsigned int frameSize, timeval presentationTime)
 {
     unsigned char const start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
+    //unsigned char const start_code[0] = { };
     
     av_init_packet(pkt);
     
@@ -109,6 +110,8 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 	unsigned numTruncatedBytes,
 	timeval presentationTime)
 {
+    //std::cout << subsession->fmtp_spropparametersets() << std::endl;
+    
     //std::cout << "Received NALU" << std::endl;
     
     //std::cout << this << " " << presentationTime.tv_sec << " " << presentationTime.tv_usec << std::endl;
@@ -120,81 +123,135 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 	continuePlaying();
 	return;*/
     
-    RTPReceptionStatsDB::Iterator statsIter(subsession->rtpSource()->receptionStatsDB());
-    RTPReceptionStats* stats = statsIter.next(True);
+    //RTPReceptionStatsDB::Iterator statsIter(subsession->rtpSource()->receptionStatsDB());
+    //RTPReceptionStats* stats = statsIter.next(True);
     
-    int lostPacketsNum = stats->totNumPacketsExpected() - stats->totNumPacketsReceived();
+    //int lostPacketsNum = stats->totNumPacketsExpected() - stats->totNumPacketsReceived();
     //std::cout << "lost packets " << lostPacketsNum << std::endl;
     
-    int bytesReceived = stats->totNumKBytesReceived() - lastTotal;
-    lastTotal = stats->totNumKBytesReceived();
+    //int bytesReceived = stats->totNumKBytesReceived() - lastTotal;
+    //lastTotal = stats->totNumKBytesReceived();
 
+    //std::cout << "type: " << (int)nal_unit_type << " " << frameSize << std::endl;
     
+    static uint64_t lastPTS = -1;
+    static std::queue<std::string> packets;
+    static size_t frameNALUsSize = 0;
     
-    AVPacket* pkt = (pktPool.try_pop(pkt)) ? pkt : nullptr;
+    uint64_t pts = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec;
     
-    if (pkt)
+    if (lastPTS != -1 && pts != lastPTS)
     {
-        // We currently have the capacities to decode the received frame
+        AVPacket* pkt;
         
-        if (lastIFramePkt)
+        if (!pktPool.wait_and_pop(pkt))
         {
-            // We still have an I frame to process -> do it now
-            // Don't care about the received frame
-            pktBuffer.push(lastIFramePkt);
-            lastIFramePkt = nullptr;
-            gotFirstIFrame = true;
-            if (onDroppedNALU) onDroppedNALU(this, nal_unit_type, frameSize);
+            return;
         }
-        else if (nal_unit_type != 7 && gotFirstIFrame)
-        {
-            // We received a B/P frame
-            // and have the capacities to decode it -> do it
-            
-            packageData(pkt, frameSize, presentationTime);
-            pktBuffer.push(pkt);
-			if (onAddedNALU) onAddedNALU(this, nal_unit_type, frameSize);
-        }
-        else if (nal_unit_type == 7)
-        {
-            packageData(pkt, frameSize, presentationTime);
-            pktBuffer.push(pkt);
-            gotFirstIFrame = true;
-			if (onAddedNALU) onAddedNALU(this, nal_unit_type, frameSize);
-        }
-        else
-        {
-            pktPool.push(pkt);
-			if (onDroppedNALU) onDroppedNALU(this, nal_unit_type, frameSize);
-        }
-    }
-    else
-    {
-        // We currently don't have the capacities to decode the received frame
+        //= (pktPool.try_pop(pkt)) ? pkt : nullptr;
         
-        if (nal_unit_type == 7)
-        {
-            // We received an I frame but don't have the capacities
-            // to encode it right now -> safe it for later
-            
-            if (!lastIFramePkt)
-            {
-                lastIFramePkt = new AVPacket;
-                packageData(lastIFramePkt, frameSize, presentationTime);
-            }
-        }
-        else if (nal_unit_type != 7 && !pkt)
-        {
-            // We received a B/P frame but don't have the capacities
-            // to encode it right now.
-            // We can safely skip it.
-        }
+        //if (false/*pkt*/)
+        //{
         
-		if (onDroppedNALU) onDroppedNALU(this, nal_unit_type, frameSize);
-    }
+        unsigned char const start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
+        av_init_packet(pkt);
+        
+        pkt->size = frameNALUsSize + packets.size() * sizeof(start_code);
+        pkt->data = (uint8_t*)new char[pkt->size];
+        pkt->pts = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec;
+        
+        uint8_t* dataPtr = pkt->data;
+        while (packets.size() > 0)
+        {
+            std::string& packet = packets.front();
+            memcpy(dataPtr, start_code, sizeof(start_code));
+            memcpy(dataPtr + sizeof(start_code), packet.data(), packet.size());
+            dataPtr += packet.size() + sizeof(start_code);
+            packets.pop();
+        }
+        frameNALUsSize = 0;
 
-	// Then try getting the next frame:
-	continuePlaying();
+        pktBuffer.push(pkt);
+        if (onAddedNALU) onAddedNALU(this, nal_unit_type, pkt->size);
+        //}
+        //else
+        //{
+        //if (onDroppedNALU) onDroppedNALU(this, nal_unit_type, frameSize);
+        //}
+    }
+    
+    std::string packet((char*)buffer, frameSize);
+    packets.push(packet);
+    frameNALUsSize += frameSize;
+    lastPTS = pts;
+    
+    // Then try getting the next frame:
+    continuePlaying();
+    return;
+    
+//    if (pkt)
+//    {
+//        // We currently have the capacities to decode the received frame
+//        
+//        if (priorityPackages.size() > 0)
+//        {
+//            // We still have SPS, PPS and/or IDR-slices to process -> do it now
+//            // Don't care about the received frame
+//            pktBuffer.push(priorityPackages.front());
+//            priorityPackages.pop();
+//            receivedFirstPriorityPackages = true;
+//            delete pkt; // avoid memory leak
+//            if (onDroppedNALU) onDroppedNALU(this, nal_unit_type, frameSize);
+//        }
+//        else if (nal_unit_type == 1 && receivedFirstPriorityPackages)
+//        {
+//            // We received a B/P frame
+//            // and have the capacities to decode it -> do it
+//            packageData(pkt, frameSize, presentationTime);
+//            pktBuffer.push(pkt);
+//			if (onAddedNALU) onAddedNALU(this, nal_unit_type, frameSize);
+//        }
+//        else if (nal_unit_type == 7 /* SPS */ ||
+//                 nal_unit_type == 8 /* PPS */ ||
+//                 nal_unit_type == 5 /* IDR-slice */)
+//        {
+//            packageData(pkt, frameSize, presentationTime);
+//            pktBuffer.push(pkt);
+//            receivedFirstPriorityPackages = true;
+//			if (onAddedNALU) onAddedNALU(this, nal_unit_type, frameSize);
+//        }
+//        else
+//        {
+//            pktPool.push(pkt);
+//			if (onDroppedNALU) onDroppedNALU(this, nal_unit_type, frameSize);
+//        }
+//    }
+//    else
+//    {
+//        // We currently don't have the capacities to decode the received frame
+//        
+//        if (nal_unit_type == 7 /* SPS */ ||
+//            nal_unit_type == 8 /* PPS */ ||
+//            nal_unit_type == 5 /* IDR-slice */)
+//        {
+//            // We received a priority NALU but don't have the capacities
+//            // to encode it right now -> safe it for later
+//            AVPacket* priorityNALU = new AVPacket;
+//            packageData(priorityNALU, frameSize, presentationTime);
+//            priorityPackages.push(priorityNALU);
+//        }
+//        else if (nal_unit_type == 1)
+//        {
+//            // We received a B/P frame but don't have the capacities
+//            // to encode it right now.
+//            // We can safely skip it.
+//            
+//            if (onDroppedNALU) onDroppedNALU(this, nal_unit_type, frameSize);
+//        }
+//    }
+//
+//	// Then try getting the next frame:
+//	continuePlaying();
 }
 
 Boolean H264RawPixelsSink::continuePlaying()
@@ -238,11 +295,17 @@ void H264RawPixelsSink::decodeFrameLoop()
 
 		int got_frame;
 		int len = avcodec_decode_video2(codecContext, frame, &got_frame, pkt);
-
+        
+        //std::cout << "len " << len - pkt->size << std::endl;
+        //std::cout << "type: " << int(pkt->data[4] & 0x1F) << std::endl;
+        //std::cout << "time " << pkt->pts << std::endl;
+        
 		pktPool.push(pkt);
 
         if (got_frame == 1)
         {
+            //std::cout << "got frame" << std::endl;
+            
             // We have decoded a frame :) ->
             // Make the frame available to the application
             frame->pts = pkt->pts;
@@ -260,6 +323,8 @@ void H264RawPixelsSink::decodeFrameLoop()
 		}
         else
         {
+            //std::cout << "didn't get frame" << std::endl;
+            
             // No frame could be decoded :( ->
             // Put frame back to the pool so that the next packet will be read
             framePool.push(frame);
