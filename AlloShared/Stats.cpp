@@ -7,6 +7,7 @@
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/thread/thread.hpp>
 
+#include "format.hpp"
 #include "to_human_readable_byte_count.hpp"
 #include "Stats.hpp"
 
@@ -17,7 +18,8 @@ namespace bf = boost::fusion;
 
 Stats::Stats()
     :
-    activeStorage(&storage1), processingStorage(&storage2)
+    activeStorage(&storage1),
+    processingStorage(&storage2)
 {
     
 }
@@ -538,8 +540,19 @@ std::string Stats::summary(bc::microseconds window)
 		sentNALUsPFPSVal[i] = sentNALUsPS(i, window, now);
     }
 	double fpsVal = fps(window, now);
-
+    
+    /*format::Dict dict;
+    for (int i = 0; i < 2; i++)
+    {
+        std::stringstream ss;
+        ss << i;
+        dict(ss.str().c_str(), i+5);
+    }*/
+    
+    
+    
     std::stringstream stream;
+    //stream << format::fmt("The answer is {0} {1}") % dict << std::endl;
     stream << "===============================================================================" << std::endl;
     stream << "Stats for last " << formatDuration(window) << ": " << std::endl;
     stream << "-------------------------------------------------------------------------------" << std::endl;

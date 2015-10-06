@@ -20,6 +20,7 @@ set(HEADERS
 	Stats.hpp
 	to_human_readable_byte_count.hpp
 	Barrier.hpp
+	format.hpp
 )
 
 find_package(Boost
