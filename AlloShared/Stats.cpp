@@ -149,6 +149,41 @@ std::vector<double> Stats::query(std::initializer_list<boost::function<bool (Tim
     return results;
 }
 
+std::vector<double> Stats::query(std::initializer_list<StatVal> statVals)
+{
+    // Create list of makers so that they are active for the time of stats processing
+    std::list<StatVal::FilterAccExtractorMaker> faeMakers;
+    for (StatVal statVal : statVals)
+    {
+        faeMakers.push_back(statVal.filterAccExtractorMaker);
+    }
+    
+    // Make accumulators etc.
+    std::list<StatVal::FilterAccExtractor> faes;
+    for (auto faeMaker : faeMakers)
+    {
+        faes.push_back(faeMaker());
+    }
+    
+    // Process stats
+    for (auto datum : *processingStorage)
+    {
+        for (auto fae : faes)
+        {
+            fae.first(datum);
+        }
+    }
+    
+    // Get stat values
+    std::vector<double> results;
+    results.reserve(faes.size());
+    for (auto fae : faes)
+    {
+        results.push_back(fae.second());
+    }
+    
+    return results;
+}
 
 bc::microseconds Stats::nowSinceEpoch()
 {
@@ -359,27 +394,25 @@ double Stats::sentNALUsPS(int face,
     boost::chrono::microseconds window,
 	boost::chrono::steady_clock::time_point now)
 {
-    auto countSent = query(
-    {
-        andFilter(
-        {
-            timeFilter(window,
-                       now),
-            typeFilter(typeid(NALU)),
-            [](TimeValueDatum datum)
-            {
-                return boost::any_cast<NALU>(datum.value).status == NALU::SENT;
-            },
-			naluFaceFilter(face),
-        })
-    },
-    [](TimeValueDatum datum)
-    {
-        return 0.0;
-    },
-	ba::tag::count());
+    StatVal countSent = StatVal::makeStatVal(andFilter({
+                                                           timeFilter(window,
+                                                                      now),
+                                                           typeFilter(typeid(NALU)),
+                                                           [](TimeValueDatum datum)
+                                                           {
+                                                               return boost::any_cast<NALU>(datum.value).status == NALU::SENT;
+                                                           },
+                                                           naluFaceFilter(face),
+                                                       }),
+                                             [](TimeValueDatum datum)
+                                             {
+                                                 return 0.0;
+                                             },
+                                             ba::tag::count());
+    
+    auto result = query({countSent});
 
-    return countSent[0] / bc::duration_cast<bc::seconds>(window).count();
+    return result[0] / bc::duration_cast<bc::seconds>(window).count();
 }
 
 double Stats::receivedNALUsBitRate(boost::chrono::microseconds window,

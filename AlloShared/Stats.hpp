@@ -43,6 +43,51 @@ public:
     {
     };
     
+    
+    class StatVal
+    {
+    public:
+        template <typename Feature>
+        static StatVal makeStatVal(boost::function<bool (TimeValueDatum)>   filter,
+                                   boost::function<double (TimeValueDatum)> accessor,
+                                   const Feature&                           accumulator)
+        {
+            auto filterAccExtractorMaker = [filter, accessor]()
+            {
+                auto acc = new boost::accumulators::accumulator_set<double, boost::accumulators::features<Feature> >();
+                
+                auto filterAcc = [acc, filter, accessor](Stats::TimeValueDatum datum)
+                {
+                    if (filter(datum))
+                    {
+                        (*acc)(accessor(datum.value));
+                    }
+                };
+                
+                auto extractor = [acc]()
+                {
+                    boost::accumulators::extractor<Feature> ex;
+                    return ex(*acc);
+                };
+                
+                return std::make_pair(filterAcc, extractor);
+            };
+            
+            return StatVal(filterAccExtractorMaker);
+        }
+        
+    private:
+        friend class Stats;
+        
+        typedef std::pair<boost::function<void (Stats::TimeValueDatum)>,  boost::function<double ()> > FilterAccExtractor;
+        typedef boost::function<FilterAccExtractor ()> FilterAccExtractorMaker;
+        
+        StatVal(FilterAccExtractorMaker filterAccExtractorMaker) : filterAccExtractorMaker(filterAccExtractorMaker) {}
+        
+        FilterAccExtractorMaker filterAccExtractorMaker;
+    };
+
+    
     Stats();
 
     // events
@@ -88,6 +133,8 @@ private:
     std::vector<double> query(std::initializer_list<boost::function<bool (TimeValueDatum)> > filters,
                               boost::function<double (TimeValueDatum)> accExtractor,
                               const Features& ... accumulators);
+    
+    std::vector<double> query(std::initializer_list<StatVal> statVals);
     
     boost::function<bool (TimeValueDatum)> timeFilter(
         boost::chrono::microseconds window,
