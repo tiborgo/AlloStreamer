@@ -185,7 +185,7 @@ Stats::StatVal Stats::nalusBitSum       (const std::string&                     
     }),
     [](TimeValueDatum datum)
     {
-        return boost::any_cast<NALU>(datum.value).size * 8.0;
+        return boost::any_cast<NALU>(datum.value).size * 8.0 / 1000000.0;
     },
     ba::tag::sum(),
     name);
@@ -497,7 +497,7 @@ std::string Stats::summary(bc::microseconds window)
     stream << "Stats for last {duration}:" << std::endl;
     stream << "-------------------------------------------------------------------------------" << std::endl;
     stream << "NALU drop rate: {naluDropRate:0.1f}" << std::endl;
-    stream << "received NALUs/s: {receivedNALUsPS-1:0.1f}; {receivedNALUsBitS:0.1f} Bit/s;" << std::endl;
+    stream << "received NALUs/s: {receivedNALUsPS-1:0.1f}; {receivedNALUsBitS:0.1f} MBit/s;" << std::endl;
     for (int j = 0; j < (std::min) (2, faceCount); j++)
     {
         stream << "recvd NALUs/s per face (" << ((j == 0) ? "left" : "right") << "):";
@@ -508,7 +508,7 @@ std::string Stats::summary(bc::microseconds window)
         stream << ";" << std::endl;
     }
     stream << "-------------------------------------------------------------------------------" << std::endl;
-    stream << "processed NALUs/s: {processedNALUsPS-1:0.1f}; {processedNALUsBitS:0.1f} Bit/s;" << std::endl;
+    stream << "processed NALUs/s: {processedNALUsPS-1:0.1f}; {processedNALUsBitS:0.1f} MBit/s;" << std::endl;
     for (int j = 0; j < (std::min) (2, faceCount); j++)
     {
         stream << "prced NALUs/s per face (" << ((j == 0) ? "left" : "right") << "):";
@@ -520,7 +520,7 @@ std::string Stats::summary(bc::microseconds window)
     }
 
     stream << "-------------------------------------------------------------------------------" << std::endl;
-    stream << "sent NALUs/s: {sentNALUsPS-1:0.1f}; {sentNALUsBitS:0.1f} Bit/s;" << std::endl;
+    stream << "sent NALUs/s: {sentNALUsPS-1:0.1f}; {sentNALUsBitS:0.1f} MBit/s;" << std::endl;
     for (int j = 0; j < (std::min) (2, faceCount); j++)
     {
         stream << "sent NALUs/s per face (" << ((j == 0) ? "left" : "right") << "):";
