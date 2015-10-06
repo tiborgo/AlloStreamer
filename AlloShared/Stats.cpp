@@ -15,6 +15,13 @@ namespace ba = boost::accumulators;
 namespace bad = boost::adaptors;
 namespace bf = boost::fusion;
 
+Stats::Stats()
+    :
+    activeStorage(&storage1), processingStorage(&storage2)
+{
+    
+}
+
 boost::function<bool (Stats::TimeValueDatum)> Stats::timeFilter(boost::chrono::microseconds window,
 	boost::chrono::steady_clock::time_point now)
 {
@@ -124,8 +131,7 @@ std::vector<double> Stats::query(std::initializer_list<boost::function<bool (Tim
     auto filterAccExtractors = makeFilterAccs(filters, accExtractor, accs, accumulators...);
     
     {
-        boost::mutex::scoped_lock lock(mutex);
-        for (auto datum : storage)
+        for (auto datum : *processingStorage)
         {
             for (auto filterAcc : filterAccExtractors.first)
             {
@@ -199,7 +205,7 @@ std::string Stats::formatDuration(bc::microseconds duration)
 void Stats::store(const boost::any& datum)
 {
     boost::mutex::scoped_lock lock(mutex);
-    storage.push_back(TimeValueDatum(datum));
+    activeStorage->push_back(TimeValueDatum(datum));
 }
 
 // ###### STATISTICAL VALUES ######
@@ -465,6 +471,18 @@ double Stats::sentNALUsBitRate(boost::chrono::microseconds window,
 
 std::string Stats::summary(bc::microseconds window)
 {
+    {
+        boost::mutex::scoped_lock lock(mutex);
+        
+        // swap storages so that events can still be stored while we calculate the statistics
+        activeStorage      = (std::list<TimeValueDatum>*)((uintptr_t)activeStorage ^ (uintptr_t)processingStorage);
+        processingStorage  = (std::list<TimeValueDatum>*)((uintptr_t)activeStorage ^ (uintptr_t)processingStorage);
+        activeStorage      = (std::list<TimeValueDatum>*)((uintptr_t)activeStorage ^ (uintptr_t)processingStorage);
+        
+        // Empty active storage to remove old data
+        activeStorage->clear();
+    }
+    
 	boost::chrono::steady_clock::time_point now = boost::chrono::steady_clock::now();
 	double naluDropRateVal = naluDropRate(window, now);
 	double receivedNALUsPSVal = receivedNALUsPS(-1, window, now);

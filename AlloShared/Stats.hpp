@@ -42,6 +42,8 @@ public:
     class Cubemap
     {
     };
+    
+    Stats();
 
     // events
     void store(const boost::any& datum);
@@ -76,7 +78,11 @@ public:
 	void stopAutoSummary();
 
 private:
-    std::list<TimeValueDatum> storage;
+    std::list<TimeValueDatum>* activeStorage;
+    std::list<TimeValueDatum>* processingStorage;
+    
+    std::list<TimeValueDatum> storage1;
+    std::list<TimeValueDatum> storage2;
     
 	template <typename... Features>
     std::vector<double> query(std::initializer_list<boost::function<bool (TimeValueDatum)> > filters,
