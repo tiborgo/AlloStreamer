@@ -50,7 +50,8 @@ public:
         template <typename Feature>
         static StatVal makeStatVal(boost::function<bool (TimeValueDatum)>   filter,
                                    boost::function<double (TimeValueDatum)> accessor,
-                                   const Feature&                           accumulator)
+                                   const Feature&                           accumulator,
+                                   const std::string&                       name)
         {
             auto filterAccExtractorMaker = [filter, accessor]()
             {
@@ -73,7 +74,7 @@ public:
                 return std::make_pair(filterAcc, extractor);
             };
             
-            return StatVal(filterAccExtractorMaker);
+            return StatVal(filterAccExtractorMaker, name);
         }
         
     private:
@@ -82,9 +83,14 @@ public:
         typedef std::pair<boost::function<void (Stats::TimeValueDatum)>,  boost::function<double ()> > FilterAccExtractor;
         typedef boost::function<FilterAccExtractor ()> FilterAccExtractorMaker;
         
-        StatVal(FilterAccExtractorMaker filterAccExtractorMaker) : filterAccExtractorMaker(filterAccExtractorMaker) {}
+        StatVal(FilterAccExtractorMaker filterAccExtractorMaker,
+                const std::string& name)
+                :
+                filterAccExtractorMaker(filterAccExtractorMaker),
+                name(name) {}
         
         FilterAccExtractorMaker filterAccExtractorMaker;
+        std::string name;
     };
 
     
@@ -134,7 +140,7 @@ private:
                               boost::function<double (TimeValueDatum)> accExtractor,
                               const Features& ... accumulators);
     
-    std::vector<double> query(std::initializer_list<StatVal> statVals);
+    std::map<std::string, double> query(std::initializer_list<StatVal> statVals);
     
     boost::function<bool (TimeValueDatum)> timeFilter(
         boost::chrono::microseconds window,

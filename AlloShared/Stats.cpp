@@ -151,7 +151,7 @@ std::vector<double> Stats::query(std::initializer_list<boost::function<bool (Tim
     return results;
 }
 
-std::vector<double> Stats::query(std::initializer_list<StatVal> statVals)
+std::map<std::string, double> Stats::query(std::initializer_list<StatVal> statVals)
 {
     // Create list of makers so that they are active for the time of stats processing
     std::list<StatVal::FilterAccExtractorMaker> faeMakers;
@@ -177,11 +177,12 @@ std::vector<double> Stats::query(std::initializer_list<StatVal> statVals)
     }
     
     // Get stat values
-    std::vector<double> results;
-    results.reserve(faes.size());
-    for (auto fae : faes)
+    std::map<std::string, double> results;
+    auto faesIt     = faes.begin();
+    auto statValsIt = statVals.begin();
+    for (; faesIt != faes.end() && statValsIt != statVals.end(); ++faesIt, ++statValsIt)
     {
-        results.push_back(fae.second());
+        results[statValsIt->name] = faesIt->second();
     }
     
     return results;
@@ -410,11 +411,12 @@ double Stats::sentNALUsPS(int face,
                                              {
                                                  return 0.0;
                                              },
-                                             ba::tag::count());
+                                             ba::tag::count(),
+                                             "countSent");
     
     auto result = query({countSent});
 
-    return result[0] / bc::duration_cast<bc::seconds>(window).count();
+    return result["countSent"] / bc::duration_cast<bc::seconds>(window).count();
 }
 
 double Stats::receivedNALUsBitRate(boost::chrono::microseconds window,
