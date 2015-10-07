@@ -8,6 +8,7 @@
 #include "AlloShared/StatsUtils.hpp"
 #include "AlloReceiver/AlloReceiver.h"
 #include "AlloShared/to_human_readable_byte_count.hpp"
+#include "AlloReceiver/Stats.hpp"
 
 #include "Renderer.hpp"
 
@@ -55,7 +56,10 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
     callback = boost::bind(&onAddedNALU, _1, _2, _3, _4);
     cubemapSource->setOnAddedNALU(callback);
     
-    stats.autoSummary(boost::chrono::seconds(10));
+    stats.autoSummary(boost::chrono::seconds(10),
+					  AlloReceiver::statValsMaker,
+					  AlloReceiver::postProcessorMaker,
+					  AlloReceiver::formatStringMaker);
     
     ::cubemapSource = cubemapSource;
     

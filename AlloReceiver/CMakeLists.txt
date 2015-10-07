@@ -14,6 +14,7 @@ set(HEADERS
     #Source.hpp
     H264CubemapSource.h
     RTSPCubemapSourceClient.hpp
+	Stats.hpp
 )
 
 

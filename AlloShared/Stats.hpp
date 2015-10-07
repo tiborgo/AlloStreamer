@@ -68,7 +68,6 @@ public:
         FilterAccExtractorMaker filterAccExtractorMaker;
         std::string name;
     };
-
     
     Stats();
 
@@ -76,8 +75,23 @@ public:
     void store(const boost::any& datum);
     
     // utility
-    std::string summary(boost::chrono::microseconds window);
-    void autoSummary(boost::chrono::microseconds frequency);
+
+	typedef boost::function<void(std::map<std::string, double>&)> PostProcessor;
+	typedef boost::function<std::list<Stats::StatVal>(boost::chrono::microseconds,
+		                                              boost::chrono::steady_clock::time_point)> StatValsMaker;
+	typedef boost::function<PostProcessor(boost::chrono::microseconds,
+		                                  boost::chrono::steady_clock::time_point)> PostProcessorMaker;
+	typedef boost::function<std::string (boost::chrono::microseconds,
+		                                 boost::chrono::steady_clock::time_point)> FormatStringMaker;
+
+	std::string summary(boost::chrono::microseconds window,
+		                StatValsMaker               statValsMaker,
+		                PostProcessorMaker          postProcessorMaker,
+		                FormatStringMaker           formatStringMaker);
+    void autoSummary(boost::chrono::microseconds frequency,
+					 StatValsMaker               statValsMaker,
+					 PostProcessorMaker          postProcessorMaker,
+					 FormatStringMaker           formatStringMaker);
 	void stopAutoSummary();
 
 private:
@@ -98,6 +112,9 @@ private:
     boost::mutex mutex;
     boost::thread autoSummaryThread;
 	bool stopAutoSummary_;
-    void autoSummaryLoop(boost::chrono::microseconds frequency);
+    void autoSummaryLoop(boost::chrono::microseconds frequency,
+						 StatValsMaker               statValsMaker,
+						 PostProcessorMaker          postProcessorMaker,
+						 FormatStringMaker           formatStringMaker);
 };
 

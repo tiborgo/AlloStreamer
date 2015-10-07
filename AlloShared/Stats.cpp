@@ -120,7 +120,10 @@ void Stats::store(const boost::any& datum)
 
 // ###### UTILITY ######
 
-std::string Stats::summary(boost::chrono::microseconds window)
+std::string Stats::summary(boost::chrono::microseconds window,
+	                       StatValsMaker               statValsMaker,
+	                       PostProcessorMaker          postProcessorMaker,
+	                       FormatStringMaker           formatStringMaker)
 {
     {
         boost::mutex::scoped_lock lock(mutex);
@@ -132,167 +135,9 @@ std::string Stats::summary(boost::chrono::microseconds window)
     }
     
 	boost::chrono::steady_clock::time_point now = boost::chrono::steady_clock::now();
-
-	std::list<StatVal> statVals;
-
-	statVals.insert(statVals.end(),
-	{
-		StatsUtils::cubemapsCount("cubemapsCount",
-			window,
-			now),
-		StatsUtils::nalusBitSum("droppedNALUsBitSum",
-			-1,
-			StatsUtils::NALU::DROPPED,
-			window,
-			now),
-		StatsUtils::nalusBitSum("addedNALUsBitSum",
-			-1,
-			StatsUtils::NALU::ADDED,
-			window,
-			now),
-		StatsUtils::nalusBitSum("sentNALUsBitSum",
-			-1,
-			StatsUtils::NALU::SENT,
-			window,
-			now)
-	});
-
-	int faceCount = 12;
-	for (int face = -1; face < faceCount; face++)
-	{
-		statVals.insert(statVals.end(),
-		{
-			StatsUtils::facesCount("facesCount" + std::to_string(face),
-				face,
-				window,
-				now),
-			StatsUtils::nalusCount("droppedNALUsCount" + std::to_string(face),
-				face,
-				StatsUtils::NALU::DROPPED,
-				window,
-				now),
-			StatsUtils::nalusCount("addedNALUsCount" + std::to_string(face),
-				face,
-				StatsUtils::NALU::ADDED,
-				window,
-				now),
-			StatsUtils::nalusCount("sentNALUsCount" + std::to_string(face),
-				face,
-				StatsUtils::NALU::SENT,
-				window,
-				now)
-		});
-	}
-
-	auto results = query(statVals,
-		[window, faceCount](std::map<std::string, double>& results)
-		{
-			unsigned long seconds = boost::chrono::duration_cast<boost::chrono::seconds>(window).count();
-
-			results.insert(
-			{
-				{
-					"naluDropRate",
-					results["droppedNALUsCount-1"] / results["addedNALUsCount-1"]
-				},
-				{
-					"fps",
-					results["cubemapsCount"] / seconds
-				},
-				{
-					"receivedNALUsBitS",
-					(results["droppedNALUsBitSum"] + results["addedNALUsBitSum"]) / seconds
-				},
-				{
-					"processedNALUsBitS",
-					results["addedNALUsBitSum"] / seconds
-				},
-				{
-					"sentNALUsBitS",
-					results["sentNALUsBitSum"] / seconds
-				},
-			});
-
-			for (int face = -1; face < faceCount; face++)
-			{
-				std::string faceStr = std::to_string(face);
-
-				results.insert(
-				{
-					{
-						"facesPS" + faceStr,
-						results["facesCount" + faceStr] / seconds
-					},
-					{
-						"receivedNALUsPS" + faceStr,
-						(results["droppedNALUsCount" + faceStr] + results["addedNALUsCount" + faceStr]) / seconds
-					},
-					{
-						"processedNALUsPS" + faceStr,
-						results["addedNALUsCount" + faceStr] / seconds
-					},
-					{
-						"sentNALUsPS" + faceStr,
-						results["sentNALUsCount" + faceStr] / seconds
-					},
-				});
-			}
-	});
-    
-    std::stringstream stream;
-    stream << "===============================================================================" << std::endl;
-    stream << "Stats for last {duration}:" << std::endl;
-    stream << "-------------------------------------------------------------------------------" << std::endl;
-    stream << "NALU drop rate: {naluDropRate:0.1f}" << std::endl;
-    stream << "received NALUs/s: {receivedNALUsPS-1:0.1f}; {receivedNALUsBitS:0.1f} MBit/s;" << std::endl;
-    for (int j = 0; j < (std::min) (2, faceCount); j++)
-    {
-        stream << "recvd NALUs/s per face (" << ((j == 0) ? "left" : "right") << "):";
-        for (int i = 0; i < (std::min) (6, faceCount - j * 6); i++)
-        {
-            stream << "\t{receivedNALUsPS" << j * 6 + i << ":0.1f}";
-        }
-        stream << ";" << std::endl;
-    }
-    stream << "-------------------------------------------------------------------------------" << std::endl;
-    stream << "processed NALUs/s: {processedNALUsPS-1:0.1f}; {processedNALUsBitS:0.1f} MBit/s;" << std::endl;
-    for (int j = 0; j < (std::min) (2, faceCount); j++)
-    {
-        stream << "prced NALUs/s per face (" << ((j == 0) ? "left" : "right") << "):";
-        for (int i = 0; i < (std::min) (6, faceCount - j * 6); i++)
-        {
-            stream << "\t{processedNALUsPS" << j * 6 + i << ":0.1f}";
-        }
-        stream << ";" << std::endl;
-    }
-
-    stream << "-------------------------------------------------------------------------------" << std::endl;
-    stream << "sent NALUs/s: {sentNALUsPS-1:0.1f}; {sentNALUsBitS:0.1f} MBit/s;" << std::endl;
-    for (int j = 0; j < (std::min) (2, faceCount); j++)
-    {
-        stream << "sent NALUs/s per face (" << ((j == 0) ? "left" : "right") << "):";
-        for (int i = 0; i < (std::min) (6, faceCount - j * 6); i++)
-        {
-            stream << "\t{sentNALUsPS" << j * 6 + i << ":0.1f}";
-        }
-        stream << ";" << std::endl;
-    }
-
-	stream << "-------------------------------------------------------------------------------" << std::endl;
-	stream << "cubemap face 0-5 (left ) fps:"; 
-	for (int i = 0; i < 6; i++)
-    {
-        stream << "\t{facesPS" << i << ":0.1f}";
-    }
-    stream << ";" << std::endl;
-
-    stream << "cubemap face 0-5 (right) fps:";
-    for (int i = 6; i < 12; i++)
-    {
-        stream << "\t{facesPS" << i << ":0.1f}";
-    }
-    stream << ";" << std::endl;
-    stream << "fps: {fps:0.1f}" << std::endl;
+	
+	auto results = query(statValsMaker(window, now),
+		                 postProcessorMaker(window, now));
     
     format::Dict dict;
     for (auto result : results)
@@ -301,7 +146,7 @@ std::string Stats::summary(boost::chrono::microseconds window)
     }
     dict("duration", formatDuration(window));
 
-	std::string summary = format::fmt(stream.str()) % dict;
+	std::string summary = format::fmt(formatStringMaker(window, now)) % dict;
 
 	// Empty active storage to remove old data
 	processingStorage->clear();
@@ -309,7 +154,10 @@ std::string Stats::summary(boost::chrono::microseconds window)
 	return summary;
 }
 
-void Stats::autoSummaryLoop(boost::chrono::microseconds frequency)
+void Stats::autoSummaryLoop(boost::chrono::microseconds frequency,
+							StatValsMaker               statValsMaker,
+							PostProcessorMaker          postProcessorMaker,
+							FormatStringMaker           formatStringMaker)
 {
     auto summaryTime = boost::chrono::system_clock::now();
 
@@ -322,14 +170,17 @@ void Stats::autoSummaryLoop(boost::chrono::microseconds frequency)
         {
             return;
         }
-        std::cout << summary(frequency);
+		std::cout << summary(frequency, statValsMaker, postProcessorMaker, formatStringMaker);
     }
 }
 
-void Stats::autoSummary(boost::chrono::microseconds frequency)
+void Stats::autoSummary(boost::chrono::microseconds frequency,
+						StatValsMaker               statValsMaker,
+						PostProcessorMaker          postProcessorMaker,
+						FormatStringMaker           formatStringMaker)
 {
     stopAutoSummary_ = false;
-    autoSummaryThread = boost::thread(boost::bind(&Stats::autoSummaryLoop, this, frequency));
+	autoSummaryThread = boost::thread(boost::bind(&Stats::autoSummaryLoop, this, frequency, statValsMaker, postProcessorMaker, formatStringMaker));
 }
 
 void Stats::stopAutoSummary()

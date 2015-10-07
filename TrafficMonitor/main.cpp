@@ -5,6 +5,8 @@
 #include <boost/bind.hpp>
 #include <boost/algorithm/string/join.hpp>
 
+#include "AlloReceiver/Stats.hpp"
+
 static Stats stats;
 
 class receiver
@@ -98,7 +100,10 @@ int main(int argc, char* argv[])
 				                         i));
 		}
 
-		stats.autoSummary(boost::chrono::seconds(statsInterval));
+		stats.autoSummary(boost::chrono::seconds(statsInterval),
+			              AlloReceiver::statValsMaker,
+						  AlloReceiver::postProcessorMaker,
+						  AlloReceiver::formatStringMaker);
 
 		std::vector<boost::thread> io_threads;
 
