@@ -526,7 +526,7 @@ std::string Stats::summary(bc::microseconds window)
         stream << "sent NALUs/s per face (" << ((j == 0) ? "left" : "right") << "):";
         for (int i = 0; i < (std::min) (6, faceCount - j * 6); i++)
         {
-            stream << "\t{processedNALUsPS" << j * 6 + i << ":0.1f}";
+            stream << "\t{sentNALUsPS" << j * 6 + i << ":0.1f}";
         }
         stream << ";" << std::endl;
     }
