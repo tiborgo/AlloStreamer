@@ -24,6 +24,10 @@
 //ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //DEALINGS IN THE SOFTWARE.
 
+#ifdef _WIN32
+#define snprintf _snprintf
+#endif
+
 #if !defined(FORMAT_HPP_INCLUDED)
 #define FORMAT_HPP_INCLUDED
 
@@ -245,7 +249,7 @@ namespace format
         Dict& operator()(const std::string& name, const T& value)
         {
             ValueWrapperBase *vw = new ValueWrapper<T>(value);
-            ValueWrapperBase *& p(env[name]);
+            ValueWrapperBase *& p = env[name];
             delete p;
             p = vw;
             return *this;

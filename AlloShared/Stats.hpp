@@ -71,7 +71,7 @@ public:
                     return ex(*acc);
                 };
                 
-                return std::make_pair(filterAcc, extractor);
+				return FilterAccExtractor(filterAcc, extractor);
             };
             
             return StatVal(filterAccExtractorMaker, name);
