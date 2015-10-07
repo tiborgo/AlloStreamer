@@ -20,30 +20,6 @@ public:
 		const boost::any value;
     };
     
-    class NALU
-    {
-    public:
-        enum Status {DROPPED, ADDED, PROCESSED, SENT};
-        
-        NALU(int type, size_t size, int face, Status status) : type(type), size(size), face(face), status(status) {}
-        int type;
-        size_t size;
-        int face;
-        Status status;
-    };
-    
-    class CubemapFace
-    {
-    public:
-        CubemapFace(int face) : face(face) {}
-        int face;
-    };
-
-    class Cubemap
-    {
-    };
-    
-    
     class StatVal
     {
     public:
@@ -95,25 +71,6 @@ public:
 
     
     Stats();
-    
-    // #### STAT VALS ####
-    StatVal nalusBitSum       (const std::string&                      name,
-                               int                                     face,
-                               NALU::Status                            status,
-                               boost::chrono::microseconds             window,
-                               boost::chrono::steady_clock::time_point now);
-    StatVal nalusCount        (const std::string&                      name,
-                               int                                     face,
-                               NALU::Status                            status,
-                               boost::chrono::microseconds             window,
-                               boost::chrono::steady_clock::time_point now);
-    StatVal cubemapsCount     (const std::string&                      name,
-                               boost::chrono::microseconds             window,
-                               boost::chrono::steady_clock::time_point now);
-    StatVal facesCount        (const std::string&                      name,
-                               int                                     face,
-                               boost::chrono::microseconds             window,
-                               boost::chrono::steady_clock::time_point now);
 
     // events
     void store(const boost::any& datum);
@@ -132,20 +89,9 @@ private:
     
     std::map<std::string, double> query(std::initializer_list<StatVal>                         statVals,
                                         boost::function<void (std::map<std::string, double>&)> postCalculator);
-
 	std::map<std::string, double> query(std::list<StatVal>                                    statVals,
 									    boost::function<void(std::map<std::string, double>&)> postCalculator);
-    
-    boost::function<bool (TimeValueDatum)> timeFilter(
-        boost::chrono::microseconds window,
-        boost::chrono::steady_clock::time_point now);
-    
-    boost::function<bool (TimeValueDatum)> typeFilter(const std::type_info& type);
-	boost::function<bool (TimeValueDatum)> naluFaceFilter(int face);
-    boost::function<bool (TimeValueDatum)> naluStatusFilter(NALU::Status status);
-    boost::function<bool (TimeValueDatum)> andFilter(std::initializer_list<boost::function<bool (TimeValueDatum)> > filters);
-    
-    boost::chrono::microseconds nowSinceEpoch();
+  
     
     std::string formatDuration(boost::chrono::microseconds duration);
     

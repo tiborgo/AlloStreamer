@@ -5,7 +5,7 @@
 #include <boost/ref.hpp>
 
 #include "AlloReceiver/RTSPCubemapSourceClient.hpp"
-#include "AlloShared/Stats.hpp"
+#include "AlloShared/StatsUtils.hpp"
 #include "AlloReceiver/AlloReceiver.h"
 #include "AlloShared/to_human_readable_byte_count.hpp"
 
@@ -22,30 +22,30 @@ StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
     for (int i = 0; i < cubemap->getEye(0)->getFacesCount(); i++)
     {
-        stats.store(Stats::CubemapFace(i));
+        stats.store(StatsUtils::CubemapFace(i));
     }
-    stats.store(Stats::Cubemap());
+	stats.store(StatsUtils::Cubemap());
     return cubemap;
 }
 
 void onDroppedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
 {
-    stats.store(Stats::NALU(type, size, face, Stats::NALU::DROPPED));
+	stats.store(StatsUtils::NALU(type, size, face, StatsUtils::NALU::DROPPED));
 }
 
 void onAddedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
 {
-    stats.store(Stats::NALU(type, size, face, Stats::NALU::ADDED));
+	stats.store(StatsUtils::NALU(type, size, face, StatsUtils::NALU::ADDED));
 }
 
 void onDisplayedCubemapFace(Renderer* renderer, int face)
 {
-    stats.store(Stats::CubemapFace(face));
+	stats.store(StatsUtils::CubemapFace(face));
 }
 
 void onDisplayedFrame(Renderer* renderer)
 {
-    stats.store(Stats::Cubemap());
+	stats.store(StatsUtils::Cubemap());
 }
 
 void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)

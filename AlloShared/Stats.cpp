@@ -1,20 +1,12 @@
 #include <boost/chrono/system_clocks.hpp>
-#include <boost/accumulators/statistics/count.hpp>
-#include <boost/accumulators/statistics/sum.hpp>
 #include <boost/bind.hpp>
 #include <boost/ref.hpp>
-#include <boost/range/adaptors.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/thread/thread.hpp>
 
 #include "format.hpp"
 #include "to_human_readable_byte_count.hpp"
 #include "Stats.hpp"
-
-namespace bc = boost::chrono;
-namespace ba = boost::accumulators;
-namespace bad = boost::adaptors;
-namespace bf = boost::fusion;
+#include "StatsUtils.hpp"
 
 Stats::Stats()
     :
@@ -22,58 +14,6 @@ Stats::Stats()
     processingStorage(&storage2)
 {
     
-}
-
-boost::function<bool (Stats::TimeValueDatum)> Stats::timeFilter(boost::chrono::microseconds window,
-	boost::chrono::steady_clock::time_point now)
-{
-    return [window, now](Stats::TimeValueDatum datum)
-    {
-		return (now - datum.time) < window;
-    };
-}
-
-boost::function<bool (Stats::TimeValueDatum)> Stats::typeFilter(const std::type_info& type)
-{
-    return [&type](TimeValueDatum datum)
-    {
-        return datum.value.type() == type;
-    };
-}
-
-boost::function<bool (Stats::TimeValueDatum)> Stats::naluFaceFilter(int face)
-{
-	return [face](TimeValueDatum datum)
-	{
-        return (face == -1) ? true : boost::any_cast<NALU>(datum.value).face == face;
-	};
-}
-
-boost::function<bool (Stats::TimeValueDatum)> Stats::naluStatusFilter(NALU::Status status)
-{
-    return [status](TimeValueDatum datum)
-    {
-        return boost::any_cast<NALU>(datum.value).status == status;
-    };
-}
-
-boost::function<bool (Stats::TimeValueDatum)> Stats::andFilter(std::initializer_list<boost::function<bool (TimeValueDatum)> > filtersList)
-{
-    // Make filters permanent
-    std::vector<boost::function<bool (TimeValueDatum)> > filters(filtersList.size());
-    std::copy(filtersList.begin(), filtersList.end(), filters.begin());
-    
-    return [filters](TimeValueDatum datum)
-    {
-        for (auto filter : filters)
-        {
-            if (!filter(datum))
-            {
-                return false;
-            }
-        }
-        return true;
-    };
 }
 
 std::map<std::string, double> Stats::query(std::initializer_list<StatVal>                         statVals,
@@ -125,17 +65,12 @@ std::map<std::string, double> Stats::query(std::list<StatVal>                   
 	return results;
 }
 
-bc::microseconds Stats::nowSinceEpoch()
-{
-    return bc::duration_cast<bc::microseconds>(bc::system_clock::now().time_since_epoch());
-}
-
-std::string Stats::formatDuration(bc::microseconds duration)
+std::string Stats::formatDuration(boost::chrono::microseconds duration)
 {
     std::stringstream result;
-    bc::microseconds remainder(duration);
+	boost::chrono::microseconds remainder(duration);
 
-    bc::hours h = bc::duration_cast<bc::hours>(remainder);
+	boost::chrono::hours h = boost::chrono::duration_cast<boost::chrono::hours>(remainder);
 
     if (h.count() > 0)
     {
@@ -143,28 +78,28 @@ std::string Stats::formatDuration(bc::microseconds duration)
         remainder -= h;
     }
 
-    bc::minutes m = bc::duration_cast<bc::minutes>(remainder);
+	boost::chrono::minutes m = boost::chrono::duration_cast<boost::chrono::minutes>(remainder);
     if (m.count() > 0)
     {
         result << m.count() << "m ";
         remainder -= m;
     }
 
-    bc::seconds s = bc::duration_cast<bc::seconds>(remainder);
+	boost::chrono::seconds s = boost::chrono::duration_cast<boost::chrono::seconds>(remainder);
     if (s.count() > 0)
     {
         result << s.count() << "s ";
         remainder -= s;
     }
 
-    bc::milliseconds ms = bc::duration_cast<bc::milliseconds>(remainder);
+	boost::chrono::milliseconds ms = boost::chrono::duration_cast<boost::chrono::milliseconds>(remainder);
     if (ms.count() > 0)
     {
         result << ms.count() << "ms ";
         remainder -= ms;
     }
 
-    bc::microseconds us = bc::duration_cast<bc::microseconds>(remainder);
+	boost::chrono::microseconds us = boost::chrono::duration_cast<boost::chrono::microseconds>(remainder);
     if (us.count() > 0)
     {
         result << us.count() << "µs ";
@@ -174,94 +109,6 @@ std::string Stats::formatDuration(bc::microseconds duration)
     std::string format = result.str();
     return format.substr(0, format.size() - 1);
 }
-
-// ###### STAT VALS ######
-
-Stats::StatVal Stats::nalusBitSum       (const std::string&                      name,
-                                         int                                     face,
-                                         NALU::Status                            status,
-                                         boost::chrono::microseconds             window,
-                                         boost::chrono::steady_clock::time_point now)
-{
-    return StatVal::makeStatVal(andFilter(
-    {
-        timeFilter(window,
-                   now),
-        typeFilter(typeid(NALU)),
-        naluStatusFilter(status),
-        naluFaceFilter(face)
-    }),
-    [](TimeValueDatum datum)
-    {
-        return boost::any_cast<NALU>(datum.value).size * 8.0 / 1000000.0;
-    },
-    ba::tag::sum(),
-    name);
-}
-
-Stats::StatVal Stats::nalusCount        (const std::string&                      name,
-                                         int                                     face,
-                                         NALU::Status                            status,
-                                         boost::chrono::microseconds             window,
-                                         boost::chrono::steady_clock::time_point now)
-{
-    return StatVal::makeStatVal(andFilter(
-    {
-        timeFilter(window,
-                   now),
-        typeFilter(typeid(NALU)),
-        naluStatusFilter(status),
-        naluFaceFilter(face)
-    }),
-    [](TimeValueDatum datum)
-    {
-        return 0.0;
-    },
-    ba::tag::count(),
-    name);
-}
-
-Stats::StatVal Stats::cubemapsCount     (const std::string&                      name,
-                                         boost::chrono::microseconds             window,
-                                         boost::chrono::steady_clock::time_point now)
-{
-    return StatVal::makeStatVal(andFilter(
-    {
-        timeFilter(window,
-                   now),
-        typeFilter(typeid(Cubemap))
-    }),
-    [](TimeValueDatum datum)
-    {
-        return 0.0;
-    },
-    ba::tag::count(),
-    name);
-}
-
-Stats::StatVal Stats::facesCount        (const std::string&                      name,
-                                         int                                     face,
-                                         boost::chrono::microseconds             window,
-                                         boost::chrono::steady_clock::time_point now)
-{
-    return StatVal::makeStatVal(andFilter(
-    {
-        timeFilter(window,
-                   now),
-        typeFilter(typeid(CubemapFace)),
-        [face](TimeValueDatum datum)
-        {
-            return (face == -1) ? true : boost::any_cast<CubemapFace>(datum.value).face == face;
-        }
-    }),
-    [](TimeValueDatum datum)
-    {
-        return 0.0;
-    },
-    ba::tag::count(),
-    name);
-}
-
 
 // ###### EVENTS ######
 
@@ -273,7 +120,7 @@ void Stats::store(const boost::any& datum)
 
 // ###### UTILITY ######
 
-std::string Stats::summary(bc::microseconds window)
+std::string Stats::summary(boost::chrono::microseconds window)
 {
     {
         boost::mutex::scoped_lock lock(mutex);
@@ -290,22 +137,22 @@ std::string Stats::summary(bc::microseconds window)
 
 	statVals.insert(statVals.end(),
 	{
-		cubemapsCount("cubemapsCount",
+		StatsUtils::cubemapsCount("cubemapsCount",
 			window,
 			now),
-		nalusBitSum("droppedNALUsBitSum",
+		StatsUtils::nalusBitSum("droppedNALUsBitSum",
 			-1,
-			NALU::DROPPED,
+			StatsUtils::NALU::DROPPED,
 			window,
 			now),
-		nalusBitSum("addedNALUsBitSum",
+		StatsUtils::nalusBitSum("addedNALUsBitSum",
 			-1,
-			NALU::ADDED,
+			StatsUtils::NALU::ADDED,
 			window,
 			now),
-		nalusBitSum("sentNALUsBitSum",
+		StatsUtils::nalusBitSum("sentNALUsBitSum",
 			-1,
-			NALU::SENT,
+			StatsUtils::NALU::SENT,
 			window,
 			now)
 	});
@@ -315,23 +162,23 @@ std::string Stats::summary(bc::microseconds window)
 	{
 		statVals.insert(statVals.end(),
 		{
-			facesCount("facesCount" + std::to_string(face),
+			StatsUtils::facesCount("facesCount" + std::to_string(face),
 				face,
 				window,
 				now),
-			nalusCount("droppedNALUsCount" + std::to_string(face),
+			StatsUtils::nalusCount("droppedNALUsCount" + std::to_string(face),
 				face,
-				NALU::DROPPED,
+				StatsUtils::NALU::DROPPED,
 				window,
 				now),
-			nalusCount("addedNALUsCount" + std::to_string(face),
+			StatsUtils::nalusCount("addedNALUsCount" + std::to_string(face),
 				face,
-				NALU::ADDED,
+				StatsUtils::NALU::ADDED,
 				window,
 				now),
-			nalusCount("sentNALUsCount" + std::to_string(face),
+			StatsUtils::nalusCount("sentNALUsCount" + std::to_string(face),
 				face,
-				NALU::SENT,
+				StatsUtils::NALU::SENT,
 				window,
 				now)
 		});
@@ -340,7 +187,7 @@ std::string Stats::summary(bc::microseconds window)
 	auto results = query(statVals,
 		[window, faceCount](std::map<std::string, double>& results)
 		{
-			unsigned long seconds = bc::duration_cast<bc::seconds>(window).count();
+			unsigned long seconds = boost::chrono::duration_cast<boost::chrono::seconds>(window).count();
 
 			results.insert(
 			{

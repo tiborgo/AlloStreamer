@@ -18,7 +18,7 @@ extern "C"
 #include "AlloShared/Binoculars.hpp"
 #include "AlloShared/config.h"
 #include "AlloShared/Process.h"
-#include "AlloShared/Stats.hpp"
+#include "AlloShared/StatsUtils.hpp"
 #include "config.h"
 #include "RawPixelSource.hpp"
 #include "CubemapExtractionPlugin/CubemapExtractionPlugin.h"
@@ -70,7 +70,7 @@ static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms, std:
 
 void onSentNALU(RawPixelSource*, uint8_t type, size_t size, int eye, int face)
 {
-    stats.store(Stats::NALU(type, size, eye * 6 + face, Stats::NALU::SENT));
+	stats.store(StatsUtils::NALU(type, size, eye * 6 + face, StatsUtils::NALU::SENT));
 }
 
 void addFaceSubstreams0(void*)

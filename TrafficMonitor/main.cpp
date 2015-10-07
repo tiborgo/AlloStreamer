@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include <boost/asio.hpp>
-#include "AlloShared/Stats.hpp"
+#include "AlloShared/StatsUtils.hpp"
 #include <boost/bind.hpp>
 #include <boost/algorithm/string/join.hpp>
 
@@ -40,7 +40,7 @@ public:
 	{
 		if (!error)
 		{
-            stats.store(Stats::NALU(face, bytes_recvd, face, Stats::NALU::SENT));
+			stats.store(StatsUtils::NALU(face, bytes_recvd, face, StatsUtils::NALU::SENT));
 
 			socket_.async_receive_from(
 				boost::asio::buffer(data_, max_length), sender_endpoint_,
