@@ -79,42 +79,50 @@ boost::function<bool (Stats::TimeValueDatum)> Stats::andFilter(std::initializer_
 std::map<std::string, double> Stats::query(std::initializer_list<StatVal>                         statVals,
                                            boost::function<void (std::map<std::string, double>&)> postCalculator)
 {
-    // Create list of makers so that they are active for the time of stats processing
-    std::list<StatVal::FilterAccExtractorMaker> faeMakers;
-    for (StatVal statVal : statVals)
-    {
-        faeMakers.push_back(statVal.filterAccExtractorMaker);
-    }
-    
-    // Make accumulators etc.
-    std::list<StatVal::FilterAccExtractor> faes;
-    for (auto faeMaker : faeMakers)
-    {
-        faes.push_back(faeMaker());
-    }
-    
-    // Process stats
-    for (auto datum : *processingStorage)
-    {
-        for (auto fae : faes)
-        {
-            fae.first(datum);
-        }
-    }
-    
-    // Get stat values
-    std::map<std::string, double> results;
-    auto faesIt     = faes.begin();
-    auto statValsIt = statVals.begin();
-    for (; faesIt != faes.end() && statValsIt != statVals.end(); ++faesIt, ++statValsIt)
-    {
-        results[statValsIt->name] = faesIt->second();
-    }
-    
-    // Make post calculations
-    postCalculator(results);
-    
-    return results;
+	std::list<StatVal> statValList(statVals.begin(), statVals.end());
+	return query(statValList,
+		         postCalculator);
+}
+
+std::map<std::string, double> Stats::query(std::list<StatVal>                         statVals,
+	                                       boost::function<void(std::map<std::string, double>&)> postCalculator)
+{
+	// Create list of makers so that they are active for the time of stats processing
+	std::list<StatVal::FilterAccExtractorMaker> faeMakers;
+	for (StatVal statVal : statVals)
+	{
+		faeMakers.push_back(statVal.filterAccExtractorMaker);
+	}
+
+	// Make accumulators etc.
+	std::list<StatVal::FilterAccExtractor> faes;
+	for (auto faeMaker : faeMakers)
+	{
+		faes.push_back(faeMaker());
+	}
+
+	// Process stats
+	for (auto datum : *processingStorage)
+	{
+		for (auto fae : faes)
+		{
+			fae.first(datum);
+		}
+	}
+
+	// Get stat values
+	std::map<std::string, double> results;
+	auto faesIt = faes.begin();
+	auto statValsIt = statVals.begin();
+	for (; faesIt != faes.end() && statValsIt != statVals.end(); ++faesIt, ++statValsIt)
+	{
+		results[statValsIt->name] = faesIt->second();
+	}
+
+	// Make post calculations
+	postCalculator(results);
+
+	return results;
 }
 
 bc::microseconds Stats::nowSinceEpoch()
@@ -263,183 +271,6 @@ void Stats::store(const boost::any& datum)
     activeStorage->push_back(TimeValueDatum(datum));
 }
 
-// ###### STATISTICAL VALUES ######
-
-std::map<std::string, double> Stats::naluDropRate(bc::microseconds window,
-                                                  boost::chrono::steady_clock::time_point now)
-{
-    return query(
-    {
-        nalusCount("droppedNALUsCount",
-                   -1,
-                   NALU::DROPPED,
-                   window,
-                   now),
-        nalusCount("addedNALUsCount",
-                   -1,
-                   NALU::ADDED,
-                   window,
-                   now),
-    },
-    [](std::map<std::string, double>& results)
-    {
-        results["naluDropRate"] = results["droppedNALUsCount"] / results["addedNALUsCount"];
-    });
-}
-
-std::map<std::string, double> Stats::facesPS(int face,
-                                             boost::chrono::microseconds window,
-                                             boost::chrono::steady_clock::time_point now)
-{
-    return query(
-    {
-        facesCount("facesCount" + std::to_string(face),
-                   face,
-                   window,
-                   now)
-    },
-    [window, face](std::map<std::string, double>& results)
-    {
-        results["facesPS" + std::to_string(face)] = results["facesCount" + std::to_string(face)] /
-            bc::duration_cast<bc::seconds>(window).count();
-    });
-}
-
-std::map<std::string, double> Stats::fps(boost::chrono::microseconds window,
-                                         boost::chrono::steady_clock::time_point now)
-{
-    return query(
-    {
-        cubemapsCount("cubemapsCount",
-                      window,
-                      now)
-    },
-    [window](std::map<std::string, double>& results)
-    {
-        results["fps"] = results["cubemapsCount"] / bc::duration_cast<bc::seconds>(window).count();
-    });
-}
-
-std::map<std::string, double> Stats::receivedNALUsPS(int face,
-                                                     boost::chrono::microseconds window,
-                                                     boost::chrono::steady_clock::time_point now)
-{
-    return query(
-    {
-         nalusCount("droppedNALUsCount" + std::to_string(face),
-                    face,
-                    NALU::DROPPED,
-                    window,
-                    now),
-         nalusCount("addedNALUsCount" + std::to_string(face),
-                    face,
-                    NALU::ADDED,
-                    window,
-                    now),
-    },
-    [window, face](std::map<std::string, double>& results)
-    {
-        results["receivedNALUsPS" + std::to_string(face)] = (results["droppedNALUsCount" + std::to_string(face)] +
-                                                             results["addedNALUsCount" + std::to_string(face)]) /
-            bc::duration_cast<bc::seconds>(window).count();
-    });
-}
-
-std::map<std::string, double> Stats::processedNALUsPS(int face,
-                                                      boost::chrono::microseconds window,
-                                                      boost::chrono::steady_clock::time_point now)
-{
-    return query(
-    {
-        nalusCount("addedNALUsCount" + std::to_string(face),
-                   face,
-                   NALU::ADDED,
-                   window,
-                   now),
-    },
-    [window, face](std::map<std::string, double>& results)
-    {
-        results["processedNALUsPS" + std::to_string(face)] = results["addedNALUsCount" + std::to_string(face)] /
-            bc::duration_cast<bc::seconds>(window).count();
-    });
-}
-
-std::map<std::string, double> Stats::sentNALUsPS(int face,
-                                                 boost::chrono::microseconds window,
-                                                 boost::chrono::steady_clock::time_point now)
-{
-    return query(
-    {
-        nalusCount("sentNALUsCount" + std::to_string(face),
-                   face,
-                   NALU::SENT,
-                   window,
-                   now)
-    },
-    [window, face](std::map<std::string, double>& results)
-    {
-        results["sentNALUsPS" + std::to_string(face)] = results["sentNALUsCount" + std::to_string(face)] /
-            bc::duration_cast<bc::seconds>(window).count();
-    });
-}
-
-std::map<std::string, double> Stats::receivedNALUsBitRate(boost::chrono::microseconds window,
-                                                          boost::chrono::steady_clock::time_point now)
-{
-    return query(
-    {
-        nalusBitSum("droppedNALUsBitSum",
-                    -1,
-                    NALU::DROPPED,
-                    window,
-                    now),
-        nalusBitSum("addedNALUsBitSum",
-                    -1,
-                    NALU::ADDED,
-                    window,
-                    now)
-    },
-    [window](std::map<std::string, double>& results)
-    {
-        results["receivedNALUsBitS"] = (results["droppedNALUsBitSum"] + results["addedNALUsBitSum"]) /
-            bc::duration_cast<bc::seconds>(window).count();
-    });
-}
-
-std::map<std::string, double> Stats::processedNALUsBitRate(boost::chrono::microseconds window,
-                                                           boost::chrono::steady_clock::time_point now)
-{
-    return query(
-    {
-        nalusBitSum("addedNALUsBitSum",
-                    -1,
-                    NALU::ADDED,
-                    window,
-                    now)
-    },
-    [window](std::map<std::string, double>& results)
-    {
-        results["processedNALUsBitS"] = results["addedNALUsBitSum"] / bc::duration_cast<bc::seconds>(window).count();
-    });
-}
-
-std::map<std::string, double> Stats::sentNALUsBitRate(boost::chrono::microseconds window,
-                                                      boost::chrono::steady_clock::time_point now)
-{
-    return query(
-    {
-        nalusBitSum("sentNALUsBitSum",
-                    -1,
-                    NALU::SENT,
-                    window,
-                    now)
-    },
-    [window](std::map<std::string, double>& results)
-    {
-        results["sentNALUsBitS"] = results["sentNALUsBitSum"] / bc::duration_cast<bc::seconds>(window).count();
-    });
-}
-
 // ###### UTILITY ######
 
 std::string Stats::summary(bc::microseconds window)
@@ -451,46 +282,115 @@ std::string Stats::summary(bc::microseconds window)
         activeStorage      = (std::list<TimeValueDatum>*)((uintptr_t)activeStorage ^ (uintptr_t)processingStorage);
         processingStorage  = (std::list<TimeValueDatum>*)((uintptr_t)activeStorage ^ (uintptr_t)processingStorage);
         activeStorage      = (std::list<TimeValueDatum>*)((uintptr_t)activeStorage ^ (uintptr_t)processingStorage);
-        
-        // Empty active storage to remove old data
-        activeStorage->clear();
     }
     
 	boost::chrono::steady_clock::time_point now = boost::chrono::steady_clock::now();
-    
-    std::map<std::string, double> results;
-    std::map<std::string, double> subresults;
-    
-	subresults = naluDropRate(window, now);
-    results.insert(subresults.begin(), subresults.end());
-	subresults = receivedNALUsPS(-1, window, now);
-    results.insert(subresults.begin(), subresults.end());
-	subresults = processedNALUsPS(-1, window, now);
-    results.insert(subresults.begin(), subresults.end());
-	subresults = sentNALUsPS(-1, window, now);
-    results.insert(subresults.begin(), subresults.end());
-	subresults = receivedNALUsBitRate(window, now);
-    results.insert(subresults.begin(), subresults.end());
-	subresults = processedNALUsBitRate(window, now);
-    results.insert(subresults.begin(), subresults.end());
-	subresults = sentNALUsBitRate(window, now);
-    results.insert(subresults.begin(), subresults.end());
-    
-    int faceCount = 12;
-    for (int i = 0; i < faceCount; i++)
-    {
-		subresults = facesPS(i, window, now);
-        results.insert(subresults.begin(), subresults.end());
-		subresults = receivedNALUsPS(i, window, now);
-        results.insert(subresults.begin(), subresults.end());
-		subresults = processedNALUsPS(i, window, now);
-        results.insert(subresults.begin(), subresults.end());
-		subresults = sentNALUsPS(i, window, now);
-        results.insert(subresults.begin(), subresults.end());
-    }
-	subresults = fps(window, now);
-    results.insert(subresults.begin(), subresults.end());
-    
+
+	std::list<StatVal> statVals;
+
+	statVals.insert(statVals.end(),
+	{
+		cubemapsCount("cubemapsCount",
+			window,
+			now),
+		nalusBitSum("droppedNALUsBitSum",
+			-1,
+			NALU::DROPPED,
+			window,
+			now),
+		nalusBitSum("addedNALUsBitSum",
+			-1,
+			NALU::ADDED,
+			window,
+			now),
+		nalusBitSum("sentNALUsBitSum",
+			-1,
+			NALU::SENT,
+			window,
+			now)
+	});
+
+	int faceCount = 12;
+	for (int face = -1; face < faceCount; face++)
+	{
+		statVals.insert(statVals.end(),
+		{
+			facesCount("facesCount" + std::to_string(face),
+				face,
+				window,
+				now),
+			nalusCount("droppedNALUsCount" + std::to_string(face),
+				face,
+				NALU::DROPPED,
+				window,
+				now),
+			nalusCount("addedNALUsCount" + std::to_string(face),
+				face,
+				NALU::ADDED,
+				window,
+				now),
+			nalusCount("sentNALUsCount" + std::to_string(face),
+				face,
+				NALU::SENT,
+				window,
+				now)
+		});
+	}
+
+	auto results = query(statVals,
+		[window, faceCount](std::map<std::string, double>& results)
+		{
+			unsigned long seconds = bc::duration_cast<bc::seconds>(window).count();
+
+			results.insert(
+			{
+				{
+					"naluDropRate",
+					results["droppedNALUsCount-1"] / results["addedNALUsCount-1"]
+				},
+				{
+					"fps",
+					results["cubemapsCount"] / seconds
+				},
+				{
+					"receivedNALUsBitS",
+					(results["droppedNALUsBitSum"] + results["addedNALUsBitSum"]) / seconds
+				},
+				{
+					"processedNALUsBitS",
+					results["addedNALUsBitSum"] / seconds
+				},
+				{
+					"sentNALUsBitS",
+					results["sentNALUsBitSum"] / seconds
+				},
+			});
+
+			for (int face = -1; face < faceCount; face++)
+			{
+				std::string faceStr = std::to_string(face);
+
+				results.insert(
+				{
+					{
+						"facesPS" + faceStr,
+						results["facesCount" + faceStr] / seconds
+					},
+					{
+						"receivedNALUsPS" + faceStr,
+						(results["droppedNALUsCount" + faceStr] + results["addedNALUsCount" + faceStr]) / seconds
+					},
+					{
+						"processedNALUsPS" + faceStr,
+						results["addedNALUsCount" + faceStr] / seconds
+					},
+					{
+						"sentNALUsPS" + faceStr,
+						results["sentNALUsCount" + faceStr] / seconds
+					},
+				});
+			}
+	});
     
     std::stringstream stream;
     stream << "===============================================================================" << std::endl;
@@ -553,8 +453,13 @@ std::string Stats::summary(bc::microseconds window)
         dict(result.first, result.second);
     }
     dict("duration", formatDuration(window));
+
+	std::string summary = format::fmt(stream.str()) % dict;
+
+	// Empty active storage to remove old data
+	processingStorage->clear();
     
-    return format::fmt(stream.str()) % dict;
+	return summary;
 }
 
 void Stats::autoSummaryLoop(boost::chrono::microseconds frequency)

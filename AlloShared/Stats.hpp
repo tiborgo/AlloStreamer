@@ -118,30 +118,6 @@ public:
     // events
     void store(const boost::any& datum);
     
-    // statistical values
-    std::map<std::string, double> naluDropRate(boost::chrono::microseconds window,
-		boost::chrono::steady_clock::time_point now);
-    std::map<std::string, double> facesPS(int face,
-                   boost::chrono::microseconds window,
-				   boost::chrono::steady_clock::time_point now);
-    std::map<std::string, double> fps(boost::chrono::microseconds window,
-		boost::chrono::steady_clock::time_point now);
-    std::map<std::string, double> receivedNALUsPS(int face,
-		                   boost::chrono::microseconds window,
-						   boost::chrono::steady_clock::time_point now);
-	std::map<std::string, double> processedNALUsPS(int face,
-	                        boost::chrono::microseconds window,
-							boost::chrono::steady_clock::time_point now);
-    std::map<std::string, double> sentNALUsPS(int face,
-		               boost::chrono::microseconds window,
-					   boost::chrono::steady_clock::time_point now);
-	std::map<std::string, double> receivedNALUsBitRate(boost::chrono::microseconds window,
-		boost::chrono::steady_clock::time_point now);
-	std::map<std::string, double> processedNALUsBitRate(boost::chrono::microseconds window,
-		boost::chrono::steady_clock::time_point now);
-	std::map<std::string, double> sentNALUsBitRate(boost::chrono::microseconds window,
-		boost::chrono::steady_clock::time_point now);
-    
     // utility
     std::string summary(boost::chrono::microseconds window);
     void autoSummary(boost::chrono::microseconds frequency);
@@ -156,6 +132,9 @@ private:
     
     std::map<std::string, double> query(std::initializer_list<StatVal>                         statVals,
                                         boost::function<void (std::map<std::string, double>&)> postCalculator);
+
+	std::map<std::string, double> query(std::list<StatVal>                                    statVals,
+									    boost::function<void(std::map<std::string, double>&)> postCalculator);
     
     boost::function<bool (TimeValueDatum)> timeFilter(
         boost::chrono::microseconds window,
