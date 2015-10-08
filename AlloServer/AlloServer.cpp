@@ -74,6 +74,11 @@ void onSentNALU(RawPixelSource*, uint8_t type, size_t size, int eye, int face)
 	stats.store(StatsUtils::NALU(type, size, eye * 6 + face, StatsUtils::NALU::SENT));
 }
 
+void onEncodedFrame(RawPixelSource*, int eye, int face)
+{
+	stats.store(StatsUtils::CubemapFace(eye * 6 + face));
+}
+
 void addFaceSubstreams0(void*)
 {
 	int portCounter = 0;
@@ -106,10 +111,8 @@ void addFaceSubstreams0(void*)
 				state->content,
 				avgBitRate);
 
-			std::function<void(RawPixelSource*,
-				uint8_t type,
-				size_t size)> callback(boost::bind(&onSentNALU, _1, _2, _3, j, i));
-			source->setOnSentNALU(callback);
+			source->setOnSentNALU    (boost::bind(&onSentNALU,     _1, _2, _3, j, i));
+			source->setOnEncodedFrame(boost::bind(&onEncodedFrame, _1, j, i));
 
 			state->source = H264VideoStreamDiscreteFramer::createNew(*env,
 				source);

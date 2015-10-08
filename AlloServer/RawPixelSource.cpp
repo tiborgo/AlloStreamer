@@ -201,11 +201,14 @@ RawPixelSource::~RawPixelSource()
 	//std::cout << this << ": deconstructed" << std::endl;
 }
 
-void RawPixelSource::setOnSentNALU(std::function<void(RawPixelSource*,
-	uint8_t type,
-	size_t size)>& callback)
+void RawPixelSource::setOnSentNALU(const OnSentNALU& callback)
 {
 	onSentNALU = callback;
+}
+
+void RawPixelSource::setOnEncodedFrame(const OnEncodedFrame& callback)
+{
+	onEncodedFrame = callback;
 }
 
 void RawPixelSource::frameContentLoop()
@@ -376,8 +379,10 @@ void RawPixelSource::encodeFrameLoop()
 			if (ret < 0)
 			{
 				fprintf(stderr, "Error encoding frame\n");
-				return;
+				abort();
 			}
+
+			if (onEncodedFrame) onEncodedFrame(this);
 
 			framePool.push(xFrame);
 
