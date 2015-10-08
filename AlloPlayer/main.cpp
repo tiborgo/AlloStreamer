@@ -5,10 +5,11 @@
 #include <boost/program_options.hpp>
 #include <boost/ref.hpp>
 
-#include "AlloShared/Stats.hpp"
+#include "AlloShared/StatsUtils.hpp"
 #include "AlloShared/to_human_readable_byte_count.hpp"
 #include "AlloReceiver/RTSPCubemapSourceClient.hpp"
 #include "AlloReceiver/AlloReceiver.h"
+#include "AlloReceiver/Stats.hpp"
 
 const unsigned int DEFAULT_SINK_BUFFER_SIZE = 2000000000;
 
@@ -22,31 +23,31 @@ StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
     for (int i = 0; i < cubemap->getEye(0)->getFacesCount(); i++)
     {
-        stats.store(Stats::CubemapFace(i));
+        stats.store(StatsUtils::CubemapFace(i));
     }
-    stats.store(Stats::Cubemap());
+    stats.store(StatsUtils::Cubemap());
     return cubemap;
 }
 
 void onDroppedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
 {
     //std::cout << "dropped NALU " << size << std::endl;
-    stats.store(Stats::NALU(type, size, face, Stats::NALU::DROPPED));
+    stats.store(StatsUtils::NALU(type, size, face, StatsUtils::NALU::DROPPED));
 }
 
 void onAddedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
 {
-    stats.store(Stats::NALU(type, size, face, Stats::NALU::ADDED));
+    stats.store(StatsUtils::NALU(type, size, face, StatsUtils::NALU::ADDED));
 }
 
 void onDisplayedCubemapFace(Renderer* renderer, int face)
 {
-    stats.store(Stats::CubemapFace(face));
+    stats.store(StatsUtils::CubemapFace(face));
 }
 
 void onDisplayedFrame(Renderer* renderer)
 {
-    stats.store(Stats::Cubemap());
+    stats.store(StatsUtils::Cubemap());
 }
 
 void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
@@ -56,7 +57,10 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
     callback = boost::bind(&onAddedNALU, _1, _2, _3, _4);
     cubemapSource->setOnAddedNALU(callback);
     
-    stats.autoSummary(boost::chrono::seconds(10));
+    stats.autoSummary(boost::chrono::seconds(10),
+                      AlloReceiver::statValsMaker,
+                      AlloReceiver::postProcessorMaker,
+                      AlloReceiver::formatStringMaker);
     
     ::cubemapSource = cubemapSource;
     
