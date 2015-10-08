@@ -41,7 +41,8 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
     :
     MediaSink(env), bufferSize(bufferSize), buffer(new unsigned char[bufferSize]),
     imageConvertCtx(NULL), receivedFirstPriorityPackages(false), format(format),
-    counter(0), sumRelativePresentationTimeMicroSec(0), maxRelativePresentationTimeMicroSec(0), subsession(subsession), lastTotal(0)
+    counter(0), sumRelativePresentationTimeMicroSec(0), maxRelativePresentationTimeMicroSec(0), subsession(subsession), lastTotal(0),
+    pts(-1), lastPTS(-1)
 {
     for (int i = 0; i < MAX_NALUS_PER_PKT + 1; i++)
     {
@@ -52,8 +53,10 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
     {
         AVPacket* pkt = new AVPacket;
         av_new_packet(pkt, MAX_PKT_SIZE);
+        pkt->size = 0;
         pktPool.push(pkt);
     }
+    pktPool.wait_and_pop(currentPkt);
     
 	for (int i = 0; i < 60; i++)
 	{
@@ -101,7 +104,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 		abort();
 	}
 
-    packageNALUsThread = boost::thread(boost::bind(&H264RawPixelsSink::packageNALUsLoop, this));
+    //packageNALUsThread = boost::thread(boost::bind(&H264RawPixelsSink::packageNALUsLoop, this));
 	decodeFrameThread  = boost::thread(boost::bind(&H264RawPixelsSink::decodeFrameLoop,  this));
     convertFrameThread = boost::thread(boost::bind(&H264RawPixelsSink::convertFrameLoop, this));
 }
@@ -140,31 +143,64 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 	continuePlaying();
 	return;*/
     
-    std::cout << naluPool.size() << std::endl;
+    //std::cout << naluPool.size() << std::endl;
     
-    NALU* nalu;
-    if (naluPool.try_pop(nalu))
+    pts = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec;
+    
+    // Check if all NALUs for current frame have arrived
+    if (lastPTS != -1 && lastPTS != pts)
     {
-        size_t size;
-        if (frameSize > MAX_NALU_SIZE)
+        // make frame available to the decoder
+        // if we currently have the capacities to encode another frame
+        AVPacket* pkt;
+        if (pktPool.try_pop(pkt))
         {
-            std::cout << "NALU too big!" << std::endl;
-            size = MAX_NALU_SIZE;
+            pktBuffer.push(currentPkt);
+            currentPkt = pkt;
         }
-        else
-        {
-            size = frameSize;
-        }
-        memcpy(nalu->buffer, buffer, size);
-        nalu->size = size;
-        nalu->pts  = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec;
-        naluBuffer.push(nalu);
-        //if (onAddedNALU) onAddedNALU(this, nal_unit_type, frameSize);
+        
+        // Reset current pkt so that we can fill it with new NALUs
+        currentPkt->size = 0;
+    }
+    
+    // Add NALU to current frame pkt
+    if (sizeof(START_CODE) + frameSize + currentPkt->size > MAX_PKT_SIZE)
+    {
+        std::cout << "NALUs are too big for one pkt!" << std::endl;
     }
     else
     {
-        if (onDroppedNALU) onDroppedNALU(this, nal_unit_type, frameSize);
+        memcpy(currentPkt->data + currentPkt->size, START_CODE, sizeof(START_CODE));
+        memcpy(currentPkt->data + currentPkt->size + sizeof(START_CODE), buffer, frameSize);
+        currentPkt->size += sizeof(START_CODE) + frameSize;
+        currentPkt->pts = pts;
     }
+    
+    lastPTS = pts;
+    
+//    NALU* nalu;
+//    if (naluPool.try_pop(nalu))
+//    {
+//        size_t size;
+//        if (frameSize > MAX_NALU_SIZE)
+//        {
+//            std::cout << "NALU too big!" << std::endl;
+//            size = MAX_NALU_SIZE;
+//        }
+//        else
+//        {
+//            size = frameSize;
+//        }
+//        memcpy(nalu->buffer, buffer, size);
+//        nalu->size = size;
+//        nalu->pts  = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec;
+//        naluBuffer.push(nalu);
+//        //if (onAddedNALU) onAddedNALU(this, nal_unit_type, frameSize);
+//    }
+//    else
+//    {
+//        if (onDroppedNALU) onDroppedNALU(this, nal_unit_type, frameSize);
+//    }
     
 
     //std::cout << "type: " << (int)nal_unit_type << " " << frameSize << std::endl;
@@ -476,8 +512,8 @@ void H264RawPixelsSink::decodeFrameLoop()
             
             //std::cout << this << " " << frame->pts << std::endl;
             
-            //frameBuffer.push(frame);
-            framePool.push(frame);
+            frameBuffer.push(frame);
+            //framePool.push(frame);
             
             //std::cout << "frame" << std::endl;
 		}
@@ -545,6 +581,7 @@ void H264RawPixelsSink::convertFrameLoop()
             // queue did close
             return;
         }
+        std::cout /*<< this << " "*/ << frameBuffer.size() << std::endl;
         
         if (!resizedFramePool.wait_and_pop(resizedFrame))
         {

@@ -74,7 +74,11 @@ private:
 	concurrent_queue<AVFrame*> framePool;
     concurrent_queue<AVFrame*> resizedFrameBuffer;
     concurrent_queue<AVFrame*> resizedFramePool;
-
+    
+    AVPacket* currentPkt;
+    int64_t pts;
+    int64_t lastPTS;
+    
 	SwsContext* imageConvertCtx;
     
     std::queue<AVPacket*> priorityPackages; // SPS, PPS, IDR-slice NAL
