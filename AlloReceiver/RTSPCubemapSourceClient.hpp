@@ -15,6 +15,7 @@ public:
     static RTSPCubemapSourceClient* create(char const* rtspURL,
                                            unsigned int sinkBufferSize,
                                            AVPixelFormat format,
+                                           bool matchStereoPairs,
                                            const char* interfaceAddress = "0.0.0.0",
                                            int verbosityLevel = 0,
                                            char const* applicationName = NULL,
@@ -28,6 +29,7 @@ protected:
                             char const* rtspURL,
                             unsigned int sinkBufferSize,
                             AVPixelFormat format,
+                            bool matchStereoPairs,
                             int verbosityLevel,
                             char const* applicationName,
                             portNumBits tunnelOverHTTPPortNum,
@@ -73,4 +75,5 @@ private:
     double lastTotalKBytes;
     unsigned int lastTotalPacketsReceived;
     unsigned int lastTotalPacketsExpected;
+    bool matchStereoPairs;
 };

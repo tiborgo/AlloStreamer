@@ -161,52 +161,55 @@ void H264CubemapSource::getNextCubemapLoop()
         // Fill cubemap making sure stereo pairs match
         for (int i = 0; i < (std::min)(frames.size(), (size_t)CUBEMAP_MAX_FACES_COUNT); i++)
         {
-            AVFrame* leftFrame = frames[i];
-            Cubemap* leftEye  = cubemap->getEye(0);
-            CubemapFace* leftFace  = leftEye->getFace(i, true);
+            AVFrame*     leftFrame = frames[i];
+            CubemapFace* leftFace  = cubemap->getEye(0)->getFace(i, true);
+            
+            AVFrame*     rightFrame = nullptr;
+            CubemapFace* rightFace  = nullptr;
             
             if (frames.size() > i + CUBEMAP_MAX_FACES_COUNT)
             {
-                AVFrame* rightFrame = frames[i+CUBEMAP_MAX_FACES_COUNT];
-                
-                Cubemap* rightEye = cubemap->getEye(1);
-                CubemapFace* rightFace = rightEye->getFace(i, true);
-                
-                // check if matched
-                if (leftFrame && rightFrame)
-                {
-                    count++;
-                    leftFace->setNewFaceFlag(true);
-                    memcpy(leftFace->getContent()->getPixels(), leftFrame->data[0], leftFrame->width * leftFrame->height * 4);
-                    
-                    count++;
-                    rightFace->setNewFaceFlag(true);
-                    memcpy(rightFace->getContent()->getPixels(), rightFrame->data[0], rightFrame->width * rightFrame->height * 4);
-                }
-                else
-                {
-                    leftFace->setNewFaceFlag(false);
-                    rightFace->setNewFaceFlag(false);
-                }
-                
-                sinks[i + CUBEMAP_MAX_FACES_COUNT]->returnFrame(rightFrame);
+                rightFrame = frames[i+CUBEMAP_MAX_FACES_COUNT];
+                rightFace  = cubemap->getEye(1)->getFace(i, true);
             }
-            else
+            
+            if (matchStereoPairs && frames.size() > i + CUBEMAP_MAX_FACES_COUNT)
             {
-                // matching not possible -> take the frame
-                if (leftFrame)
+                // check if matched
+                if (!leftFrame || !rightFrame)
                 {
-                    count++;
-                    leftFace->setNewFaceFlag(true);
-                    memcpy(leftFace->getContent()->getPixels(), leftFrame->data[0], leftFrame->width * leftFrame->height * 4);
-                }
-                else
-                {
-                    leftFace->setNewFaceFlag(false);
+                    // if they don't match give them back and forget about them
+                    sinks[i]->returnFrame(leftFrame);
+                    sinks[i + CUBEMAP_MAX_FACES_COUNT]->returnFrame(rightFrame);
+                    leftFrame  = nullptr;
+                    rightFrame = nullptr;
                 }
             }
             
-            sinks[i]->returnFrame(leftFrame);
+            // Fill the cubemapfaces with pixels if pixels are available
+            if (leftFrame)
+            {
+                count++;
+                leftFace->setNewFaceFlag(true);
+                memcpy(leftFace->getContent()->getPixels(), leftFrame->data[0], leftFrame->width * leftFrame->height * 4);
+                sinks[i]->returnFrame(leftFrame);
+            }
+            else
+            {
+                leftFace->setNewFaceFlag(false);
+            }
+            
+            if (rightFrame)
+            {
+                count++;
+                rightFace->setNewFaceFlag(true);
+                memcpy(rightFace->getContent()->getPixels(), rightFrame->data[0], rightFrame->width * rightFrame->height * 4);
+                sinks[i + CUBEMAP_MAX_FACES_COUNT]->returnFrame(rightFrame);
+            }
+            else if (rightFace)
+            {
+                rightFace->setNewFaceFlag(false);
+            }
         }
 
         //std::cout << count << std::endl;
@@ -254,9 +257,11 @@ void H264CubemapSource::getNextCubemapLoop()
     }
 }
 
-H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks, AVPixelFormat format)
+H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
+                                     AVPixelFormat                    format,
+                                     bool                             matchStereoPairs)
     :
-sinks(sinks), format(format), oldCubemap(nullptr), lastDisplayPTS(0)
+sinks(sinks), format(format), oldCubemap(nullptr), lastDisplayPTS(0), matchStereoPairs(matchStereoPairs)
 {
     av_log_set_level(AV_LOG_WARNING);
     for (H264RawPixelsSink* sink : sinks)

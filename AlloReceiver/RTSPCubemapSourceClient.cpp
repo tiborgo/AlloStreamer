@@ -222,7 +222,7 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
         
         if (onDidConnect)
         {
-            onDidConnect(this, new H264CubemapSource(h264Sinks, format));
+            onDidConnect(this, new H264CubemapSource(h264Sinks, format, matchStereoPairs));
         }
     }
     
@@ -501,6 +501,7 @@ void RTSPCubemapSourceClient::connect()
 RTSPCubemapSourceClient* RTSPCubemapSourceClient::create(char const* rtspURL,
                                                          unsigned int sinkBufferSize,
                                                          AVPixelFormat format,
+                                                         bool matchStereoPairs,
                                                          const char* interfaceAddress,
                                                          int verbosityLevel,
                                                          char const* applicationName,
@@ -523,6 +524,7 @@ RTSPCubemapSourceClient* RTSPCubemapSourceClient::create(char const* rtspURL,
                                        rtspURL,
                                        sinkBufferSize,
                                        format,
+                                       matchStereoPairs,
                                        verbosityLevel,
                                        applicationName,
                                        tunnelOverHTTPPortNum,
@@ -533,12 +535,14 @@ RTSPCubemapSourceClient::RTSPCubemapSourceClient(UsageEnvironment& env,
                                                  char const* rtspURL,
                                                  unsigned int sinkBufferSize,
                                                  AVPixelFormat format,
+                                                 bool matchStereoPairs,
                                                  int verbosityLevel,
                                                  char const* applicationName,
                                                  portNumBits tunnelOverHTTPPortNum,
                                                  int socketNumToServer)
     :
     RTSPClient(env, rtspURL, verbosityLevel, applicationName, tunnelOverHTTPPortNum, socketNumToServer),
-    sinkBufferSize(sinkBufferSize), format(format), lastTotalKBytes(0.0), lastTotalPacketsReceived(0), lastTotalPacketsExpected(0)
+    sinkBufferSize(sinkBufferSize), format(format), lastTotalKBytes(0.0), lastTotalPacketsReceived(0), lastTotalPacketsExpected(0),
+    matchStereoPairs(matchStereoPairs)
 {
 }

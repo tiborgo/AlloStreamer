@@ -82,7 +82,8 @@ int main(int argc, char* argv[])
         ("no-display", "")
         ("url", boost::program_options::value<std::string>(), "url")
         ("interface", boost::program_options::value<std::string>(), "interface")
-        ("buffer-size", boost::program_options::value<unsigned long>(), "buffer-size");
+        ("buffer-size", boost::program_options::value<unsigned long>(), "buffer-size")
+        ("match-stereo-pairs", "");
     
     boost::program_options::positional_options_description p;
     p.add("url", -1);
@@ -122,7 +123,17 @@ int main(int argc, char* argv[])
         noDisplay = false;
     }
     
-    rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, interface);
+    bool matchStereoPairs;
+    if (vm.count("match-stereo-pairs"))
+    {
+        matchStereoPairs = true;
+    }
+    else
+    {
+        matchStereoPairs = false;
+    }
+    
+    rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, matchStereoPairs, interface);
     std::function<void (RTSPCubemapSourceClient*, CubemapSource*)> callback(boost::bind(&onDidConnect, _1, _2));
     rtspClient->setOnDidConnect(callback);
     rtspClient->connect();

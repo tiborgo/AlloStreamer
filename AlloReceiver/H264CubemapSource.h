@@ -18,7 +18,8 @@ public:
     virtual void setOnAddedNALU  (std::function<void (CubemapSource*, int, u_int8_t, size_t)>&    callback);
     
     H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
-                      AVPixelFormat format);
+                      AVPixelFormat                    format,
+                      bool                             matchStereoPairs);
 
 protected:
 	std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)> onNextCubemap;
@@ -40,4 +41,5 @@ private:
     boost::thread                           getNextFramesThread;
 	StereoCubemap*                          oldCubemap;
     int64_t                                 lastDisplayPTS;
+    bool                                    matchStereoPairs;
 };
