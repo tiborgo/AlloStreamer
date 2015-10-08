@@ -7,6 +7,7 @@ set(HEADERS
 	config.h
 	RawPixelSource.hpp
 	AlloServer.h
+	Stats.hpp
 )
 
 # include Boost, FFMpeg, live555, x264

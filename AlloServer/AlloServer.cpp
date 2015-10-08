@@ -23,7 +23,7 @@ extern "C"
 #include "RawPixelSource.hpp"
 #include "CubemapExtractionPlugin/CubemapExtractionPlugin.h"
 #include "AlloServer.h"
-#include "AlloReceiver/Stats.hpp"
+#include "Stats.hpp"
 
 static Stats stats;
 
@@ -387,9 +387,9 @@ int main(int argc, char* argv[])
         std::cout << "Connected to Unity :)" << std::endl;
         startStreaming();
 		stats.autoSummary(boost::chrono::seconds(statsInterval),
-			              AlloReceiver::statValsMaker,
-						  AlloReceiver::postProcessorMaker,
-						  AlloReceiver::formatStringMaker);
+			              AlloServer::statValsMaker,
+						  AlloServer::postProcessorMaker,
+						  AlloServer::formatStringMaker);
         unityProcess.join();
         std::cout << "Lost connection to Unity :(" << std::endl;
         stopStreaming();

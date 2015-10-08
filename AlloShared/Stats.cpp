@@ -114,8 +114,8 @@ std::string Stats::formatDuration(boost::chrono::microseconds duration)
 
 void Stats::store(const boost::any& datum)
 {
-    boost::mutex::scoped_lock lock(mutex);
-    activeStorage->push_back(TimeValueDatum(datum));
+    //boost::mutex::scoped_lock lock(mutex);
+    //activeStorage->push_back(TimeValueDatum(datum));
 }
 
 // ###### UTILITY ######
@@ -146,7 +146,12 @@ std::string Stats::summary(boost::chrono::microseconds window,
     }
     dict("duration", formatDuration(window));
 
-	std::string summary = format::fmt(formatStringMaker(window, now)) % dict;
+	std::stringstream ss;
+	ss << "===============================================================================" << std::endl;
+	ss << "Stats for last {duration}:" << std::endl;
+	ss << formatStringMaker(window, now);
+
+	std::string summary = format::fmt(ss.str()) % dict;
 
 	// Empty active storage to remove old data
 	processingStorage->clear();
@@ -165,6 +170,7 @@ void Stats::autoSummaryLoop(boost::chrono::microseconds frequency,
     {
         summaryTime += frequency;
         boost::this_thread::sleep_until(summaryTime);
+		summaryTime = boost::chrono::system_clock::now();
 
         if (stopAutoSummary_)
         {

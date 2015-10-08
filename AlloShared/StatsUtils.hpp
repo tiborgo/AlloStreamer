@@ -30,6 +30,36 @@ public:
     };
     
     // STAT VALS
+	template <typename Feature>
+	static Stats::StatVal nalus(const std::string&                      name,
+		                        int                                     face,
+		                        NALU::Status                            status,
+		                        int                                     type,
+								const Feature&                          accumulator,
+								boost::chrono::microseconds             window,
+		                        boost::chrono::steady_clock::time_point now)
+	{
+		return Stats::StatVal::makeStatVal(andFilter(
+		{
+			timeFilter(window,
+			           now),
+			typeFilter(typeid(NALU)),
+			naluStatusFilter(status),
+			naluFaceFilter(face),
+			[type](Stats::TimeValueDatum datum)
+			{
+				return (type == -1) ? true : boost::any_cast<StatsUtils::NALU>(datum.value).type == type;
+			}
+		}),
+		[](Stats::TimeValueDatum datum)
+		{
+			return boost::any_cast<NALU>(datum.value).size;
+		},
+		accumulator,
+		name);
+	}
+
+
 	static Stats::StatVal nalusBitSum  (const std::string&                      name,
                                         int                                     face,
                                         NALU::Status                            status,
