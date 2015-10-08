@@ -581,7 +581,7 @@ void H264RawPixelsSink::convertFrameLoop()
             // queue did close
             return;
         }
-        std::cout /*<< this << " "*/ << frameBuffer.size() << std::endl;
+        //std::cout /*<< this << " "*/ << frameBuffer.size() << std::endl;
         
         if (!resizedFramePool.wait_and_pop(resizedFrame))
         {
@@ -622,8 +622,8 @@ void H264RawPixelsSink::convertFrameLoop()
         framePool.push(frame);
         
         // make frame available
-        //resizedFrameBuffer.push(resizedFrame);
-		resizedFramePool.push(resizedFrame);
+        resizedFrameBuffer.push(resizedFrame);
+		//resizedFramePool.push(resizedFrame);
     }
 }
 
