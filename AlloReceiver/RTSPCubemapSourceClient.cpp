@@ -149,7 +149,7 @@ void RTSPCubemapSourceClient::periodicQOSMeasurement(void* self_)
     
     unsigned int totalPacketsLostInInterval = totalPacketsExpectedInInterval - totalPacketsReceivedInInterval;
     
-    std::cout << "Client: " << std::setprecision(10) << totalKBytesInInterval/10 * 8 << "kBit/s; " <<
+    std::cout << "Client: " << std::setprecision(10) << std::setiosflags(std::ios::fixed) << std::setprecision(1) <<totalKBytesInInterval/10 * 8 / 1000 << " MBit/s; " <<
         " packets received: " << totalPacketsReceivedInInterval << "; packets lost: " << totalPacketsLostInInterval <<
         "; packet loss: " << std::setprecision(2) << (double)totalPacketsLostInInterval / totalPacketsReceivedInInterval * 100.0 << "%" << std::endl;
     
@@ -427,7 +427,7 @@ void RTSPCubemapSourceClient::continueAfterDESCRIBE(RTSPClient* self_, int resul
 					// Because we're saving the incoming data, rather than playing
 					// it in real time, allow an especially large time threshold
 					// (1 second) for reordering misordered incoming packets:
-					unsigned const thresh = 3000000; // 1 second
+					unsigned const thresh = 100000; // 1 second
 					subsession->rtpSource()->setPacketReorderingThresholdTime(thresh);
 
 					// Set the RTP source's OS socket buffer size as appropriate - either if we were explicitly asked (using -B),

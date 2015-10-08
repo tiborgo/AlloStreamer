@@ -56,9 +56,18 @@ protected:
     std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> onAddedNALU;
 
 private:
+    struct NALU
+    {
+        unsigned char* buffer;
+        size_t size;
+        int64_t pts;
+    };
+    
 	unsigned long bufferSize;
 	unsigned char* buffer;
 	AVCodecContext* codecContext;
+    concurrent_queue<NALU*> naluPool;
+    concurrent_queue<NALU*> naluBuffer;
     concurrent_queue<AVPacket*> pktBuffer;
     concurrent_queue<AVPacket*> pktPool;
 	concurrent_queue<AVFrame*> frameBuffer;
@@ -73,8 +82,10 @@ private:
     
     AVPixelFormat format;
     
+    void packageNALUsLoop();
 	void decodeFrameLoop();
     void convertFrameLoop();
+    boost::thread packageNALUsThread;
     boost::thread decodeFrameThread;
     boost::thread convertFrameThread;
 
