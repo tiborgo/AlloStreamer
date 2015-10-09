@@ -32,17 +32,17 @@ StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 
 void onReceivedNALU(CubemapSource* source, u_int8_t type, size_t size, int face)
 {
-    stats.store(StatsUtils::NALU(type, size, face, StatsUtils::NALU::RECEIVED));
+    //stats.store(StatsUtils::NALU(type, size, face, StatsUtils::NALU::RECEIVED));
 }
 
 void onReceivedFrame(CubemapSource* source, u_int8_t type, size_t size, int face)
 {
-    stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::RECEIVED));
+    //stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::RECEIVED));
 }
 
 void onDecodedFrame(CubemapSource* source, u_int8_t type, size_t size, int face)
 {
-    stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::DECODED));
+    //stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::DECODED));
 }
 
 void onColorConvertedFrame(CubemapSource* source, u_int8_t type, size_t size, int face)
@@ -62,10 +62,9 @@ void onDisplayedFrame(Renderer* renderer)
 
 void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
 {
-    if (typeid(cubemapSource) == typeid(H264CubemapSource))
+    H264CubemapSource* h264CubemapSource = dynamic_cast<H264CubemapSource*>(cubemapSource);
+    if (h264CubemapSource)
     {
-        H264CubemapSource* h264CubemapSource = (H264CubemapSource*)cubemapSource;
-        
         h264CubemapSource->setOnReceivedNALU       (boost::bind(&onReceivedNALU,        _1, _2, _3, _4));
         h264CubemapSource->setOnReceivedFrame      (boost::bind(&onReceivedFrame,       _1, _2, _3, _4));
         h264CubemapSource->setOnDecodedFrame       (boost::bind(&onDecodedFrame,        _1, _2, _3, _4));

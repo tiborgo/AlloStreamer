@@ -1,5 +1,11 @@
 #pragma once
 
+#include <boost/accumulators/statistics/sum.hpp>
+#include <boost/accumulators/statistics/max.hpp>
+#include <boost/accumulators/statistics/min.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/any.hpp>
+
 #include "AlloShared/StatsUtils.hpp"
 
 namespace AlloReceiver
@@ -15,7 +21,7 @@ namespace AlloReceiver
 		{
 			StatsUtils::cubemapsCount("cubemapsCount",
 			window,
-			now),
+			now)/*,
 			StatsUtils::nalusBitSum("droppedNALUsBitSum",
 			-1,
 			StatsUtils::NALU::DROPPED,
@@ -30,18 +36,80 @@ namespace AlloReceiver
 			-1,
 			StatsUtils::NALU::SENT,
 			window,
-			now)
+			now)*/
 		});
 
 		for (int face = -1; face < FACE_COUNT; face++)
 		{
+            std::string faceStr = std::to_string(face);
+            
 			statVals.insert(statVals.end(),
 			{
-				StatsUtils::facesCount("facesCount" + std::to_string(face),
-				face,
-				window,
-				now),
-				StatsUtils::nalusCount("droppedNALUsCount" + std::to_string(face),
+				StatsUtils::facesCount("facesCount" + faceStr,
+                    face,
+                    window,
+                    now),
+                Stats::StatVal::makeStatVal(StatsUtils::andFilter(
+                    {
+                        StatsUtils::timeFilter(window,
+                                               now),
+                        StatsUtils::typeFilter(typeid(StatsUtils::Frame)),
+                        [face](Stats::TimeValueDatum datum)
+                        {
+                            return (face == -1) ? true : boost::any_cast<StatsUtils::Frame>(datum.value).face == face;
+                        },
+                        [face](Stats::TimeValueDatum datum)
+                        {
+                            return boost::any_cast<StatsUtils::Frame>(datum.value).status == StatsUtils::Frame::RECEIVED;
+                        }
+                    }),
+                    [](Stats::TimeValueDatum datum)
+                    {
+                        return 0.0;
+                    },
+                    boost::accumulators::tag::count(),
+                    "receivedFrames" + faceStr),
+                Stats::StatVal::makeStatVal(StatsUtils::andFilter(
+                    {
+                        StatsUtils::timeFilter(window,
+                                               now),
+                        StatsUtils::typeFilter(typeid(StatsUtils::Frame)),
+                        [face](Stats::TimeValueDatum datum)
+                        {
+                          return (face == -1) ? true : boost::any_cast<StatsUtils::Frame>(datum.value).face == face;
+                        },
+                        [face](Stats::TimeValueDatum datum)
+                        {
+                            return boost::any_cast<StatsUtils::Frame>(datum.value).status == StatsUtils::Frame::DECODED;
+                        }
+                    }),
+                    [](Stats::TimeValueDatum datum)
+                    {
+                        return 0.0;
+                    },
+                    boost::accumulators::tag::count(),
+                    "decodedFrames" + faceStr),
+                Stats::StatVal::makeStatVal(StatsUtils::andFilter(
+                                                                  {
+                                                                      StatsUtils::timeFilter(window,
+                                                                                             now),
+                                                                      StatsUtils::typeFilter(typeid(StatsUtils::Frame)),
+                                                                      [face](Stats::TimeValueDatum datum)
+                                                                      {
+                                                                          return (face == -1) ? true : boost::any_cast<StatsUtils::Frame>(datum.value).face == face;
+                                                                      },
+                                                                      [face](Stats::TimeValueDatum datum)
+                                                                      {
+                                                                          return boost::any_cast<StatsUtils::Frame>(datum.value).status == StatsUtils::Frame::COLOR_CONVERTED;
+                                                                      }
+                                                                  }),
+                                            [](Stats::TimeValueDatum datum)
+                                            {
+                                                return 0.0;
+                                            },
+                                            boost::accumulators::tag::count(),
+                                            "colorConvertedFrames" + faceStr)
+				/*StatsUtils::nalusCount("droppedNALUsCount" + std::to_string(face),
 				face,
 				StatsUtils::NALU::DROPPED,
 				window,
@@ -55,7 +123,7 @@ namespace AlloReceiver
 				face,
 				StatsUtils::NALU::SENT,
 				window,
-				now)
+				now)*/
 			});
 		}
 
@@ -71,15 +139,15 @@ namespace AlloReceiver
 
 			results.insert(
 			{
-				{
+				/*{
 					"naluDropRate",
 					results["droppedNALUsCount-1"] / results["addedNALUsCount-1"]
-				},
+				},*/
 				{
 					"fps",
 					results["cubemapsCount"] / seconds
 				},
-				{
+				/*{
 					"receivedNALUsBitS",
 					(results["droppedNALUsBitSum"] + results["addedNALUsBitSum"]) / seconds
 				},
@@ -90,7 +158,7 @@ namespace AlloReceiver
 				{
 					"sentNALUsBitS",
 					results["sentNALUsBitSum"] / seconds
-				},
+				},*/
 			});
 
 			for (int face = -1; face < FACE_COUNT; face++)
@@ -103,7 +171,7 @@ namespace AlloReceiver
 						"facesPS" + faceStr,
 						results["facesCount" + faceStr] / seconds
 					},
-					{
+					/*{
 						"receivedNALUsPS" + faceStr,
 						(results["droppedNALUsCount" + faceStr] + results["addedNALUsCount" + faceStr]) / seconds
 					},
@@ -114,7 +182,19 @@ namespace AlloReceiver
 					{
 						"sentNALUsPS" + faceStr,
 						results["sentNALUsCount" + faceStr] / seconds
-					},
+					},*/
+                    {
+                        "receivedFrames" + faceStr + "PS",
+                        results["receivedFrames" + faceStr] / seconds
+                    },
+                    {
+                        "decodedFrames" + faceStr + "PS",
+                        results["decodedFrames" + faceStr] / seconds
+                    },
+                    {
+                        "colorConvertedFrames" + faceStr + "PS",
+                        results["colorConvertedFrames" + faceStr] / seconds
+                    },
 				});
 			}
 		};
@@ -126,9 +206,7 @@ namespace AlloReceiver
 		                                            boost::chrono::steady_clock::time_point now)
 	{
 		std::stringstream stream;
-		stream << "===============================================================================" << std::endl;
-		stream << "Stats for last {duration}:" << std::endl;
-		stream << "-------------------------------------------------------------------------------" << std::endl;
+		/*stream << "-------------------------------------------------------------------------------" << std::endl;
 		stream << "NALU drop rate: {naluDropRate:0.1f}" << std::endl;
 		stream << "received NALUs/s: {receivedNALUsPS-1:0.1f}; {receivedNALUsBitS:0.1f} MBit/s;" << std::endl;
 		for (int j = 0; j < (std::min) (2, FACE_COUNT); j++)
@@ -162,7 +240,50 @@ namespace AlloReceiver
 				stream << "\t{sentNALUsPS" << j * 6 + i << ":0.1f}";
 			}
 			stream << ";" << std::endl;
-		}
+		}*/
+        
+        stream << "-------------------------------------------------------------------------------" << std::endl;
+        stream << "Received frames/s:" << std::endl;
+        for (int j = 0; j < (std::min) (2, FACE_COUNT); j++)
+        {
+            stream << ((j == 0) ? "left" : "right") << ":";
+            for (int i = 0; i < (std::min) (6, FACE_COUNT - j * 6); i++)
+            {
+                stream << "\t{receivedFrames" << j * 6 + i << "PS:0.1f}";
+            }
+            stream << ";" << std::endl;
+        }
+        
+        stream << "-------------------------------------------------------------------------------" << std::endl;
+        stream << "Decoded frames/s:" << std::endl;
+        for (int j = 0; j < (std::min) (2, FACE_COUNT); j++)
+        {
+            stream << ((j == 0) ? "left" : "right") << ":";
+            for (int i = 0; i < (std::min) (6, FACE_COUNT - j * 6); i++)
+            {
+                stream << "\t{decodedFrames" << j * 6 + i << "PS:0.1f}";
+            }
+            stream << ";" << std::endl;
+        }
+        
+        stream << "-------------------------------------------------------------------------------" << std::endl;
+        stream << "Color converted frames/s:" << std::endl;
+        for (int j = 0; j < (std::min) (2, FACE_COUNT); j++)
+        {
+            stream << ((j == 0) ? "left" : "right") << ":";
+            for (int i = 0; i < (std::min) (6, FACE_COUNT - j * 6); i++)
+            {
+                stream << "\t{colorConvertedFrames" << j * 6 + i << "PS:0.1f}";
+            }
+            stream << ";" << std::endl;
+        }
+        
+        /*stream << "Decoded:\t";
+        for (int i = 0; i < (std::min) (6, FACE_COUNT - j * 6); i++)
+        {
+            stream << "{receivedFrames" << faceStr << "PS:0.1f}\t";
+        }
+        stream << ";" << std::endl;*/
 
 		stream << "-------------------------------------------------------------------------------" << std::endl;
 		stream << "cubemap face 0-5 (left ) fps:";

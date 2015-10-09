@@ -146,7 +146,12 @@ std::string Stats::summary(boost::chrono::microseconds window,
     }
     dict("duration", formatDuration(window));
 
-	std::string summary = format::fmt(formatStringMaker(window, now)) % dict;
+    std::stringstream ss;
+    ss << "===============================================================================" << std::endl;
+    ss << "Stats for last {duration}:" << std::endl;
+    ss << formatStringMaker(window, now);
+    
+    std::string summary = format::fmt(ss.str()) % dict;
 
 	// Empty active storage to remove old data
 	processingStorage->clear();
