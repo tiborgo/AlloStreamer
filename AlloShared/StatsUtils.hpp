@@ -9,12 +9,24 @@ public:
     class NALU
     {
     public:
-        enum Status {DROPPED, ADDED, PROCESSED, SENT};
+        enum Status {RECEIVED, DROPPED, ADDED, PROCESSED, SENT};
         
         NALU(int type, size_t size, int face, Status status) : type(type), size(size), face(face), status(status) {}
-        int type;
+        int    type;
         size_t size;
-        int face;
+        int    face;
+        Status status;
+    };
+    
+    class Frame
+    {
+    public:
+        enum Status {RECEIVED, DECODED, COLOR_CONVERTED};
+        
+        Frame(int type, size_t size, int face, Status status) : type(type), size(size), face(face), status(status) {}
+        int    type;
+        size_t size;
+        int    face;
         Status status;
     };
     

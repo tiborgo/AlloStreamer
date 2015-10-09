@@ -31,8 +31,15 @@ public:
 	AVFrame* getNextFrame();
     void returnFrame(AVFrame* usedFrame);
     
-    void setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t, size_t)>& callback);
-    void setOnAddedNALU(std::function<void (H264RawPixelsSink*, u_int8_t, size_t)>& callback);
+    typedef std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> OnReceivedNALU;
+    typedef std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> OnReceivedFrame;
+    typedef std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> OnDecodedFrame;
+    typedef std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> OnColorConvertedFrame;
+    
+    void setOnReceivedNALU       (const OnReceivedNALU&        callback);
+    void setOnReceivedFrame      (const OnReceivedFrame&       callback);
+    void setOnDecodedFrame       (const OnDecodedFrame&        callback);
+    void setOnColorConvertedFrame(const OnColorConvertedFrame& callback);
 	
 protected:
 	H264RawPixelsSink(UsageEnvironment& env,
@@ -52,8 +59,10 @@ protected:
 		timeval presentationTime,
 		unsigned durationInMicroseconds);
     
-    std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> onDroppedNALU;
-    std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> onAddedNALU;
+    OnReceivedNALU        onReceivedNALU;
+    OnReceivedFrame       onReceivedFrame;
+    OnDecodedFrame        onDecodedFrame;
+    OnColorConvertedFrame onColorConvertedFrame;
 
 private:
     struct NALU

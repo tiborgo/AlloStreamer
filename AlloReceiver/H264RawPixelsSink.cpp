@@ -24,14 +24,24 @@ H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
 	return new H264RawPixelsSink(env, bufferSize, format, subsession);
 }
 
-void H264RawPixelsSink::setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type, size_t)>& callback)
+void H264RawPixelsSink::setOnReceivedNALU(const OnReceivedNALU& callback)
 {
-    onDroppedNALU = callback;
+    onReceivedNALU = callback;
 }
 
-void H264RawPixelsSink::setOnAddedNALU(std::function<void (H264RawPixelsSink*, u_int8_t type, size_t)>& callback)
+void H264RawPixelsSink::setOnReceivedFrame(const OnReceivedFrame& callback)
 {
-    onAddedNALU = callback;
+    onReceivedFrame = callback;
+}
+
+void H264RawPixelsSink::setOnDecodedFrame(const OnDecodedFrame& callback)
+{
+    onDecodedFrame = callback;
+}
+
+void H264RawPixelsSink::setOnColorConvertedFrame(const OnColorConvertedFrame& callback)
+{
+    onColorConvertedFrame = callback;
 }
 
 H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
@@ -150,6 +160,8 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
     // Check if all NALUs for current frame have arrived
     if (lastPTS != -1 && lastPTS != pts)
     {
+        if (onReceivedFrame) onReceivedFrame(this, currentPkt->data[4] & 0x1F, currentPkt->size);
+        
         // make frame available to the decoder
         // if we currently have the capacities to encode another frame
         AVPacket* pkt;
@@ -497,6 +509,11 @@ void H264RawPixelsSink::decodeFrameLoop()
 
         if (got_frame == 1)
         {
+            if (onDecodedFrame) onDecodedFrame(this,
+                                               frame->key_frame,
+                                               avpicture_get_size((AVPixelFormat)frame->format,
+                                                                  frame->width,
+                                                                  frame->height));
             //std::cout << "got frame" << std::endl;
             
             // We have decoded a frame :) ->
@@ -617,6 +634,12 @@ void H264RawPixelsSink::convertFrameLoop()
                   resizedFrame->data, resizedFrame->linesize);
         
         resizedFrame->pts = frame->pts;
+        
+        if (onColorConvertedFrame) onColorConvertedFrame(this,
+                                                         frame->key_frame,
+                                                         avpicture_get_size((AVPixelFormat)frame->format,
+                                                                            frame->width,
+                                                                            frame->height));
         
         // continue decoding
         framePool.push(frame);

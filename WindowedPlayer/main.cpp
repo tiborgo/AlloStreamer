@@ -9,6 +9,7 @@
 #include "AlloReceiver/AlloReceiver.h"
 #include "AlloShared/to_human_readable_byte_count.hpp"
 #include "AlloReceiver/Stats.hpp"
+#include "AlloReceiver/H264CubemapSource.h"
 
 #include "Renderer.hpp"
 
@@ -29,14 +30,24 @@ StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
     return cubemap;
 }
 
-void onDroppedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
+void onReceivedNALU(CubemapSource* source, u_int8_t type, size_t size, int face)
 {
-	stats.store(StatsUtils::NALU(type, size, face, StatsUtils::NALU::DROPPED));
+    stats.store(StatsUtils::NALU(type, size, face, StatsUtils::NALU::RECEIVED));
 }
 
-void onAddedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
+void onReceivedFrame(CubemapSource* source, u_int8_t type, size_t size, int face)
 {
-	stats.store(StatsUtils::NALU(type, size, face, StatsUtils::NALU::ADDED));
+    stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::RECEIVED));
+}
+
+void onDecodedFrame(CubemapSource* source, u_int8_t type, size_t size, int face)
+{
+    stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::DECODED));
+}
+
+void onColorConvertedFrame(CubemapSource* source, u_int8_t type, size_t size, int face)
+{
+    stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::COLOR_CONVERTED));
 }
 
 void onDisplayedCubemapFace(Renderer* renderer, int face)
@@ -51,10 +62,15 @@ void onDisplayedFrame(Renderer* renderer)
 
 void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
 {
-    std::function<void (CubemapSource*, int, u_int8_t, size_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3, _4);
-    cubemapSource->setOnDroppedNALU(callback);
-    callback = boost::bind(&onAddedNALU, _1, _2, _3, _4);
-    cubemapSource->setOnAddedNALU(callback);
+    if (typeid(cubemapSource) == typeid(H264CubemapSource))
+    {
+        H264CubemapSource* h264CubemapSource = (H264CubemapSource*)cubemapSource;
+        
+        h264CubemapSource->setOnReceivedNALU       (boost::bind(&onReceivedNALU,        _1, _2, _3, _4));
+        h264CubemapSource->setOnReceivedFrame      (boost::bind(&onReceivedFrame,       _1, _2, _3, _4));
+        h264CubemapSource->setOnDecodedFrame       (boost::bind(&onDecodedFrame,        _1, _2, _3, _4));
+        h264CubemapSource->setOnColorConvertedFrame(boost::bind(&onColorConvertedFrame, _1, _2, _3, _4));
+    }
     
     stats.autoSummary(boost::chrono::seconds(10),
 					  AlloReceiver::statValsMaker,

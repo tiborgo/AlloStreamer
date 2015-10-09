@@ -2,19 +2,29 @@
 #include <unordered_map>
 #include "H264CubemapSource.h"
 
-void H264CubemapSource::setOnNextCubemap(std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)>& callback)
+void H264CubemapSource::setOnReceivedNALU(const OnReceivedNALU& callback)
+{
+    onReceivedNALU = callback;
+}
+
+void H264CubemapSource::setOnReceivedFrame(const OnReceivedFrame& callback)
+{
+    onReceivedFrame = callback;
+}
+
+void H264CubemapSource::setOnDecodedFrame(const OnDecodedFrame& callback)
+{
+    onDecodedFrame = callback;
+}
+
+void H264CubemapSource::setOnColorConvertedFrame(const OnColorConvertedFrame& callback)
+{
+    onColorConvertedFrame = callback;
+}
+
+void H264CubemapSource::setOnNextCubemap(const OnNextCubemap& callback)
 {
     onNextCubemap = callback;
-}
-
-void H264CubemapSource::setOnDroppedNALU(std::function<void (CubemapSource*, int face, u_int8_t type, size_t)>& callback)
-{
-    onDroppedNALU = callback;
-}
-
-void H264CubemapSource::setOnAddedNALU(std::function<void (CubemapSource*, int face, u_int8_t type, size_t)>& callback)
-{
-    onAddedNALU = callback;
 }
 
 void H264CubemapSource::getNextFramesLoop()
@@ -261,32 +271,46 @@ H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
                                      AVPixelFormat                    format,
                                      bool                             matchStereoPairs)
     :
-sinks(sinks), format(format), oldCubemap(nullptr), lastDisplayPTS(0), matchStereoPairs(matchStereoPairs)
+    sinks(sinks), format(format), oldCubemap(nullptr), lastDisplayPTS(0), matchStereoPairs(matchStereoPairs)
 {
+    
     av_log_set_level(AV_LOG_WARNING);
+    int i = 0;
     for (H264RawPixelsSink* sink : sinks)
     {
-        std::function<void (H264RawPixelsSink *, u_int8_t, size_t)> onDroppedNaluCallback =
-            boost::bind(&H264CubemapSource::sinkOnDroppedNALU, this, _1, _2, _3);
-        sink->setOnDroppedNALU(onDroppedNaluCallback);
-        std::function<void (H264RawPixelsSink *, u_int8_t, size_t)> onAddedNaluCallback =
-            boost::bind(&H264CubemapSource::sinkOnAddedNALU, this, _1, _2, _3);
-        sink->setOnAddedNALU(onAddedNaluCallback);
+        sink->setOnReceivedNALU       (boost::bind(&H264CubemapSource::sinkOnReceivedNALU,        this, _1, _2, _3));
+        sink->setOnReceivedFrame      (boost::bind(&H264CubemapSource::sinkOnReceivedFrame,       this, _1, _2, _3));
+        sink->setOnDecodedFrame       (boost::bind(&H264CubemapSource::sinkOnDecodedFrame,        this, _1, _2, _3));
+        sink->setOnColorConvertedFrame(boost::bind(&H264CubemapSource::sinkOnColorConvertedFrame, this, _1, _2, _3));
+        
+        sinksFaceMap[sink] = i;
+        i++;
     }
     getNextFramesThread  = boost::thread(boost::bind(&H264CubemapSource::getNextFramesLoop,  this));
     getNextCubemapThread = boost::thread(boost::bind(&H264CubemapSource::getNextCubemapLoop, this));
 }
 
-void H264CubemapSource::sinkOnDroppedNALU(H264RawPixelsSink* sink, u_int8_t type, size_t size)
+void H264CubemapSource::sinkOnReceivedNALU(H264RawPixelsSink* sink, u_int8_t type, size_t size)
 {
-    int face = std::find(sinks.begin(), sinks.end(), sink) - sinks.begin();
-    assert(face < sinks.size());
-    onDroppedNALU(this, face, type, size);
+    int face = sinksFaceMap[sink];
+    if (onReceivedNALU) onReceivedNALU(this, type, size, face);
 }
 
-void H264CubemapSource::sinkOnAddedNALU(H264RawPixelsSink* sink, u_int8_t type, size_t size)
+void H264CubemapSource::sinkOnReceivedFrame(H264RawPixelsSink* sink, u_int8_t type, size_t size)
 {
-    int face = std::find(sinks.begin(), sinks.end(), sink) - sinks.begin();
-    assert(face < sinks.size());
-    onAddedNALU(this, face, type, size);
+    int face = sinksFaceMap[sink];
+    if (onReceivedFrame) onReceivedFrame(this, type, size, face);
 }
+
+void H264CubemapSource::sinkOnDecodedFrame(H264RawPixelsSink* sink, u_int8_t type, size_t size)
+{
+    int face = sinksFaceMap[sink];
+    if (onDecodedFrame) onDecodedFrame(this, type, size, face);
+}
+
+void H264CubemapSource::sinkOnColorConvertedFrame(H264RawPixelsSink* sink, u_int8_t type, size_t size)
+{
+    int face = sinksFaceMap[sink];
+    if (onColorConvertedFrame) onColorConvertedFrame(this, type, size, face);
+}
+
