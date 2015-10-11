@@ -1,33 +1,15 @@
 # Compiled source #
 ###################
-*.com
-*.class
-*.dll
-*.exe
-*.o
-*.so
-*.bundle
-*.apk
-*.dex
+Lib/
+Bin/
 
-# Packages #
-############
-# it's better to unpack these files and commit the raw source
-# git has its own built in compression methods
-*.7z
-*.dmg
-*.gz
-*.iso
-*.jar
-*.rar
-*.tar
-*.zip
-
-# Logs and databases #
-######################
-*.log
-*.sql
-*.sqlite
+# CMake generated files #
+########################
+CMakeBuilds/
+cmake_install.cmake
+CMakeCache.txt
+CMakeFiles/
+Makefile
 
 # OS generated files #
 ######################
@@ -38,3 +20,8 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+*~
+
+# Unity #
+#########
+AlloStreamer/

@@ -2,16 +2,17 @@
 
 #include "UnityPluginInterface.h"
 
-#include <pthread.h>
+//#include <pthread.h>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
-#include <FrameData.h>
 #include <iostream>
 #include <cstring>
 #include <cstdlib>
-#include "osc/OscReceivedElements.h"
-#include "osc/OscPacketListener.h"
-#include "ip/UdpSocket.h"
+#include <osc/OscReceivedElements.h>
+#include <osc/OscPacketListener.h>
+#include <ip/UdpSocket.h>
+
+#include "AlloServer/FrameData.h"
 
 #ifdef __cplusplus
 
@@ -24,7 +25,7 @@ extern "C" {
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <sys/types.h>
     
 unsigned char *image = NULL;
@@ -35,15 +36,22 @@ bool startedServer = false;
     // --------------------------------------------------------------------------
     // Include headers for the graphics APIs we support
 }
-#if SUPPORT_D3D9
-#include <d3d9.h>
+/*#if SUPPORT_D3D9
+	#include <d3d9.h>
 #endif
 #if SUPPORT_D3D11
-#include <d3d11.h>
-#endif
+	#include <d3d11.h>
+#endif*/
 #if SUPPORT_OPENGL
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
+	#if UNITY_WIN
+		#include <Windows.h>
+		#include <GL/gl.h>
+	#elif UNITY_LINUX
+		#include <GL/gl.h>
+	#elif UNITY_OSX
+		#include <OpenGL/OpenGL.h>
+		#include <OpenGL/gl.h>
+	#endif
 #endif
 
 
@@ -109,12 +117,12 @@ static int g_DeviceType = -1;
 
 
 // Actual setup/teardown functions defined below
-#if SUPPORT_D3D9
+/*#if SUPPORT_D3D9
 static void SetGraphicsDeviceD3D9 (IDirect3DDevice9* device, GfxDeviceEventType eventType);
 #endif
 #if SUPPORT_D3D11
 static void SetGraphicsDeviceD3D11 (ID3D11Device* device, GfxDeviceEventType eventType);
-#endif
+#endif*/
 
 
 extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType, int eventType)
@@ -124,7 +132,7 @@ extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType,
 	// Set device type to -1, i.e. "not recognized by our plugin"
 	g_DeviceType = -1;
 	
-#if SUPPORT_D3D9
+/*#if SUPPORT_D3D9
 	// D3D9 device, remember device pointer and device type.
 	// The pointer we get is IDirect3DDevice9.
 	if (deviceType == kGfxRendererD3D9)
@@ -144,7 +152,7 @@ extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType,
 		g_DeviceType = deviceType;
 		SetGraphicsDeviceD3D11 ((ID3D11Device*)device, (GfxDeviceEventType)eventType);
 	}
-#endif
+#endif*/
     
 #if SUPPORT_OPENGL
 	// If we've got an OpenGL device, remember device type. There's no OpenGL
@@ -242,7 +250,7 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 
 static void SetDefaultGraphicsState ()
 {
-#if SUPPORT_D3D9
+/*#if SUPPORT_D3D9
 	// D3D9 case
 	if (g_DeviceType == kGfxRendererD3D9)
 	{
@@ -267,7 +275,7 @@ static void SetDefaultGraphicsState ()
 		ctx->OMSetBlendState (g_D3D11BlendState, NULL, 0xFFFFFFFF);
 		ctx->Release();
 	}
-#endif
+#endif*/
     
     
 #if SUPPORT_OPENGL
