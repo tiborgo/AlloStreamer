@@ -136,10 +136,8 @@ int main(int argc, char* argv[])
     barrier.wait();
     
     Renderer renderer(cubemapSource);
-    std::function<void (Renderer*, int)> onDisplayedCubemapFaceCallback = boost::bind(&onDisplayedCubemapFace, _1, _2);
-    renderer.setOnDisplayedCubemapFace(onDisplayedCubemapFaceCallback);
-    std::function<void (Renderer*)> onDisplayedFrameCallback = boost::bind(&onDisplayedFrame, _1);
-    renderer.setOnDisplayedFrame(onDisplayedFrameCallback);
+	renderer.setOnDisplayedCubemapFace(boost::bind(&onDisplayedCubemapFace, _1, _2));
+	renderer.setOnDisplayedFrame(boost::bind(&onDisplayedFrame, _1));
     renderer.start(); // Returns when window is closed
     
     CubemapSource::destroy(cubemapSource);

@@ -17,6 +17,8 @@ find_package(Boost
 #find_package(SDL REQUIRED)
 find_package(FFmpeg REQUIRED)
 find_package(OculusSDK REQUIRED)
+find_package(Live555 REQUIRED)
+find_package(X264 REQUIRED)
 
 add_executable(OculusPlayer
 	${SOURCES}
@@ -25,8 +27,10 @@ add_executable(OculusPlayer
 target_include_directories(OculusPlayer
 	PRIVATE
 	${Boost_INCLUDE_DIRS}
+	${Live555_INCLUDE_DIRS}
 	${SDL_INCLUDE_DIR}
 	${FFMPEG_INCLUDE_DIRS}
+	${X264_INCLUDE_DIRS}
 	${OCULUS_SDK_INCLUDE_DIRS}
 )
 target_link_libraries(OculusPlayer

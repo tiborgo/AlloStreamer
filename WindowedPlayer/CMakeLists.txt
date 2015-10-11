@@ -14,6 +14,7 @@ find_package(Boost
 )                     # e.g. "date_time" for "libboost_date_time"
 find_package(SDL REQUIRED)
 find_package(FFmpeg REQUIRED)
+find_package(X264 REQUIRED)
 find_package(Live555 REQUIRED)
 
 add_executable(WindowedPlayer
@@ -25,6 +26,7 @@ target_include_directories(WindowedPlayer
 	${Boost_INCLUDE_DIRS}
 	${SDL_INCLUDE_DIR}
 	${FFMPEG_INCLUDE_DIRS}
+	${X264_INCLUDE_DIRS}
     ${Live555_INCLUDE_DIRS}
 )
 target_link_libraries(WindowedPlayer

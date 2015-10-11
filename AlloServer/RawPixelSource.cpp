@@ -137,6 +137,7 @@ RawPixelSource::RawPixelSource(UsageEnvironment& env,
 
 	av_opt_set(codecContext->priv_data, "preset", PRESET_VAL, 0);
 	av_opt_set(codecContext->priv_data, "tune", TUNE_VAL, 0);
+	av_opt_set(codecContext->priv_data, "slice-max-size", "20000", 0);
 
 	/* open it */
 	if (avcodec_open2(codecContext, codec, NULL) < 0)
@@ -556,6 +557,12 @@ void RawPixelSource::deliverFrame()
 
 	u_int8_t* newFrameDataStart = (u_int8_t*)(pkt.data /*+ truncateBytes*/);
 	unsigned newFrameSize = pkt.size/* - truncateBytes*/;
+
+	if ((int)(pkt.data[0] & 0x1F) == 5)
+	{
+		//std::cout << newFrameSize << std::endl;
+	}
+	
 
 	u_int8_t nal_unit_type = newFrameDataStart[0] & 0x1F;
 

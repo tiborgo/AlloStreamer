@@ -137,16 +137,20 @@ namespace AlloReceiver
 		{
 			unsigned long seconds = boost::chrono::duration_cast<boost::chrono::seconds>(window).count();
 
-			results.insert(
-			{
+			results["fps"] = results["cubemapsCount"] / seconds;
+
+			//results.insert(
+			//{
+				
+
 				/*{
 					"naluDropRate",
 					results["droppedNALUsCount-1"] / results["addedNALUsCount-1"]
 				},*/
-				{
+				/*{
 					"fps",
 					results["cubemapsCount"] / seconds
-				},
+				},*/
 				/*{
 					"receivedNALUsBitS",
 					(results["droppedNALUsBitSum"] + results["addedNALUsBitSum"]) / seconds
@@ -159,7 +163,7 @@ namespace AlloReceiver
 					"sentNALUsBitS",
 					results["sentNALUsBitSum"] / seconds
 				},*/
-			});
+			//});
 
 			for (int face = -1; face < FACE_COUNT; face++)
 			{

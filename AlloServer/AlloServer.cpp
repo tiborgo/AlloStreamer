@@ -71,7 +71,7 @@ static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms, std:
 
 void onSentNALU(RawPixelSource*, uint8_t type, size_t size, int eye, int face)
 {
-	stats.store(StatsUtils::NALU(type, size, eye * 6 + face, StatsUtils::NALU::SENT));
+	//stats.store(StatsUtils::NALU(type, size, eye * 6 + face, StatsUtils::NALU::SENT));
 }
 
 void onEncodedFrame(RawPixelSource*, int eye, int face)
