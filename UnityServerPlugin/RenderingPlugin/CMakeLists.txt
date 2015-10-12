@@ -15,29 +15,29 @@ find_package(Boost
 find_package(OpenGL REQUIRED)
 find_package(OSCPack REQUIRED) 
  
-add_library(RenderingPlugin
+add_library(UnityServerPlugin
 	SHARED
 	${SOURCES}
 	${HEADERS}
 )
-target_include_directories(RenderingPlugin
+target_include_directories(UnityServerPlugin
 	PRIVATE
 	${Boost_INCLUDE_DIRS}
 	${OSCPack_INCLUDE_DIRS}
 )
-target_link_libraries(RenderingPlugin
+target_link_libraries(UnityServerPlugin
 	${Boost_LIBRARIES}
     ${OPENGL_gl_LIBRARY}
 	${OSCPack_LIBRARIES}
 )
-set_target_properties(RenderingPlugin
+set_target_properties(UnityServerPlugin
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}" # for Windows
     LIBRARY_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}/" # for OS X
 )
 
 if(WIN32)
-	target_link_libraries(RenderingPlugin
+	target_link_libraries(UnityServerPlugin
         ws2_32
 		winmm
 	)
@@ -46,7 +46,7 @@ endif()
 if(APPLE)
     # trick unity into accepting dylibs as native plugins
     # from http://answers.unity3d.com/questions/23615/how-to-make-unity-find-dylib-files.html?sort=oldest
-    set_target_properties(RenderingPlugin
+    set_target_properties(UnityServerPlugin
         PROPERTIES
         SUFFIX ".bundle"
         PREFIX ""

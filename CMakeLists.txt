@@ -12,6 +12,8 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 set(Boost_USE_STATIC_LIBS OFF)
 add_definitions(-DBOOST_ALL_DYN_LINK)
 
+add_definitions(-DROOT_DIR="${CMAKE_SOURCE_DIR}")
+
 if(WIN32)
     add_definitions(-DBOOST_INTERPROCESS_BOOTSTAMP_IS_LASTBOOTUPTIME) # prevents error when startup time is not in Windows sys log
 	add_definitions(-DBOOST_INTERPROCESS_WINDOWS)

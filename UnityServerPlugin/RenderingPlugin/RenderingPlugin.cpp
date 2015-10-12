@@ -93,9 +93,9 @@ const int i_height = 1080;
 
 //const int i_width = 1024;
 //const int i_height = 576;
-extern "C" void setLog()
+extern "C" void EXPORT_API setLog()
 {
-    pluginFile = fopen("/Users/tiborgoldschwendt/Desktop/AlloMathieu/Logs/UnityServerPlugin.log", "w");
+    pluginFile = fopen(ROOT_DIR "/Logs/UnityServerPlugin.log", "w");
     fprintf(pluginFile, "Initializing interprocess memory...\n");
     fflush(pluginFile);
 }
@@ -385,73 +385,73 @@ float q2 = 0;
 float q3 = 0;
 float q4 = 0;
 extern "C" {
-    int startStream();
-    int initInterprocessMemory();
-	float getRoll();
-	float getPitch();
-	float getYaw();
-    float getTouchX();
-    float getTouchY();
-    float getDragX();
-    float getDragY();
-    float getPSQuatX();
-    float getPSQuatY();
-    float getPSQuatZ();
-    float getPSQuatW();
-	void endServer();
-    void oscStart();
-    void oscPhaseSpaceStart();
+	int EXPORT_API startStream();
+	int EXPORT_API initInterprocessMemory();
+	float EXPORT_API getRoll();
+	float EXPORT_API getPitch();
+	float EXPORT_API getYaw();
+	float EXPORT_API getTouchX();
+	float EXPORT_API getTouchY();
+	float EXPORT_API getDragX();
+	float EXPORT_API getDragY();
+	float EXPORT_API getPSQuatX();
+	float EXPORT_API getPSQuatY();
+	float EXPORT_API getPSQuatZ();
+	float EXPORT_API getPSQuatW();
+	void EXPORT_API endServer();
+	void EXPORT_API oscStart();
+	void EXPORT_API oscPhaseSpaceStart();
 }
-void endServer()
+extern "C" void EXPORT_API endServer()
 {
     data->shutdownServer = true;
     fprintf(pluginFile, "Ending server...\n");
     fflush(pluginFile);
 }
 
-float getRoll()
+extern "C" float EXPORT_API getRoll()
 {
 	return a3;
 }
 
-float getPitch()
+extern "C" float EXPORT_API getPitch()
 {
 	return a2;
 }
 
-float getYaw()
+extern "C" float EXPORT_API getYaw()
 {
 	return a1;
 }
-float getTouchX()
+extern "C" float EXPORT_API getTouchX()
 {
 	return a4;
 }
-float getTouchY()
+extern "C" float EXPORT_API getTouchY()
 {
 	return a5;
 }
-float getDragX()
+extern "C" float EXPORT_API getDragX()
 {
 	return a6;
 }
-float getDragY()
+extern "C" float EXPORT_API getDragY()
 {
 	return a7;
 }
-float getPSQuatX()
+extern "C" float EXPORT_API getPSQuatX()
 {
 	return q1;
 }
-float getPSQuatY()
+extern "C" float EXPORT_API getPSQuatY()
 {
 	return q2;
 }
-float getPSQuatZ()
+extern "C" float EXPORT_API getPSQuatZ()
 {
 	return q3;
 }
-float getPSQuatW()
+extern "C" float EXPORT_API getPSQuatW()
 {
 	return q4;
 }
@@ -531,7 +531,7 @@ protected:
 UdpListeningReceiveSocket* s = NULL;
 UdpListeningReceiveSocket* qs = NULL;
 //UdpListeningReceiveSocket s;
-void oscStart()
+extern "C" void EXPORT_API oscStart()
 {
 	/*
      * Start OSC client to receive phone sensor orientation
@@ -543,7 +543,7 @@ void oscStart()
     
 }
 
-void oscPhaseSpaceStart()
+extern "C" void EXPORT_API oscPhaseSpaceStart()
 {
 	/*
      * Start OSC client to receive Phase Space sensor orientation
@@ -556,7 +556,7 @@ void oscPhaseSpaceStart()
 }
 
 unsigned char testPixels[i_width*i_height*3];
-int initInterprocessMemory()
+extern "C" int EXPORT_API initInterprocessMemory()
 {
     
 
@@ -604,7 +604,7 @@ int initInterprocessMemory()
      * Will not return until endServer() is called
      */
     
-    if(0 != std::system("/Users/tiborgoldschwendt/Desktop/AlloMathieu cop/AlloServer/AlloServer"))
+	if (0 != std::system(ROOT_DIR "/Bin/" CMAKE_INTDIR "/AlloServer_Binoculars"))
         return 1;
     
     //AlloServer is finished, so shutdown OSC
