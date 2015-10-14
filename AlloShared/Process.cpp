@@ -52,12 +52,17 @@ bool Process::isAlive()
         {
             return false;
         }
-        boost::interprocess::file_lock fileLock(lockfilePath.string().c_str());
-        bool result = !fileLock.try_lock();
-        if (!result)
-        {
-            fileLock.unlock();
-        }
+
+		bool result;
+		{
+			boost::mutex::scoped_lock lock(isAliveMutex);
+			boost::interprocess::file_lock fileLock(lockfilePath.string().c_str());
+			result = !fileLock.try_lock();
+			if (!result)
+			{
+				fileLock.unlock();
+			}
+		}
         return result;
     }
     else

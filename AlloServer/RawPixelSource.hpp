@@ -27,9 +27,13 @@ public:
                                      Frame* content,
                                      int avgBitRate);
 
-	virtual void setOnSentNALU(std::function<void(RawPixelSource*,
-												  uint8_t type,
-												  size_t size)>& callback);
+	typedef std::function<void(RawPixelSource* self,
+		                       uint8_t type,
+		                       size_t size)> OnSentNALU;
+	typedef std::function<void(RawPixelSource* self)> OnEncodedFrame;
+
+	void setOnSentNALU    (const OnSentNALU&     callback);
+	void setOnEncodedFrame(const OnEncodedFrame& callback);
 
 protected:
 	RawPixelSource(UsageEnvironment& env,
@@ -38,13 +42,14 @@ protected:
 	// called only by createNew(), or by subclass constructors
 	virtual ~RawPixelSource();
 
-	std::function<void(RawPixelSource*,
-					   u_int8_t type,
-					   size_t size)> onSentNALU;
+	OnSentNALU     onSentNALU;
+	OnEncodedFrame onEncodedFrame;
 
 private:
 	EventTriggerId eventTriggerId;
 	static void deliverFrame0(void* clientData);
+	static boost::mutex triggerEventMutex;
+	static std::vector<RawPixelSource*> sourcesReadyForDelivery;
 	void deliverFrame();
 
 	// redefined virtual functions:
@@ -78,4 +83,6 @@ private:
 	bool destructing;
 
 	int64_t lastFrameTime;
+
+	int_least64_t lastPTS;
 };

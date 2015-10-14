@@ -12,6 +12,9 @@
 
 namespace bc = boost::chrono;
 
+boost::mutex RawPixelSource::triggerEventMutex;
+std::vector<RawPixelSource*> RawPixelSource::sourcesReadyForDelivery;
+
 int RawPixelSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
 {
 	char *err = NULL;
@@ -29,14 +32,14 @@ int RawPixelSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
 			return -1;
 		}
 	}
-	/*for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 4; i++)
 	{
 		if (xFrame->linesize[i] > 0)
 		{
 			xFrame->data[i] += xFrame->linesize[i] * (c->height - 1);
 			xFrame->linesize[i] = -xFrame->linesize[i];
 		}
-	}*/
+	}
 	return sws_scale(img_convert_ctx, xFrame->data,
 		xFrame->linesize, 0, c->height,
 		yuvFrame->data, yuvFrame->linesize);
@@ -55,9 +58,9 @@ struct timeval prevtime;
 
 RawPixelSource::RawPixelSource(UsageEnvironment& env,
                                Frame* content,
-                               int avgBitRate)
+							   int avgBitRate)
 	:
-	FramedSource(env), img_convert_ctx(NULL), content(content), /*encodeBarrier(2),*/ destructing(false)
+	FramedSource(env), img_convert_ctx(NULL), content(content), /*encodeBarrier(2),*/ destructing(false), lastPTS(0)
 {
 
 	gettimeofday(&prevtime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
@@ -134,6 +137,7 @@ RawPixelSource::RawPixelSource(UsageEnvironment& env,
 
 	av_opt_set(codecContext->priv_data, "preset", PRESET_VAL, 0);
 	av_opt_set(codecContext->priv_data, "tune", TUNE_VAL, 0);
+	av_opt_set(codecContext->priv_data, "slice-max-size", "20000", 0);
 
 	/* open it */
 	if (avcodec_open2(codecContext, codec, NULL) < 0)
@@ -198,11 +202,14 @@ RawPixelSource::~RawPixelSource()
 	//std::cout << this << ": deconstructed" << std::endl;
 }
 
-void RawPixelSource::setOnSentNALU(std::function<void(RawPixelSource*,
-	uint8_t type,
-	size_t size)>& callback)
+void RawPixelSource::setOnSentNALU(const OnSentNALU& callback)
 {
 	onSentNALU = callback;
+}
+
+void RawPixelSource::setOnEncodedFrame(const OnEncodedFrame& callback)
+{
+	onEncodedFrame = callback;
 }
 
 void RawPixelSource::frameContentLoop()
@@ -210,16 +217,6 @@ void RawPixelSource::frameContentLoop()
 
 	while (!destructing)
 	{
-		while (!content->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
-		{
-			if (destructing)
-			{
-				return;
-			}
-		}
-
-		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(content->getMutex(),
-			boost::interprocess::accept_ownership);
 
 		AVFrame* frame;
 		if (!framePool.wait_and_pop(frame))
@@ -227,25 +224,42 @@ void RawPixelSource::frameContentLoop()
 			return;
 		}
 
-		// barrier1  // barrier1
-		// barrier2
+		// End this thread when CubemapExtractionPlugin closes
+		while (!content->getBarrier().timedWait(boost::chrono::milliseconds(100)))
+		{
+			if (destructing)
+			{
+				return;
+			}
+		}
 
-		// Fill frame
-        avpicture_fill((AVPicture*)frame,
-			(uint8_t*)content->getPixels(),
-            content->getFormat(),
-            content->getWidth(),
-            content->getHeight());
-        
-        // barrier2
+		//content->getBarrier().wait();
 
-        // Set the actual presentation time
-        // It is in the past probably but we will try our best
-        AVRational microSecBase = { 1, 1000000 };
-        bc::microseconds presentationTimeSinceEpochMicroSec =
-            bc::duration_cast<bc::microseconds>(content->getPresentationTime().time_since_epoch());
+		AVRational microSecBase = { 1, 1000000 };
+		bc::microseconds presentationTimeSinceEpochMicroSec;
+
+		int_least64_t x;
+		{
+			boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(content->getMutex());
+
+			// Fill frame
+			avpicture_fill((AVPicture*)frame,
+				(uint8_t*)content->getPixels(),
+				content->getFormat(),
+				content->getWidth(),
+				content->getHeight());
+
+			// Set the actual presentation time
+			// It is in the past probably but we will try our best
+			
+			presentationTimeSinceEpochMicroSec =
+				bc::duration_cast<bc::microseconds>(content->getPresentationTime().time_since_epoch());
+
+			x = content->getPresentationTime().time_since_epoch().count();
+		}
         
-        
+		
+
 //        const time_t time = bc::system_clock::to_time_t(face->getPresentationTime());
 //
 //        // Maybe the put_time will be implemented later?
@@ -257,20 +271,19 @@ void RawPixelSource::frameContentLoop()
         //std::cout << this << " frame" << std::endl;
 
 
-        frame->pts = av_rescale_q(presentationTimeSinceEpochMicroSec.count(), microSecBase, codecContext->time_base);
+		frame->pts = presentationTimeSinceEpochMicroSec.count();// av_rescale_q(presentationTimeSinceEpochMicroSec.count(), microSecBase, codecContext->time_base);
+
+		if (x == lastPTS)
+		{
+			std::cout << "match!?" << std::endl;
+		}
+
+		lastPTS = frame->pts;
+
+		//std::cout << presentationTimeSinceEpochMicroSec.count() << " " << x << " " << frame->pts << std::endl;
 
         // Make frame available to the encoder
         frameBuffer.push(frame);
-
-		// Wait for new frame
-		while (!content->getNewPixelsCondition().timed_wait(lock,
-			boost::get_system_time() + boost::posix_time::milliseconds(100)))
-		{
-			if (destructing)
-			{
-				return;
-			}
-		}
 	}
 }
 
@@ -298,107 +311,156 @@ void RawPixelSource::doGetNextFrame()
 
 void RawPixelSource::deliverFrame0(void* clientData)
 {
+	boost::mutex::scoped_lock lock(triggerEventMutex);
+	for (RawPixelSource* source : sourcesReadyForDelivery)
+	{
+		source->deliverFrame();
+	}
+	sourcesReadyForDelivery.clear();
 	//std::cout << "deliver frame: " << ((CubemapFaceSource*)clientData)->face->index << std::endl;
-	((RawPixelSource*)clientData)->deliverFrame();
 }
-
-boost::mutex triggerEventMutex;
 
 void RawPixelSource::encodeFrameLoop()
 {
-
-
 	while (!this->destructing)
 	{
-		// Pop frame ptr from buffer
-		AVFrame* xFrame;
-		AVFrame* yuv420pFrame;
 		AVPacket pkt;
+		int64_t pts;
 
-
-
-
-		if (!frameBuffer.wait_and_pop(xFrame))
 		{
-			// queue did close
-			return;
-		}
+			// Pop frame ptr from buffer
+			AVFrame* xFrame;
+			AVFrame* yuv420pFrame;
 
-		if (!pktPool.wait_and_pop(pkt))
-		{
-			// queue did close
-			return;
-		}
-
-        //std::cout << this << " encode" << std::endl;
-        
-		if (xFrame->format != AV_PIX_FMT_YUV420P)
-		{
-			yuv420pFrame = av_frame_alloc();
-			if (!yuv420pFrame)
+			if (!frameBuffer.wait_and_pop(xFrame))
 			{
-				fprintf(stderr, "Could not allocate video frame\n");
+				// queue did close
 				return;
 			}
-			yuv420pFrame->format = AV_PIX_FMT_YUV420P;
-			yuv420pFrame->width = xFrame->width;
-			yuv420pFrame->height = xFrame->height;
 
+			pts = xFrame->pts;
 
+			//std::cout << this << " encode" << std::endl;
 
-			/* the image can be allocated by any means and av_image_alloc() is
-			* just the most convenient way if av_malloc() is to be used */
-			if (av_image_alloc(yuv420pFrame->data, yuv420pFrame->linesize, yuv420pFrame->width, yuv420pFrame->height,
-				AV_PIX_FMT_YUV420P, 32) < 0)
+			if (xFrame->format != AV_PIX_FMT_YUV420P)
 			{
-				fprintf(stderr, "Could not allocate raw picture buffer\n");
+				yuv420pFrame = av_frame_alloc();
+				if (!yuv420pFrame)
+				{
+					fprintf(stderr, "Could not allocate video frame\n");
+					return;
+				}
+				yuv420pFrame->format = AV_PIX_FMT_YUV420P;
+				yuv420pFrame->width = xFrame->width;
+				yuv420pFrame->height = xFrame->height;
+
+				/* the image can be allocated by any means and av_image_alloc() is
+				* just the most convenient way if av_malloc() is to be used */
+				if (av_image_alloc(yuv420pFrame->data, yuv420pFrame->linesize, yuv420pFrame->width, yuv420pFrame->height,
+					AV_PIX_FMT_YUV420P, 32) < 0)
+				{
+					fprintf(stderr, "Could not allocate raw picture buffer\n");
+					abort();
+				}
+
+				x2yuv(xFrame, yuv420pFrame, codecContext);
+			}
+			else
+			{
+				yuv420pFrame = xFrame;
+			}
+
+			av_init_packet(&pkt);
+			pkt.data = NULL; // packet data will be allocated by the encoder
+			pkt.size = 0;
+			int got_output = 0;
+
+			//mutex.lock();
+			int ret = avcodec_encode_video2(codecContext, &pkt, yuv420pFrame, &got_output);
+			if (ret < 0)
+			{
+				fprintf(stderr, "Error encoding frame\n");
 				abort();
 			}
 
-			x2yuv(xFrame, yuv420pFrame, codecContext);
+			if (onEncodedFrame) onEncodedFrame(this);
+
+			framePool.push(xFrame);
+
+			if (xFrame->format != AV_PIX_FMT_YUV420P)
+			{
+				av_freep(&yuv420pFrame->data[0]);
+				av_frame_free(&yuv420pFrame);
+			}
 		}
-		else
+	
 		{
-			yuv420pFrame = xFrame;
-		}
+			// pair.first: pos if first byte of NALU; pair.second: pos of last byte of NALU
+			std::queue<std::pair<size_t, size_t> > naluPoses;
 
-		pkt.data = NULL; // packet data will be allocated by the encoder
-		pkt.size = 0;
-		int got_output = 0;
+			// Parse package for all NALUs
+			size_t naluStartPos = 0;
+			for (size_t i = 0; i < pkt.size - 3; i++)
+			{
+				if (pkt.data[i] == 0 &&
+					pkt.data[i + 1] == 0)
+				{
+					if (pkt.data[i + 2] == 0 &&
+						pkt.data[i + 3] == 1)
+					{
+						if (i != 0)
+						{
+							naluPoses.push(std::make_pair(naluStartPos, i - 1));
+						}
 
-		//mutex.lock();
-		int ret = avcodec_encode_video2(codecContext, &pkt, yuv420pFrame, &got_output);
-		//mutex.unlock();
+						naluStartPos = i + 4;
+						i += 3;
+					}
+					else if (pkt.data[i + 2] == 1)
+					{
+						if (i != 0)
+						{
+							naluPoses.push(std::make_pair(naluStartPos, i - 1));
+						}
 
-		// std::cout << "encoded frame" << std::endl;
+						naluStartPos = i + 3;
+						i += 2;
+					}
+				}
+			}
+			naluPoses.push(std::make_pair(naluStartPos, pkt.size - 1));
 
-//		fprintf(myfile, "packet size: %i \n", pkt.size);
-	//	fflush(myfile);
 
-		if (ret < 0)
-		{
-			fprintf(stderr, "Error encoding frame\n");
-			return;
-		}
+			size_t naluCount = naluPoses.size();
 
-		pkt.pts = xFrame->pts;
 
-		framePool.push(xFrame);
-		pktBuffer.push(pkt);
+			AVPacket dummy;
+			if (!pktPool.wait_and_pop(dummy))
+			{
+				// queue did close
+				return;
+			}
 
-		//std::cout << this << ": encoded frame" << std::endl;
+			for (size_t i = 0; i < naluCount; i++)
+			{
+				std::pair<size_t, size_t> naluPos = naluPoses.front();
+				naluPoses.pop();
 
-		//if (!this->destructing && isCurrentlyAwaitingData())
-		{
-			boost::mutex::scoped_lock lock(triggerEventMutex);
-			envir().taskScheduler().triggerEvent(eventTriggerId, this);
-			//std::cout << this << ": event triggered" << std::endl;
-		}
+				AVPacket naluPkt;
+				av_new_packet(&naluPkt, naluPos.second - naluPos.first + 1);
+				memcpy(naluPkt.data, pkt.data + naluPos.first, naluPkt.size);
+				naluPkt.pts = pts;
 
-		if (xFrame->format != AV_PIX_FMT_YUV420P)
-		{
-			av_freep(&yuv420pFrame->data[0]);
-			av_frame_free(&yuv420pFrame);
+				pktBuffer.push(naluPkt);
+
+				{
+					boost::mutex::scoped_lock lock(triggerEventMutex);
+					sourcesReadyForDelivery.push_back(this);
+					envir().taskScheduler().triggerEvent(eventTriggerId, nullptr);
+				}
+			}
+
+			av_free_packet(&pkt);
 		}
 	}
 }
@@ -427,7 +489,7 @@ void RawPixelSource::deliverFrame()
 	//         to set this variable, because - in this case - data will never arrive 'early'.
 	// Note the code below.
 
-
+	//std::cout << "available size: " << fMaxSize << std::endl;
 
 	if (!isCurrentlyAwaitingData())
 	{
@@ -456,15 +518,22 @@ void RawPixelSource::deliverFrame()
 		// queue did close
 		return;
 	}
+
+	if (pktBuffer.size() == 0)
+	{
+		AVPacket dummy;
+		pktPool.push(dummy);
+	}
     
     //std::cout << this << " send" << std::endl;
 
 	// Set the presentation time of this frame
 	AVRational secBase = { 1, 1 };
 	AVRational microSecBase = { 1, 1000000 };
-	fPresentationTime.tv_sec = av_rescale_q(pkt.pts, codecContext->time_base, secBase);
-	fPresentationTime.tv_usec = av_rescale_q(pkt.pts, codecContext->time_base, microSecBase) -
-		fPresentationTime.tv_sec * 1000000;
+	fPresentationTime.tv_sec = pkt.pts / 1000000; //av_rescale_q(pkt.pts, codecContext->time_base, secBase);
+	fPresentationTime.tv_usec = pkt.pts % 1000000; // av_rescale_q(pkt.pts, codecContext->time_base, microSecBase) -
+
+	//std::cout << fPresentationTime.tv_sec << " " << fPresentationTime.tv_usec << std::endl;
 
 	// Live555 does not like start codes.
 	// So, we remove the start code which is there in front of every nal unit.  
@@ -486,10 +555,18 @@ void RawPixelSource::deliverFrame()
 		truncateBytes = 3;
 	}
 
-	u_int8_t* newFrameDataStart = (u_int8_t*)(pkt.data + truncateBytes);
-	unsigned newFrameSize = pkt.size - truncateBytes;
+	u_int8_t* newFrameDataStart = (u_int8_t*)(pkt.data /*+ truncateBytes*/);
+	unsigned newFrameSize = pkt.size/* - truncateBytes*/;
+
+	if ((int)(pkt.data[0] & 0x1F) == 5)
+	{
+		//std::cout << newFrameSize << std::endl;
+	}
+	
 
 	u_int8_t nal_unit_type = newFrameDataStart[0] & 0x1F;
+
+	//std::cout << "sent NALU type " << (int)nal_unit_type << " (" << newFrameSize << ")" << std::endl;
 
 	//if (nal_unit_type == 8) // PPS
 	//{
@@ -527,15 +604,19 @@ void RawPixelSource::deliverFrame()
 
 
 	av_free_packet(&pkt);
-	pktPool.push(pkt);
+	//pktPool.push(pkt);
 
 	if (fNumTruncatedBytes > 0)
 	{
 		std::cout << this << ": truncated " << fNumTruncatedBytes << " bytes" << std::endl;
 	}
 
+	//std::cout << fFrameSize << std::endl;
+
 	// Tell live555 that a new frame is available
 	FramedSource::afterGetting(this);
+
+	//std::cout << pkt.pts << std::endl;
 
 	if (onSentNALU) onSentNALU(this, nal_unit_type, fFrameSize);
 
@@ -544,4 +625,6 @@ void RawPixelSource::deliverFrame()
 	lastFrameTime = thisTime;
 
 	//std::cout << this << ": delivered" << std::endl;
+
+	//boost::this_thread::sleep_for(boost::chrono::microseconds((size_t)(1 * fFrameSize)));
 }

@@ -5,43 +5,81 @@
 #include <boost/program_options.hpp>
 #include <boost/ref.hpp>
 
-#include "AlloShared/Stats.hpp"
+#include "AlloShared/StatsUtils.hpp"
 #include "AlloShared/to_human_readable_byte_count.hpp"
+#include "AlloReceiver/RTSPCubemapSourceClient.hpp"
 #include "AlloReceiver/AlloReceiver.h"
+#include "AlloReceiver/Stats.hpp"
+#include "AlloReceiver/H264CubemapSource.h"
 
 const unsigned int DEFAULT_SINK_BUFFER_SIZE = 2000000000;
 
-Stats stats;
+static Stats stats;
+static bool noDisplay;
+static boost::barrier barrier(2);
+static CubemapSource* cubemapSource;
+static RTSPCubemapSourceClient* rtspClient;
 
 StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
     for (int i = 0; i < cubemap->getEye(0)->getFacesCount(); i++)
     {
-        stats.displayedCubemapFace(i);
+        stats.store(StatsUtils::CubemapFace(i));
     }
-    stats.displayedFrame();
-    StereoCubemap::destroy(cubemap);
-    return nullptr;
+    stats.store(StatsUtils::Cubemap());
+    return cubemap;
 }
 
-void onDroppedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
+void onReceivedNALU(CubemapSource* source, u_int8_t type, size_t size, int face)
 {
-    stats.droppedNALU(type, size, face);
+    //stats.store(StatsUtils::NALU(type, size, face, StatsUtils::NALU::RECEIVED));
 }
 
-void onAddedNALU(CubemapSource* source, int face, u_int8_t type, size_t size)
+void onReceivedFrame(CubemapSource* source, u_int8_t type, size_t size, int face)
 {
-    stats.addedNALU(type, size, face);
+    //stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::RECEIVED));
+}
+
+void onDecodedFrame(CubemapSource* source, u_int8_t type, size_t size, int face)
+{
+    //stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::DECODED));
+}
+
+void onColorConvertedFrame(CubemapSource* source, u_int8_t type, size_t size, int face)
+{
+    stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::COLOR_CONVERTED));
 }
 
 void onDisplayedCubemapFace(Renderer* renderer, int face)
 {
-    stats.displayedCubemapFace(face);
+    stats.store(StatsUtils::CubemapFace(face));
 }
 
 void onDisplayedFrame(Renderer* renderer)
 {
-    stats.displayedFrame();
+    stats.store(StatsUtils::Cubemap());
+}
+
+void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
+{
+    H264CubemapSource* h264CubemapSource = dynamic_cast<H264CubemapSource*>(cubemapSource);
+    if (h264CubemapSource)
+    {
+        h264CubemapSource->setOnReceivedNALU       (boost::bind(&onReceivedNALU,        _1, _2, _3, _4));
+        h264CubemapSource->setOnReceivedFrame      (boost::bind(&onReceivedFrame,       _1, _2, _3, _4));
+        h264CubemapSource->setOnDecodedFrame       (boost::bind(&onDecodedFrame,        _1, _2, _3, _4));
+        h264CubemapSource->setOnColorConvertedFrame(boost::bind(&onColorConvertedFrame, _1, _2, _3, _4));
+    }
+    
+    
+    stats.autoSummary(boost::chrono::seconds(10),
+                      AlloReceiver::statValsMaker,
+                      AlloReceiver::postProcessorMaker,
+                      AlloReceiver::formatStringMaker);
+    
+    ::cubemapSource = cubemapSource;
+    
+    barrier.wait();
 }
 
 int main(int argc, char* argv[])
@@ -59,7 +97,8 @@ int main(int argc, char* argv[])
         ("no-display", "")
         ("url", boost::program_options::value<std::string>(), "url")
         ("interface", boost::program_options::value<std::string>(), "interface")
-        ("buffer-size", boost::program_options::value<unsigned long>(), "buffer-size");
+        ("buffer-size", boost::program_options::value<unsigned long>(), "buffer-size")
+        ("match-stereo-pairs", "");
     
     boost::program_options::positional_options_description p;
     p.add("url", -1);
@@ -88,23 +127,44 @@ int main(int argc, char* argv[])
     {
         bufferSize = DEFAULT_SINK_BUFFER_SIZE;
     }
-    
     std::cout << "Buffer size " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
 
-    CubemapSource* cubemapSource = CubemapSource::createFromRTSP(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, interface);
-    
-    std::function<void (CubemapSource*, int, u_int8_t, size_t)> callback = boost::bind(&onDroppedNALU, _1, _2, _3, _4);
-    cubemapSource->setOnDroppedNALU(callback);
-    callback = boost::bind(&onAddedNALU, _1, _2, _3, _4);
-    cubemapSource->setOnAddedNALU(callback);
-    
-    stats.autoSummary(boost::chrono::seconds(10));
-    
     if (vm.count("no-display"))
+    {
+        noDisplay = true;
+    }
+    else
+    {
+        noDisplay = false;
+    }
+    
+    bool matchStereoPairs;
+    if (vm.count("match-stereo-pairs"))
+    {
+        matchStereoPairs = true;
+    }
+    else
+    {
+        matchStereoPairs = false;
+    }
+    
+    rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(),
+                                                 bufferSize,
+                                                 AV_PIX_FMT_RGBA,
+                                                 matchStereoPairs,
+                                                 interface);
+    std::function<void (RTSPCubemapSourceClient*, CubemapSource*)> callback(boost::bind(&onDidConnect, _1, _2));
+    rtspClient->setOnDidConnect(callback);
+    rtspClient->connect();
+    
+    barrier.wait();
+    
+    if (noDisplay)
     {
         std::cout << "network only" << std::endl;
         std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)> callback = boost::bind(&onNextCubemap, _1, _2);
         cubemapSource->setOnNextCubemap(callback);
+        
         while(true)
         {
             boost::this_thread::yield();
@@ -119,6 +179,6 @@ int main(int argc, char* argv[])
         renderer.setOnDisplayedFrame(onDisplayedFrameCallback);
         renderer.start();
     }
-    
+
     CubemapSource::destroy(cubemapSource);
 }

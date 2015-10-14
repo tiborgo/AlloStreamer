@@ -21,8 +21,9 @@
 
 class CubemapFace
 {
-
 public:
+	bool getNewFaceFlag();
+	void setNewFaceFlag(bool);
 	typedef boost::interprocess::offset_ptr<CubemapFace> Ptr;
     
     int getIndex();
@@ -32,8 +33,9 @@ public:
                                int index,
                                Allocator& allocator);
     static void destroy(CubemapFace* cubemapFace);
-    
+
 protected:
+	bool newFaceFlag;
     CubemapFace(Frame* content,
                 int index,
                 Allocator& allocator);
@@ -49,9 +51,9 @@ class Cubemap
 public:
     typedef boost::interprocess::offset_ptr<Cubemap> Ptr;
 
-	static enum { MAX_FACES_COUNT = 6 };
+	enum { MAX_FACES_COUNT = 6 };
     
-    CubemapFace* getFace(int index);
+    CubemapFace* getFace(int index, bool force=false);
     int getFacesCount();
     
     static Cubemap* create(std::vector<CubemapFace*> faces,
@@ -75,7 +77,7 @@ public:
     typedef boost::interprocess::offset_ptr<StereoCubemap> Ptr;
     //static const size_t MAX_EYES_COUNT;
     
-	static enum { MAX_EYES_COUNT = 2 };
+	enum { MAX_EYES_COUNT = 2 };
 
     Cubemap* getEye(int index);
     int getEyesCount();

@@ -7,7 +7,8 @@ Frame::Frame(boost::uint32_t                         width,
              Allocator&                              allocator)
     :
     allocator(allocator), width(width), height(height), format(format),
-	presentationTime(presentationTime), pixels(allocator.allocate(width * height * 4)) // for RGBA
+	presentationTime(presentationTime), pixels(allocator.allocate(width * height * 4)), // for RGBA
+	barrier(2)
 {
 }
 
@@ -41,14 +42,14 @@ void* Frame::getPixels()
     return pixels.get();
 }
 
+Barrier& Frame::getBarrier()
+{
+    return barrier;
+}
+
 boost::interprocess::interprocess_mutex& Frame::getMutex()
 {
     return mutex;
-}
-
-boost::interprocess::interprocess_condition& Frame::getNewPixelsCondition()
-{
-    return newPixelsCondition;
 }
 
 void Frame::setPresentationTime(boost::chrono::system_clock::time_point presentationTime)

@@ -120,12 +120,12 @@ StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cub
 	return oldCubemap;
 }
 
-void Renderer::setOnDisplayedFrame(std::function<void (Renderer*)>& callback)
+void Renderer::setOnDisplayedFrame(const std::function<void (Renderer*)>& callback)
 {
     onDisplayedFrame = callback;
 }
 
-void Renderer::setOnDisplayedCubemapFace(std::function<void (Renderer*, int)>& callback)
+void Renderer::setOnDisplayedCubemapFace(const std::function<void (Renderer*, int)>& callback)
 {
     onDisplayedCubemapFace = callback;
 }

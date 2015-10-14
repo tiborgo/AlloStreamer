@@ -32,6 +32,9 @@ find_package(Jsoncpp REQUIRED)
 find_package(FreeImage REQUIRED)
 find_package(GLEW REQUIRED)
 
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+set(CMAKE_INSTALL_RPATH "@loader_path/.")
+
 add_executable(AlloPlayer
 	${SOURCES}
 	${HEADERS}

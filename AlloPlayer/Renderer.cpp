@@ -70,6 +70,13 @@ bool Renderer::onFrame()
                                               al::Graphics::RGBA,
                                               al::Graphics::UBYTE);
                         textures[texI + j * Cubemap::MAX_FACES_COUNT] = tex;
+                        
+                        // In case a face is mono use the same the texture for left and right.
+                        // By doing so, image will become twice as bright in the AlloSphere.
+                        if (j == 0 && cubemap->getEyesCount() > 1 && cubemap->getEye(1)->getFacesCount() > i)
+                        {
+                            textures[texI + Cubemap::MAX_FACES_COUNT] = tex;
+                        }
                     }
                 
                     void* pixels = tex->data<void>();
@@ -81,6 +88,7 @@ bool Renderer::onFrame()
                 }
             }
         }
+        
         cubemapPool.push(cubemap);
     }
     

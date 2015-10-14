@@ -7,96 +7,114 @@
 #include <boost/function.hpp>
 #include <initializer_list>
 #include <boost/thread.hpp>
+#include <boost/any.hpp>
 
 class Stats
 {
 public:
-	  
-
-    // events
-    void droppedNALU(int type, size_t size, int face);
-    void addedNALU(int type, size_t size, int face);
-	void sentNALU(int type, size_t size, int face);
-	/*void decodedNALU(int type);
-    void failedToDecodeNALU(int type);*/
-    void displayedCubemapFace(int face);
-    void displayedFrame();
-    
-    // statistical values
-    double naluDropRate(boost::chrono::microseconds window,
-                        boost::chrono::microseconds nowSinceEpoch);
-    double facesPS(int face,
-                   boost::chrono::microseconds window,
-				   boost::chrono::microseconds nowSinceEpoch);
-    double fps(boost::chrono::microseconds window,
-		       boost::chrono::microseconds nowSinceEpoch);
-    double receivedNALUsPS(int face,
-		                   boost::chrono::microseconds window,
-		                   boost::chrono::microseconds nowSinceEpoch);
-	double processedNALUsPS(int face,
-	                        boost::chrono::microseconds window,
-		                    boost::chrono::microseconds nowSinceEpoch);
-	double sentNALUsPS(int face,
-		               boost::chrono::microseconds window,
-		               boost::chrono::microseconds nowSinceEpoch);
-	double receivedNALUsBitRate(boost::chrono::microseconds window,
-		                        boost::chrono::microseconds nowSinceEpoch);
-	double processedNALUsBitRate(boost::chrono::microseconds window,
-		                         boost::chrono::microseconds nowSinceEpoch);
-	double sentNALUsBitRate(boost::chrono::microseconds window,
-		                    boost::chrono::microseconds nowSinceEpoch);
-    
-    // utility
-    std::string summary(boost::chrono::microseconds window);
-    void autoSummary(boost::chrono::microseconds frequency);
-	void stopAutoSummary();
-
-private:
-    
-    template <typename ValueType>
     class TimeValueDatum
     {
     public:
-        TimeValueDatum(ValueType value);
-        const boost::chrono::microseconds timeSinceEpoch;
-        const ValueType value;
+        TimeValueDatum(const boost::any& value) : time(boost::chrono::steady_clock::now()), value(value) {}
+		const boost::chrono::steady_clock::time_point time;
+		const boost::any value;
     };
+    
+    class StatVal
+    {
+    public:
+        template <typename Feature>
+        static StatVal makeStatVal(boost::function<bool (TimeValueDatum)>   filter,
+                                   boost::function<double (TimeValueDatum)> accessor,
+                                   const Feature&                           accumulator,
+                                   const std::string&                       name)
+        {
+            auto filterAccExtractorMaker = [filter, accessor]()
+            {
+                auto acc = new boost::accumulators::accumulator_set<double, boost::accumulators::features<Feature> >();
+                
+                auto filterAcc = [acc, filter, accessor](Stats::TimeValueDatum datum)
+                {
+                    if (filter(datum))
+                    {
+                        (*acc)(accessor(datum.value));
+                    }
+                };
+                
+                auto extractor = [acc]()
+                {
+                    boost::accumulators::extractor<Feature> ex;
+                    return ex(*acc);
+                };
+                
+				return FilterAccExtractor(filterAcc, extractor);
+            };
+            
+            return StatVal(filterAccExtractorMaker, name);
+        }
+        
+    private:
+        friend class Stats;
+        
+        typedef std::pair<boost::function<void (Stats::TimeValueDatum)>,  boost::function<double ()> > FilterAccExtractor;
+        typedef boost::function<FilterAccExtractor ()> FilterAccExtractorMaker;
+        
+        StatVal(FilterAccExtractorMaker filterAccExtractorMaker,
+                const std::string& name)
+                :
+                filterAccExtractorMaker(filterAccExtractorMaker),
+                name(name) {}
+        
+        FilterAccExtractorMaker filterAccExtractorMaker;
+        std::string name;
+    };
+    
+    Stats();
 
-	class NALU
-	{
-	public:
-		NALU(int type, size_t size, int face);
-		int type;
-		size_t size;
-		int face;
-	};
+    // events
+    void store(const boost::any& datum);
     
-	std::vector<TimeValueDatum<NALU> > droppedNALUs;
-	std::vector<TimeValueDatum<NALU> > addedNALUs;
-	std::vector<TimeValueDatum<NALU> > sentNALUs;
-    std::vector<TimeValueDatum<int> > displayedCubemapFaces;
-    std::vector<TimeValueDatum<int> > displayedFrames;
-    
-	template <typename Features, typename ValueType, typename AccType>
-    boost::accumulators::accumulator_set<AccType, Features> filter(
-       std::vector<TimeValueDatum<ValueType> >& data,
-       std::initializer_list<boost::function<bool (TimeValueDatum<ValueType>)> > filters,
-	   boost::function<AccType(ValueType)> accExtractor);
-    
-    template <typename ValueType>
-    boost::function<bool (TimeValueDatum<ValueType>)> timeFilter(
-        boost::chrono::microseconds window,
-        boost::chrono::microseconds nowSinceEpoch);
+    // utility
 
-	boost::function<bool(TimeValueDatum<NALU>)> faceFilter(int face);
+	typedef boost::function<void(std::map<std::string, double>&)> PostProcessor;
+	typedef boost::function<std::list<Stats::StatVal>(boost::chrono::microseconds,
+		                                              boost::chrono::steady_clock::time_point)> StatValsMaker;
+	typedef boost::function<PostProcessor(boost::chrono::microseconds,
+		                                  boost::chrono::steady_clock::time_point)> PostProcessorMaker;
+	typedef boost::function<std::string (boost::chrono::microseconds,
+		                                 boost::chrono::steady_clock::time_point)> FormatStringMaker;
+
+	std::string summary(boost::chrono::microseconds window,
+		                StatValsMaker               statValsMaker,
+		                PostProcessorMaker          postProcessorMaker,
+		                FormatStringMaker           formatStringMaker);
+    void autoSummary(boost::chrono::microseconds frequency,
+					 StatValsMaker               statValsMaker,
+					 PostProcessorMaker          postProcessorMaker,
+					 FormatStringMaker           formatStringMaker);
+	void stopAutoSummary();
+
+private:
+    std::list<TimeValueDatum>* activeStorage;
+    std::list<TimeValueDatum>* processingStorage;
     
-    boost::chrono::microseconds nowSinceEpoch();
+    std::list<TimeValueDatum> storage1;
+    std::list<TimeValueDatum> storage2;
+    
+    std::map<std::string, double> query(std::initializer_list<StatVal>                         statVals,
+                                        boost::function<void (std::map<std::string, double>&)> postCalculator);
+	std::map<std::string, double> query(std::list<StatVal>                                    statVals,
+									    boost::function<void(std::map<std::string, double>&)> postCalculator);
+  
     
     std::string formatDuration(boost::chrono::microseconds duration);
     
     boost::mutex mutex;
     boost::thread autoSummaryThread;
 	bool stopAutoSummary_;
-    void autoSummaryLoop(boost::chrono::microseconds frequency);
+    void autoSummaryLoop(boost::chrono::microseconds frequency,
+						 StatValsMaker               statValsMaker,
+						 PostProcessorMaker          postProcessorMaker,
+						 FormatStringMaker           formatStringMaker);
 };
 

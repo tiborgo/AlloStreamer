@@ -9,6 +9,7 @@ extern "C"
 	#include <libavutil/time.h>
 	#include <libswscale/swscale.h>
 	#include <x264.h>
+    #include <libavformat/avformat.h>
 }
 #include <MediaSink.hh>
 #include <MediaSession.hh>
@@ -24,17 +25,27 @@ class ALLORECEIVER_API H264RawPixelsSink : public MediaSink
 public:
 	static H264RawPixelsSink* createNew(UsageEnvironment& env,
                                         unsigned long bufferSize,
-                                        AVPixelFormat format);
+                                        AVPixelFormat format,
+                                        MediaSubsession* subsession);
 
-	AVFrame* getNextFrame(AVFrame* oldFrame);
+	AVFrame* getNextFrame();
+    void returnFrame(AVFrame* usedFrame);
     
-    void setOnDroppedNALU(std::function<void (H264RawPixelsSink*, u_int8_t, size_t)>& callback);
-    void setOnAddedNALU(std::function<void (H264RawPixelsSink*, u_int8_t, size_t)>& callback);
-
+    typedef std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> OnReceivedNALU;
+    typedef std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> OnReceivedFrame;
+    typedef std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> OnDecodedFrame;
+    typedef std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> OnColorConvertedFrame;
+    
+    void setOnReceivedNALU       (const OnReceivedNALU&        callback);
+    void setOnReceivedFrame      (const OnReceivedFrame&       callback);
+    void setOnDecodedFrame       (const OnDecodedFrame&        callback);
+    void setOnColorConvertedFrame(const OnColorConvertedFrame& callback);
+	
 protected:
 	H264RawPixelsSink(UsageEnvironment& env,
                       unsigned int bufferSize,
-                      AVPixelFormat format);
+                      AVPixelFormat format,
+                      MediaSubsession* subsession);
 
 	virtual void afterGettingFrame(unsigned frameSize,
 		unsigned numTruncatedBytes,
@@ -48,34 +59,55 @@ protected:
 		timeval presentationTime,
 		unsigned durationInMicroseconds);
     
-    std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> onDroppedNALU;
-    std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> onAddedNALU;
+    OnReceivedNALU        onReceivedNALU;
+    OnReceivedFrame       onReceivedFrame;
+    OnDecodedFrame        onDecodedFrame;
+    OnColorConvertedFrame onColorConvertedFrame;
 
 private:
+    struct NALU
+    {
+        unsigned char* buffer;
+        size_t size;
+        int64_t pts;
+    };
+    
 	unsigned long bufferSize;
 	unsigned char* buffer;
 	AVCodecContext* codecContext;
+    concurrent_queue<NALU*> naluPool;
+    concurrent_queue<NALU*> naluBuffer;
     concurrent_queue<AVPacket*> pktBuffer;
     concurrent_queue<AVPacket*> pktPool;
 	concurrent_queue<AVFrame*> frameBuffer;
 	concurrent_queue<AVFrame*> framePool;
     concurrent_queue<AVFrame*> resizedFrameBuffer;
     concurrent_queue<AVFrame*> resizedFramePool;
-
+    
+    AVPacket* currentPkt;
+    int64_t pts;
+    int64_t lastPTS;
+    
 	SwsContext* imageConvertCtx;
-
-    AVPacket* lastIFramePkt;
-    bool gotFirstIFrame;
+    
+    std::queue<AVPacket*> priorityPackages; // SPS, PPS, IDR-slice NAL
+    bool receivedFirstPriorityPackages; // first sequence of SPS, PPS and IDR-slice NALUs has been received
+    
     AVPixelFormat format;
     
+    void packageNALUsLoop();
 	void decodeFrameLoop();
     void convertFrameLoop();
+    boost::thread packageNALUsThread;
     boost::thread decodeFrameThread;
     boost::thread convertFrameThread;
 
 	int counter;
 	long sumRelativePresentationTimeMicroSec;
 	long maxRelativePresentationTimeMicroSec;
+    
+    MediaSubsession* subsession;
+    int lastTotal;
     
     void packageData(AVPacket* pkt, unsigned int frameSize, timeval presentationTime);
 };

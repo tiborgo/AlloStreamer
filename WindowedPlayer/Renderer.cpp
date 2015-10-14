@@ -67,12 +67,12 @@ StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cub
 	return oldCubemap;
 }
 
-void Renderer::setOnDisplayedFrame(std::function<void (Renderer*)>& callback)
+void Renderer::setOnDisplayedFrame(const std::function<void (Renderer*)>& callback)
 {
     onDisplayedFrame = callback;
 }
 
-void Renderer::setOnDisplayedCubemapFace(std::function<void (Renderer*, int)>& callback)
+void Renderer::setOnDisplayedCubemapFace(const std::function<void (Renderer*, int)>& callback)
 {
     onDisplayedCubemapFace = callback;
 }
@@ -99,17 +99,24 @@ void Renderer::createTextures(StereoCubemap* cubemap)
 		for (int i = 0; i < eye->getFacesCount(); i++)
 		{
 			CubemapFace* face = eye->getFace(i);
-			SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, face->getContent()->getWidth(), face->getContent()->getHeight());
-			if (texture == nullptr)
+			if (face)
 			{
-				SDL_DestroyRenderer(renderer);
-				SDL_DestroyWindow(window);
-				std::cerr << "SDL_CreateTextureFromSurface Error: " << SDL_GetError() << std::endl;
-				SDL_Quit();
-				abort();
-			}
+				SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, face->getContent()->getWidth(), face->getContent()->getHeight());
+				if (texture == nullptr)
+				{
+					SDL_DestroyRenderer(renderer);
+					SDL_DestroyWindow(window);
+					std::cerr << "SDL_CreateTextureFromSurface Error: " << SDL_GetError() << std::endl;
+					SDL_Quit();
+					abort();
+				}
 
-			textures.push_back(texture);
+				textures.push_back(texture);
+			}
+			else {
+				textures.push_back(nullptr);
+			}
+			
 		}
 	}
 }
@@ -152,94 +159,101 @@ void Renderer::renderLoop()
 		{
 
 			//First clear the renderer
-			SDL_RenderClear(renderer);
+			//SDL_RenderClear(renderer);
 
 			for (int j = 0, textureIndex = 0; j < cubemap->getEyesCount(); j++)
 			{
 				Cubemap* eye = cubemap->getEye(j);
 				for (int i = 0; i < eye->getFacesCount(); i++, textureIndex++)
 				{
-
-					Frame* content = eye->getFace(i)->getContent();
-					SDL_Texture* texture = textures[textureIndex];
-
-					// Show cubemap
-
-				
-					void* pixels;
-					int   pitch;
-
-					int width;
-					int height;
-					SDL_GetRendererOutputSize(renderer, &width, &height);
-
-					SDL_Rect dstrect;
-
-					dstrect.w = width / 4;
-					dstrect.h = height / 6;
-
-					switch (i)
+					CubemapFace* face = eye->getFace(i);
+					if (face)
 					{
-					case 1: // negative X
-						dstrect.x = width * 0 / 4;
-						dstrect.y = height / 3;
-						break;
-					case 4: // negative Z
-						dstrect.x = width * 1 / 4;
-						dstrect.y = height / 3;
-						break;
-					case 2: // postive Y
-						dstrect.x = width * 1 / 4;
-						dstrect.y = 0;
-						break;
-					case 5: // negative Y
-						dstrect.x = width * 3 / 4;
-						dstrect.y = height / 3;
-						break;
-					case 3: // positive Z
-						dstrect.x = width * 1 / 4;
-						dstrect.y = height * 2 / 3;
-						break;
-					case 0: // positive X
-						dstrect.x = width * 2 / 4;
-						dstrect.y = height / 3;
-						break;
-					default:
-						dstrect.x = 0;
-						dstrect.y = 0;
-						dstrect.w = 0;
-						dstrect.h = 0;
-						break;
+						Frame* content = eye->getFace(i)->getContent();
+						SDL_Texture* texture = textures[textureIndex];
+
+						// Show cubemap
+
+
+						void* pixels;
+						int   pitch;
+
+						int width;
+						int height;
+						SDL_GetRendererOutputSize(renderer, &width, &height);
+
+						SDL_Rect dstrect;
+
+						dstrect.w = width / 4;
+						dstrect.h = height / 6;
+
+						switch (i)
+						{
+						case 1: // negative X
+							dstrect.x = width * 0 / 4;
+							dstrect.y = height / 3;
+							break;
+						case 4: // negative Z
+							dstrect.x = width * 1 / 4;
+							dstrect.y = height / 3;
+							break;
+						case 2: // postive Y
+							dstrect.x = width * 1 / 4;
+							dstrect.y = 0;
+							break;
+						case 5: // negative Y
+							dstrect.x = width * 3 / 4;
+							dstrect.y = height / 3;
+							break;
+						case 3: // positive Z
+							dstrect.x = width * 1 / 4;
+							dstrect.y = height * 2 / 3;
+							break;
+						case 0: // positive X
+							dstrect.x = width * 2 / 4;
+							dstrect.y = height / 3;
+							break;
+						default:
+							dstrect.x = 0;
+							dstrect.y = 0;
+							dstrect.w = 0;
+							dstrect.h = 0;
+							break;
+						}
+
+						switch (j)
+						{
+						case 0:
+							dstrect.y /= 2;
+							break;
+						case 1:
+							dstrect.y /= 2;
+							dstrect.y += height / 2;
+						}
+
+						if (SDL_LockTexture(texture, NULL, &pixels, &pitch) < 0)
+						{
+							SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
+							SDL_Quit();
+							abort();
+						}
+						memcpy(pixels, content->getPixels(), content->getHeight() * content->getWidth() * 4);
+						SDL_UnlockTexture(texture);
+
+						//Draw the texture
+						if (SDL_RenderCopy(renderer, texture, NULL, &dstrect) < 0)
+						{
+							SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
+							abort();
+						}
+
+						if (onDisplayedCubemapFace) onDisplayedCubemapFace(this, i + j * Cubemap::MAX_FACES_COUNT);
+
 					}
-
-					switch (j)
-					{
-					case 0:
-						dstrect.y /= 2;
-						break;
-					case 1:
-						dstrect.y /= 2;
-						dstrect.y += height / 2;
+					/*else {
+						std::cout << "Drop Eye: " << j << " Drop Frame: " << i << std::endl;
 					}
-
-					if (SDL_LockTexture(texture, NULL, &pixels, &pitch) < 0)
-					{
-						SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
-						SDL_Quit();
-						abort();
-					}
-					memcpy(pixels, content->getPixels(), content->getHeight() * content->getWidth() * 4);
-					SDL_UnlockTexture(texture);
-
-					//Draw the texture
-					if (SDL_RenderCopy(renderer, texture, NULL, &dstrect) < 0)
-					{
-						SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't lock texture: %s\n", SDL_GetError());
-						abort();
-					}
-
-					if (onDisplayedCubemapFace) onDisplayedCubemapFace(this, i + j * Cubemap::MAX_FACES_COUNT);
-
+					*/
 				}
 			}
 

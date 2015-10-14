@@ -1,7 +1,14 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string_regex.hpp>
 
+#include "H264RawPixelsSink.h"
+#include "H264CubemapSource.h"
 #include "RTSPCubemapSourceClient.hpp"
+
+void RTSPCubemapSourceClient::setOnDidConnect(std::function<void (RTSPCubemapSourceClient*, CubemapSource*)>& onDidConnect)
+{
+    this->onDidConnect = onDidConnect;
+}
 
 void RTSPCubemapSourceClient::shutdown(int exitCode)
 {
@@ -113,6 +120,41 @@ void RTSPCubemapSourceClient::continueAfterPLAY(RTSPClient* self_, int resultCod
 	//ourClient->sendDescribeCommand(continueAfterDESCRIBE2);
 }
 
+void RTSPCubemapSourceClient::periodicQOSMeasurement(void* self_)
+{
+    RTSPCubemapSourceClient* self = (RTSPCubemapSourceClient*)self_;
+    double totalKBytes = 0.0;
+    unsigned int totalPacketsReceived = 0;
+    unsigned int totalPacketsExpected = 0;
+    for (MediaSubsession* subsession : self->subsessions)
+    {
+        RTPSource* src = subsession->rtpSource();
+        RTPReceptionStatsDB::Iterator statsIter(src->receptionStatsDB());
+        RTPReceptionStats* stats;
+        while ((stats = statsIter.next(True)) != NULL)
+        {
+            totalKBytes += stats->totNumKBytesReceived();
+            totalPacketsReceived += stats->totNumPacketsReceived();
+            totalPacketsExpected += stats->totNumPacketsExpected();
+        }
+    }
+    
+    double totalKBytesInInterval = totalKBytes - self->lastTotalKBytes;
+    unsigned int totalPacketsReceivedInInterval = totalPacketsReceived - self->lastTotalPacketsReceived;
+    unsigned int totalPacketsExpectedInInterval = totalPacketsExpected - self->lastTotalPacketsExpected;
+    
+    self->lastTotalKBytes = totalKBytes;
+    self->lastTotalPacketsReceived = totalPacketsReceived;
+    self->lastTotalPacketsExpected = totalPacketsExpected;
+    
+    unsigned int totalPacketsLostInInterval = totalPacketsExpectedInInterval - totalPacketsReceivedInInterval;
+    
+    std::cout << "Client: " << std::setprecision(10) << std::setiosflags(std::ios::fixed) << std::setprecision(1) <<totalKBytesInInterval/10 * 8 / 1000 << " MBit/s; " <<
+        " packets received: " << totalPacketsReceivedInInterval << "; packets lost: " << totalPacketsLostInInterval <<
+        "; packet loss: " << std::setprecision(2) << (double)totalPacketsLostInInterval / totalPacketsReceivedInInterval * 100.0 << "%" << std::endl;
+    
+    self->envir().taskScheduler().scheduleDelayedTask(10000000, (TaskFunc*)RTSPCubemapSourceClient::periodicQOSMeasurement, self);
+}
 
 void RTSPCubemapSourceClient::subsessionByeHandler(void* clientData)
 {
@@ -151,21 +193,37 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
         subsessions.push_back(subsession);
     }*/
     
-    if (onGetSinksForSubsessions)
+    // Create CubemapSource based on discovered stream
+    bool isH264 = true;
+    for (MediaSubsession* subsession : subsessions)
     {
-        std::vector<MediaSink*> sinks = onGetSinksForSubsessions(this, subsessions);
-        assert(sinks.size() == subsessions.size());
-        
-
-		for (int i = 0; i < subsessions.size(); i++)
-		{
-			subsessions[i]->sink = sinks[i];
+        if (strcmp(subsession->mediumName(), "video") != 0 ||
+            strcmp(subsession->codecName(), "H264") != 0)
+        {
+            isH264 = false;
         }
     }
     
-    if (onDidIdentifyStreams)
+    if (isH264)
     {
-        onDidIdentifyStreams(this);
+        std::vector<H264RawPixelsSink*> h264Sinks;
+        std::vector<MediaSink*> sinks;
+        for (int i = 0; i < (std::min)(subsessions.size(), (size_t)(StereoCubemap::MAX_EYES_COUNT * Cubemap::MAX_FACES_COUNT)); i++)
+        {
+            H264RawPixelsSink* sink = H264RawPixelsSink::createNew(envir(),
+                                                                   sinkBufferSize,
+                                                                   format,
+                                                                   subsessions[i]);
+            subsessions[i]->sink = sink;
+            
+            h264Sinks.push_back(sink);
+            sinks.push_back(sink);
+        }
+        
+        if (onDidConnect)
+        {
+            onDidConnect(this, new H264CubemapSource(h264Sinks, format, matchStereoPairs));
+        }
     }
     
     for (MediaSubsession* subsession : subsessions)
@@ -194,6 +252,8 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
 		}
 	}
 }
+
+
 
 void RTSPCubemapSourceClient::setupStreams()
 {
@@ -367,7 +427,7 @@ void RTSPCubemapSourceClient::continueAfterDESCRIBE(RTSPClient* self_, int resul
 					// Because we're saving the incoming data, rather than playing
 					// it in real time, allow an especially large time threshold
 					// (1 second) for reordering misordered incoming packets:
-					unsigned const thresh = 1; // 1 second
+					unsigned const thresh = 100000; // 1 second
 					subsession->rtpSource()->setPacketReorderingThresholdTime(thresh);
 
 					// Set the RTP source's OS socket buffer size as appropriate - either if we were explicitly asked (using -B),
@@ -405,6 +465,8 @@ void RTSPCubemapSourceClient::continueAfterDESCRIBE(RTSPClient* self_, int resul
 
 	// Perform additional 'setup' on each subsession, before playing them:
 	self->setupStreams();
+    
+    self->envir().taskScheduler().scheduleDelayedTask(10000000, (TaskFunc*)RTSPCubemapSourceClient::periodicQOSMeasurement, self);
 
 	for (int i = 0; i < self->envs.size(); i++)
 	{
@@ -436,13 +498,24 @@ void RTSPCubemapSourceClient::connect()
     networkThread = boost::thread(boost::bind(&RTSPCubemapSourceClient::networkLoop, this));
 }
 
-RTSPCubemapSourceClient* RTSPCubemapSourceClient::createNew(char const* rtspURL,
-                                                            unsigned int sinkBufferSize,
-                                                            int verbosityLevel,
-                                                            char const* applicationName,
-                                                            portNumBits tunnelOverHTTPPortNum,
-                                                            int socketNumToServer)
+RTSPCubemapSourceClient* RTSPCubemapSourceClient::create(char const* rtspURL,
+                                                         unsigned int sinkBufferSize,
+                                                         AVPixelFormat format,
+                                                         bool matchStereoPairs,
+                                                         const char* interfaceAddress,
+                                                         int verbosityLevel,
+                                                         char const* applicationName,
+                                                         portNumBits tunnelOverHTTPPortNum,
+                                                         int socketNumToServer)
 {
+    NetAddressList addresses(interfaceAddress);
+    if (addresses.numAddresses() == 0)
+    {
+        std::cout << "Inteface \"" << interfaceAddress << "\" does not exist" << std::endl;
+        return nullptr;
+    }
+    ReceivingInterfaceAddr = *(unsigned*)(addresses.firstAddress()->data());
+    
     // Begin by setting up our usage environment:
     TaskScheduler* scheduler = BasicTaskScheduler::createNew();
     BasicUsageEnvironment* env = BasicUsageEnvironment::createNew(*scheduler);
@@ -450,6 +523,8 @@ RTSPCubemapSourceClient* RTSPCubemapSourceClient::createNew(char const* rtspURL,
     return new RTSPCubemapSourceClient(*env,
                                        rtspURL,
                                        sinkBufferSize,
+                                       format,
+                                       matchStereoPairs,
                                        verbosityLevel,
                                        applicationName,
                                        tunnelOverHTTPPortNum,
@@ -459,12 +534,15 @@ RTSPCubemapSourceClient* RTSPCubemapSourceClient::createNew(char const* rtspURL,
 RTSPCubemapSourceClient::RTSPCubemapSourceClient(UsageEnvironment& env,
                                                  char const* rtspURL,
                                                  unsigned int sinkBufferSize,
+                                                 AVPixelFormat format,
+                                                 bool matchStereoPairs,
                                                  int verbosityLevel,
                                                  char const* applicationName,
                                                  portNumBits tunnelOverHTTPPortNum,
                                                  int socketNumToServer)
     :
     RTSPClient(env, rtspURL, verbosityLevel, applicationName, tunnelOverHTTPPortNum, socketNumToServer),
-    sinkBufferSize(sinkBufferSize)
+    sinkBufferSize(sinkBufferSize), format(format), lastTotalKBytes(0.0), lastTotalPacketsReceived(0), lastTotalPacketsExpected(0),
+    matchStereoPairs(matchStereoPairs)
 {
 }

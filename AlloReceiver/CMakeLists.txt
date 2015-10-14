@@ -2,20 +2,19 @@ set(SOURCES
 	AlloReceiver.cpp
 	H264RawPixelsSink.cpp
     CubemapSource.cpp
-    Source.cpp
+    #Source.cpp
     H264CubemapSource.cpp
     RTSPCubemapSourceClient.cpp
-    RTSPCubemapSource.cpp
 )
 
 set(HEADERS
 	H264RawPixelsSink.h
     AlloReceiver.h
     CubemapSource.hpp
-    Source.hpp
+    #Source.hpp
     H264CubemapSource.h
     RTSPCubemapSourceClient.hpp
-    RTSPCubemapSource.hpp
+	Stats.hpp
 )
 
 

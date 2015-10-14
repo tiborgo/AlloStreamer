@@ -35,7 +35,8 @@ struct CubemapConfig
 {
     void** texturePtrs;
     size_t facesCount;
-    int resolution;
+    int width;
+	int height;
 };
 static CubemapConfig* cubemapConfig = nullptr;
 
@@ -117,7 +118,7 @@ void allocateSHM(CubemapConfig* cubemapConfig, BinocularsConfig* binocularsConfi
     unsigned long shmSize = 65536;
     if (cubemapConfig)
     {
-        shmSize += cubemapConfig->resolution * cubemapConfig->resolution * 4 * cubemapConfig->facesCount +
+        shmSize += cubemapConfig->width * cubemapConfig->height * 4 * cubemapConfig->facesCount +
                    sizeof(Cubemap) + cubemapConfig->facesCount * sizeof(CubemapFace);
     }
     if (binocularsConfig)
@@ -301,62 +302,70 @@ void copyFromGPUToCPU(Frame* frame)
     }
 #endif
     
-    while (!frame->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
-    {
-        if (!alloServerProcess.isAlive())
-        {
-            // Reset the mutex otherwise it will block forever
-            // Reset the condition otherwise it my be in inconsistent state
-            // Hacky solution indeed
-            void* mutexAddr     = &frame->getMutex();
-            void* conditionAddr = &frame->getNewPixelsCondition();
-            // That's not possible unfortunately since the mutex is locked and abandoned
-            //face->getMutex().~interprocess_mutex();
-            memset(mutexAddr, 0, sizeof(boost::interprocess::interprocess_mutex));
-            memset(conditionAddr, 0, sizeof(boost::interprocess::interprocess_condition));
-            new (mutexAddr)     boost::interprocess::interprocess_mutex;
-            new (conditionAddr) boost::interprocess::interprocess_condition;
-            return;
-        }
-    }
+    //while (!frame->getMutex().timed_lock(boost::get_system_time() + boost::posix_time::milliseconds(100)))
+    //{
+    //    if (!alloServerProcess.isAlive())
+    //    {
+    //        // Reset the mutex otherwise it will block forever
+    //        // Reset the condition otherwise it my be in inconsistent state
+    //        // Hacky solution indeed
+    //        void* mutexAddr     = &frame->getMutex();
+    //        void* conditionAddr = &frame->getNewPixelsCondition();
+    //        // That's not possible unfortunately since the mutex is locked and abandoned
+    //        //face->getMutex().~interprocess_mutex();
+    //        memset(mutexAddr, 0, sizeof(boost::interprocess::interprocess_mutex));
+    //        memset(conditionAddr, 0, sizeof(boost::interprocess::interprocess_condition));
+    //        new (mutexAddr)     boost::interprocess::interprocess_mutex;
+    //        new (conditionAddr) boost::interprocess::interprocess_condition;
+    //        return;
+    //    }
+    //}
 
-    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(frame->getMutex(),
-                                                                                   boost::interprocess::accept_ownership);
+    //boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(frame->getMutex(),
+    //                                                                               boost::interprocess::accept_ownership);
     // COPY
-    
+
+
+	{
+		boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(frame->getMutex());
+
 #if SUPPORT_D3D9
-    // D3D9 case
-    if (g_DeviceType == kGfxRendererD3D9)
-    {
-        /*CubemapFaceD3D9* faceD3D9 = (CubemapFaceD3D9*)face;
-        memcpy(faceD3D9->getPixels(),
-			   faceD3D9->lockedRect.pBits,
-			   faceD3D9->getWidth() * faceD3D9->getHeight() * 4);*/
-    }
+		// D3D9 case
+		if (g_DeviceType == kGfxRendererD3D9)
+		{
+			/*CubemapFaceD3D9* faceD3D9 = (CubemapFaceD3D9*)face;
+			memcpy(faceD3D9->getPixels(),
+			faceD3D9->lockedRect.pBits,
+			faceD3D9->getWidth() * faceD3D9->getHeight() * 4);*/
+		}
 #endif
-    
-    
+
+
 #if SUPPORT_D3D11
-    // D3D11 case
-    if (g_DeviceType == kGfxRendererD3D11)
-    {
-		FrameD3D11* frameD3D11 = (FrameD3D11*)frame;
-		memcpy(frameD3D11->getPixels(),
-			   frameD3D11->resource.pData,
-			   frameD3D11->getWidth() * frameD3D11->getHeight() * 3 / 2);
-    }
+		// D3D11 case
+		if (g_DeviceType == kGfxRendererD3D11)
+		{
+			FrameD3D11* frameD3D11 = (FrameD3D11*)frame;
+			memcpy(frameD3D11->getPixels(),
+				frameD3D11->resource.pData,
+				frameD3D11->getWidth() * frameD3D11->getHeight() * 3 / 2);
+		}
 #endif
-    
-    
+
+
 #if SUPPORT_OPENGL
-    // OpenGL case
-    if (g_DeviceType == kGfxRendererOpenGL)
-    {
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->getPixels());
-    }
+		// OpenGL case
+		if (g_DeviceType == kGfxRendererOpenGL)
+		{
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->getPixels());
+		}
 #endif
-    
-    frame->getNewPixelsCondition().notify_all();
+	}
+
+	if (alloServerProcess.isAlive())
+	{
+		frame->getBarrier().wait();
+	}	
 }
 
 void copyFromGPUtoCPU (std::vector<Frame*>& frames)
@@ -438,7 +447,7 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 // --------------------------------------------------------------------------
 // Start stop management
 
-extern "C" void EXPORT_API ConfigureCubemapFromUnity(void** texturePtrs, int cubemapFacesCount, int resolution)
+extern "C" void EXPORT_API ConfigureCubemapFromUnity(void** texturePtrs, int cubemapFacesCount, int width, int height)
 {
     
     
@@ -451,7 +460,8 @@ extern "C" void EXPORT_API ConfigureCubemapFromUnity(void** texturePtrs, int cub
     cubemapConfig              = new CubemapConfig;
     cubemapConfig->texturePtrs = texturePtrs;
     cubemapConfig->facesCount  = cubemapFacesCount;
-    cubemapConfig->resolution  = resolution;
+    cubemapConfig->width       = width;
+	cubemapConfig->height      = height;
 }
 
 extern "C" void EXPORT_API ConfigureBinocularsFromUnity(void* texturePtr, int width, int height)

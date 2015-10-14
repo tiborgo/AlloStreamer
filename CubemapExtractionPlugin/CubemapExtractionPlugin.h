@@ -29,6 +29,6 @@
 
 #define CUBEMAPEXTRACTIONPLUGIN_ID "HH21V0GKQ98fuU2AHoWidiIRJxIrgDy-CubemapExtractionPlugin"
 
-extern "C" void EXPORT_API ConfigureCubemapFromUnity(void** texturePtrs, int cubemapFacesCount, int resolution);
+extern "C" void EXPORT_API ConfigureCubemapFromUnity(void** texturePtrs, int cubemapFacesCount, int width, int height);
 extern "C" void EXPORT_API ConfigureBinocularsFromUnity(void* texturePtr, int width, int height);
 extern "C" void EXPORT_API StopFromUnity();

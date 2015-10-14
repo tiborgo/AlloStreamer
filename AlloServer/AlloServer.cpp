@@ -18,11 +18,12 @@ extern "C"
 #include "AlloShared/Binoculars.hpp"
 #include "AlloShared/config.h"
 #include "AlloShared/Process.h"
-#include "AlloShared/Stats.hpp"
+#include "AlloShared/StatsUtils.hpp"
 #include "config.h"
 #include "RawPixelSource.hpp"
 #include "CubemapExtractionPlugin/CubemapExtractionPlugin.h"
 #include "AlloServer.h"
+#include "AlloReceiver/Stats.hpp"
 
 static Stats stats;
 
@@ -42,6 +43,8 @@ static boost::interprocess::managed_shared_memory* shm;
 static boost::barrier stopStreamingBarrier(3);
 static boost::uint16_t rtspPort;
 static int avgBitRate;
+
+static size_t bufferSize = 2000000000;
 
 // Cubemap related
 static StereoCubemap*                cubemap;
@@ -68,7 +71,12 @@ static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms, std:
 
 void onSentNALU(RawPixelSource*, uint8_t type, size_t size, int eye, int face)
 {
-	stats.sentNALU(type, size, eye * 6 + face);
+	//stats.store(StatsUtils::NALU(type, size, eye * 6 + face, StatsUtils::NALU::SENT));
+}
+
+void onEncodedFrame(RawPixelSource*, int eye, int face)
+{
+	stats.store(StatsUtils::CubemapFace(eye * 6 + face));
 }
 
 void addFaceSubstreams0(void*)
@@ -90,6 +98,8 @@ void addFaceSubstreams0(void*)
 			Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, TTL);
 			//rtpGroupsock->multicastSendOnly(); // we're a SSM source
 
+			setReceiveBufferTo(*env, rtpGroupsock->socketNum(), bufferSize);
+
 			// Create a 'H264 Video RTP' sink from the RTP 'groupsock':
 			state->sink = H264VideoRTPSink::createNew(*env, rtpGroupsock, 96);
 
@@ -101,17 +111,15 @@ void addFaceSubstreams0(void*)
 				state->content,
 				avgBitRate);
 
-			std::function<void(RawPixelSource*,
-				uint8_t type,
-				size_t size)> callback(boost::bind(&onSentNALU, _1, _2, _3, j, i));
-			source->setOnSentNALU(callback);
+			source->setOnSentNALU    (boost::bind(&onSentNALU,     _1, _2, _3, j, i));
+			source->setOnEncodedFrame(boost::bind(&onEncodedFrame, _1, j, i));
 
 			state->source = H264VideoStreamDiscreteFramer::createNew(*env,
 				source);
 
 			state->sink->startPlaying(*state->source, NULL, NULL);
 
-			std::cout << "Streaming face " << i << " (" << ((j == 0) ? "left" : "right") << ") ..." << std::endl;
+			std::cout << "Streaming face " << i << " (" << ((j == 0) ? "left" : "right") << ") on port " << ntohs(rtpPort.num()) << " ..." << std::endl;
 		}
 	}
     
@@ -188,6 +196,8 @@ void networkLoop()
 
 void setupRTSP()
 {
+	OutPacketBuffer::maxSize = bufferSize;
+
     // Begin by setting up our usage environment:
     TaskScheduler* scheduler = BasicTaskScheduler::createNew();
 
@@ -213,7 +223,7 @@ void setupRTSP()
     // "ServerMediaSubsession" objects for each audio/video substream.
 
 
-    OutPacketBuffer::maxSize = 40000000;
+	
     
     cubemapSMS = ServerMediaSession::createNew(*env,
                                                cubemapStreamName.c_str(),
@@ -280,10 +290,12 @@ int main(int argc, char* argv[])
 {
     boost::program_options::options_description desc("");
 	desc.add_options()
-		("multicast-address", boost::program_options::value<std::string>(), "")
-		("interface", boost::program_options::value<std::string>(), "")
-		("rtsp-port", boost::program_options::value<boost::uint16_t>(), "")
-		("avg-bit-rate", boost::program_options::value<int>(), "");
+		("multicast-address", boost::program_options::value<std::string>(),     "")
+		("interface",         boost::program_options::value<std::string>(),     "")
+		("rtsp-port",         boost::program_options::value<boost::uint16_t>(), "")
+		("avg-bit-rate",      boost::program_options::value<int>(),             "")
+		("buffer-size",       boost::program_options::value<size_t>(),          "")
+	    ("stats-interval",    boost::program_options::value<size_t>(),          "");
 		
     
     boost::program_options::variables_map vm;
@@ -337,6 +349,27 @@ int main(int argc, char* argv[])
     std::string bitRateString = to_human_readable_byte_count(avgBitRate, true, false);
 	std::cout << "Using an average encoding bit rate of " << bitRateString << "/s per face" << std::endl;
 
+	if (vm.count("buffer-size"))
+	{
+		bufferSize = vm["buffer-size"].as<size_t>();
+	}
+	else
+	{
+		bufferSize = DEFAULT_BUFFER_SIZE;
+	}
+	std::string bufferSizeString = to_human_readable_byte_count(bufferSize, false, false);
+	std::cout << "Using a buffer size of " << bufferSizeString << std::endl;
+
+	size_t statsInterval;
+	if (vm.count("stats-interval"))
+	{
+		statsInterval = vm["stats-interval"].as<size_t>();
+	}
+	else
+	{
+		statsInterval = DEFAULT_STATS_INTERVAL;
+	}
+
     av_log_set_level(AV_LOG_WARNING);
     avcodec_register_all();
     setupRTSP();
@@ -353,7 +386,10 @@ int main(int argc, char* argv[])
         unityProcess.waitForBirth();
         std::cout << "Connected to Unity :)" << std::endl;
         startStreaming();
-		stats.autoSummary(boost::chrono::seconds(10));
+		stats.autoSummary(boost::chrono::seconds(statsInterval),
+			              AlloReceiver::statValsMaker,
+						  AlloReceiver::postProcessorMaker,
+						  AlloReceiver::formatStringMaker);
         unityProcess.join();
         std::cout << "Lost connection to Unity :(" << std::endl;
         stopStreaming();

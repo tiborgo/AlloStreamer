@@ -15,8 +15,8 @@ public:
     
 	void start();
 
-    void setOnDisplayedFrame(std::function<void (Renderer*)>& callback);
-    void setOnDisplayedCubemapFace(std::function<void (Renderer*, int)>& callback);
+    void setOnDisplayedFrame(const std::function<void (Renderer*)>& callback);
+    void setOnDisplayedCubemapFace(const std::function<void (Renderer*, int)>& callback);
     
 protected:
     std::function<void (Renderer*)> onDisplayedFrame;

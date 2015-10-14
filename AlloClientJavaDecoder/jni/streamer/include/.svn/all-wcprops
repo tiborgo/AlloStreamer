@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/svn/sgauglitz/!svn/ver/3507/projects/android-devel/github_jhon/streamer/jni/streamer/include
+END
+AMRAudioFileDescriptorSource.hh
+K 25
+svn:wc:ra_dav:version-url
+V 125
+/svn/sgauglitz/!svn/ver/3488/projects/android-devel/github_jhon/streamer/jni/streamer/include/AMRAudioFileDescriptorSource.hh
+END
+config.h
+K 25
+svn:wc:ra_dav:version-url
+V 102
+/svn/sgauglitz/!svn/ver/3488/projects/android-devel/github_jhon/streamer/jni/streamer/include/config.h
+END
+jnix_util.h
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/svn/sgauglitz/!svn/ver/3507/projects/android-devel/github_jhon/streamer/jni/streamer/include/jnix_util.h
+END
+jnix.h
+K 25
+svn:wc:ra_dav:version-url
+V 100
+/svn/sgauglitz/!svn/ver/3507/projects/android-devel/github_jhon/streamer/jni/streamer/include/jnix.h
+END

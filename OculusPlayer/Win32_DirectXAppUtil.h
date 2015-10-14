@@ -676,7 +676,13 @@ struct OculusTexture
 		dsDesc.MiscFlags = 0;
 		dsDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
 
-		ovrHmd_CreateSwapTextureSetD3D11(hmd, DIRECTX.Device, &dsDesc, &TextureSet);
+		if (ovrHmd_CreateSwapTextureSetD3D11(hmd, DIRECTX.Device, &dsDesc, &TextureSet) != ovrSuccess)
+		{
+			ovrErrorInfo errorInfo;
+			ovr_GetLastErrorInfo(&errorInfo);
+			std::cerr << errorInfo.ErrorString << std::endl;
+			abort();
+		}
 		for (int i = 0; i < TextureSet->TextureCount; ++i)
 		{
 			ovrD3D11Texture* tex = (ovrD3D11Texture*)&TextureSet->Textures[i];
