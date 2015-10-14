@@ -70,6 +70,8 @@ public class RenderBinoculars : MonoBehaviour
         virtualCameraStereo.transform.localPosition = new Vector3(-320.953f, -15.1f, -134.3123f);
         virtualCameraStereo.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
+        virtualCameraStereo.AddComponent<MouseLook>();
+
         GameObject hmd = new GameObject("HMD");
         hmd.transform.parent = virtualCameraStereo.transform;
         hmd.transform.localPosition = new Vector3(0f, 0f, 0f);
@@ -80,9 +82,15 @@ public class RenderBinoculars : MonoBehaviour
         leftEyeCamera.transform.localPosition = new Vector3(0f, 0f, 0f);
         leftEyeCamera.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
+        Camera leftEyeCameraCam = leftEyeCamera.AddComponent<Camera>();
+        leftEyeCameraCam.targetTexture = Resources.Load("Binoculars/LeftEyeTexture", typeof(RenderTexture)) as RenderTexture;
+
         GameObject rightEyeCamera = new GameObject("RightEyeCamera");
         rightEyeCamera.transform.parent = hmd.transform;
         rightEyeCamera.transform.localPosition = new Vector3(0f, 0f, 0f);
         rightEyeCamera.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+
+        Camera rightEyeCameraCam = rightEyeCamera.AddComponent<Camera>();
+        rightEyeCameraCam.targetTexture = Resources.Load("Binoculars/RightEyeTexture", typeof(RenderTexture)) as RenderTexture;
     }
 }
