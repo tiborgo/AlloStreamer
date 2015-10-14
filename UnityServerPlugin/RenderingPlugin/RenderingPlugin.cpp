@@ -12,7 +12,7 @@
 #include <osc/OscPacketListener.h>
 #include <ip/UdpSocket.h>
 
-#include "AlloServer/FrameData.h"
+#include "AlloServer_Binoculars/FrameData.h"
 
 #ifdef __cplusplus
 
