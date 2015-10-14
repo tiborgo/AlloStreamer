@@ -6,99 +6,80 @@ using System.Reflection;
 
 
 
-public class RenderBinoculars : MonoBehaviour {
-	
-	// Parameters
-	public int width      = 1024;
-	public int height     = 1024;
-	public bool extract   = true;
-	
-	[DllImport("CubemapExtractionPlugin")]
-	private static extern void ConfigureBinocularsFromUnity(System.IntPtr texturePtr, int width, int height);
-	[DllImport("CubemapExtractionPlugin")]
-	private static extern void StopFromUnity();
-	
-	/*private static System.String[] cubemapFaceNames = {
-		"LeftEye/PositiveX",
-		"LeftEye/NegativeX",
-		"LeftEye/PositiveY",
-		"LeftEye/NegativeY",
-		"LeftEye/PositiveZ",
-		"LeftEye/NegativeZ",
-		"RightEye/PositiveX",
-		"RightEye/NegativeX",
-		"RightEye/PositiveY",
-		"RightEye/NegativeY",
-		"RightEye/PositiveZ",
-		"RightEye/NegativeZ"
-	};*/
-	
-	/*private static Vector3[] cubemapFaceRotations = {
-		new Vector3(  0,  90, 0),
-		new Vector3(  0, 270, 0),
-		new Vector3(270,   0, 0),
-		new Vector3( 90,   0, 0),
-		new Vector3(  0,   0, 0),
-		new Vector3(  0, 180, 0),
-	};*/
-	
-	// Use this for initialization
-	IEnumerator Start() {
-		
-		// Set up 6 cameras for cubemap
-		Camera thisCam = GetComponent<Camera>();
-		//GameObject cubemap = new GameObject("Cubemap");
-		//cubemap.transform.parent = transform;
-		
-		// Move the cubemap to the origin of the parent cam
-		//cubemap.transform.localPosition = Vector3.zero;
-		
-		//System.IntPtr[] texturePtrs = new System.IntPtr[faceCount];
-		
-		/*for (int i = 0; i < faceCount; i++)
-		{
-			GameObject go = new GameObject(cubemapFaceNames[i]);
-			Camera cam = go.AddComponent<Camera>();*/
-			
-			// Set render texture
-			RenderTexture tex = new RenderTexture(width, height, 1, RenderTextureFormat.ARGB32);
-			tex.Create();
-			thisCam.targetTexture = tex;
-		//thisCam.aspect = 1;
-			
-			/* // Set orientation
-			cam.fieldOfView = 90;
-			go.transform.eulerAngles = cubemapFaceRotations[i];
-			go.transform.parent = cubemap.transform;
-			
-			// Move the cubemap to the origin of the parent cam
-			cam.transform.localPosition = Vector3.zero;
-			
-			texturePtrs[i] = tex.GetNativeTexturePtr();
-		}*/
+public class RenderBinoculars : MonoBehaviour
+{
 
-		Debug.Log (thisCam.targetTexture.width);
-		// Tell native plugin that rendering has started
-		ConfigureBinocularsFromUnity(tex.GetNativeTexturePtr(), width, height);
-		
-		yield return StartCoroutine("CallPluginAtEndOfFrames");
-	}
-	
-	void OnDestroy()
-	{
-		StopFromUnity();
-	}
-	
-	
-	private IEnumerator CallPluginAtEndOfFrames()
-	{
-		while (true)
-		{
-			yield return new WaitForEndOfFrame();
-			if (extract)
-			{
-				GL.IssuePluginEvent(2);
-			}
-		}
-	}
+    // Use this for initialization
+    void Start()
+    {
+
+        GameObject binoculars = new GameObject("Binoculars");
+        binoculars.transform.parent = transform;
+        binoculars.transform.localPosition = Vector3.zero;
+
+        GameObject rendererStereo = new GameObject("RendererStereo");
+        rendererStereo.transform.parent = binoculars.transform;
+        rendererStereo.transform.localPosition = new Vector3(-320.953f, -9.005943f, -136.6786f);
+        rendererStereo.transform.localRotation = Quaternion.Euler(0f, 164.2724f, 0f);
+
+        GameObject camera = new GameObject("Camera");
+        camera.transform.parent = rendererStereo.transform;
+        camera.transform.localPosition = new Vector3(0f, 0f, 0.1f);
+        camera.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+
+        camera.AddComponent<UseRenderingPlugin>();
+
+        Camera cameraCam = camera.AddComponent<Camera>();
+        cameraCam.clearFlags = CameraClearFlags.SolidColor;
+        cameraCam.backgroundColor = Color.black;
+        cameraCam.cullingMask = 1 << 8;
+        cameraCam.orthographicSize = 0.88f;
+        cameraCam.nearClipPlane = 0.01f;
+        cameraCam.farClipPlane = 0.11f;
+        cameraCam.targetTexture = Resources.Load("Binoculars/StereoTexture", typeof(RenderTexture)) as RenderTexture;
+
+        GameObject leftEyeMesh = new GameObject("LeftEyeMesh");
+        leftEyeMesh.transform.parent = rendererStereo.transform;
+        leftEyeMesh.transform.localPosition = new Vector3(0.45f, -0.008f, 0f);
+        leftEyeMesh.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+
+        MeshRenderer meshRenderer = leftEyeMesh.AddComponent<MeshRenderer>();
+        meshRenderer.material = Resources.Load("Binoculars/LeftEyeMaterial", typeof(Material)) as Material;
+        MeshFilter meshFilter = leftEyeMesh.AddComponent<MeshFilter>();
+        MxrPredistortionMesh mxrPredistortionMesh = leftEyeMesh.AddComponent<MxrPredistortionMesh>();
+        mxrPredistortionMesh.resolutionX = 50;
+        mxrPredistortionMesh.resolutionY = 50;
+
+        GameObject rightEyeMesh = new GameObject("RightEyeMesh");
+        rightEyeMesh.transform.parent = rendererStereo.transform;
+        rightEyeMesh.transform.localPosition = new Vector3(-0.45f, -0.008f, 0f);
+        rightEyeMesh.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+
+        MeshRenderer meshRenderer2 = rightEyeMesh.AddComponent<MeshRenderer>();
+        meshRenderer2.material = Resources.Load("Binoculars/RightEyeMaterial", typeof(Material)) as Material;
+        MeshFilter meshFilter2 = rightEyeMesh.AddComponent<MeshFilter>();
+        MxrPredistortionMesh mxrPredistortionMesh2 = rightEyeMesh.AddComponent<MxrPredistortionMesh>();
+        mxrPredistortionMesh2.resolutionX = 50;
+        mxrPredistortionMesh2.resolutionY = 50;
+
+        GameObject virtualCameraStereo = new GameObject("VirtualCameraStereo");
+        virtualCameraStereo.transform.parent = binoculars.transform;
+        virtualCameraStereo.transform.localPosition = new Vector3(-320.953f, -15.1f, -134.3123f);
+        virtualCameraStereo.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+
+        GameObject hmd = new GameObject("HMD");
+        hmd.transform.parent = virtualCameraStereo.transform;
+        hmd.transform.localPosition = new Vector3(0f, 0f, 0f);
+        hmd.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+
+        GameObject leftEyeCamera = new GameObject("LeftEyeCamera");
+        leftEyeCamera.transform.parent = hmd.transform;
+        leftEyeCamera.transform.localPosition = new Vector3(0f, 0f, 0f);
+        leftEyeCamera.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+
+        GameObject rightEyeCamera = new GameObject("RightEyeCamera");
+        rightEyeCamera.transform.parent = hmd.transform;
+        rightEyeCamera.transform.localPosition = new Vector3(0f, 0f, 0f);
+        rightEyeCamera.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+    }
 }
