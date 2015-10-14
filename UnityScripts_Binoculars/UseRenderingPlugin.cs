@@ -41,11 +41,11 @@ public class UseRenderingPlugin : MonoBehaviour
 
 
 
-        Texture2D ci = (Texture2D)Resources.Load("CorrectSelection", typeof(Texture2D));
-        Texture2D ii = (Texture2D)Resources.Load("IncorrectSelection", typeof(Texture2D));
+        //Texture2D ci = (Texture2D)Resources.Load("CorrectSelection", typeof(Texture2D));
+        //Texture2D ii = (Texture2D)Resources.Load("IncorrectSelection", typeof(Texture2D));
 
-        correctSelectionIndicator = ci.GetPixels();
-        incorrectSelectionIndicator = ii.GetPixels();
+        //correctSelectionIndicator = ci.GetPixels();
+        //incorrectSelectionIndicator = ii.GetPixels();
 
         blackTexture = new Color[width * height];
         for (int i = 0; i < width * height; i++)

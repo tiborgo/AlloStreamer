@@ -1,5 +1,6 @@
 set(SOURCES
 	MouseLook.cs
+	MxrPredistortionMesh.cs
 	OSCPhaseSpaceThread.cs
 	OSCThread.cs
 	ServerThread.cs
@@ -11,6 +12,9 @@ add_custom_target(UnityScripts_Binoculars
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_LIST_DIR}/MouseLook.cs
         ${UNITY_PROJECT_ASSETS_DIR}/MouseLook.cs
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_LIST_DIR}/MxrPredistortionMesh.cs
+        ${UNITY_PROJECT_ASSETS_DIR}/MxrPredistortionMesh.cs
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_LIST_DIR}/OSCPhaseSpaceThread.cs
         ${UNITY_PROJECT_ASSETS_DIR}/OSCPhaseSpaceThread.cs

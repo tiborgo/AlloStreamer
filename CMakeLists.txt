@@ -32,8 +32,9 @@ endif()
 add_definitions(-DUNICODE -D_UNICODE)
 
 # In case the libraries have to be connected to Unity
-set(UNITY_PROJECT_ASSETS_DIR "${CMAKE_SOURCE_DIR}/AlloStreamer/Assets/" CACHE STRING "")
-set(UNITY_PROJECT_PLUGIN_DIR "${UNITY_PROJECT_ASSETS_DIR}/Plugins" CACHE STRING "")
+set(UNITY_PROJECT_ASSETS_DIR "${CMAKE_SOURCE_DIR}/AlloStreamer/Assets/" CACHE PATH "")
+set(UNITY_PROJECT_PLUGIN_DIR "${UNITY_PROJECT_ASSETS_DIR}/Plugins")
+mark_as_advanced(UNITY_PROJECT_PLUGIN_DIR)
 
 # so that each project can include the other project's headers
 include_directories(${CMAKE_SOURCE_DIR})
