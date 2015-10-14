@@ -60,7 +60,7 @@ if(MSVC)
 endif()
 
 if(ENABLE_ALLOSERVER_BINOCULARS)
-	add_subdirectory(AlloServer)
+	add_subdirectory(AlloServer_Binoculars)
 endif()
 if(ENABLE_RENDERINGPLUGIN)
 	add_subdirectory(UnityServerPlugin/RenderingPlugin)
