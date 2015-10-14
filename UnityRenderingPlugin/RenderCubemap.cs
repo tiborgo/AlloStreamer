@@ -53,6 +53,8 @@ public class RenderCubemap : MonoBehaviour
     private ComputeShader shader;
     private RenderTexture[] inTextures;
     private RenderTexture[] outTextures;
+
+    private bool didPlay = false;
     
     // Use this for initialization
     IEnumerator Start()
@@ -120,13 +122,18 @@ public class RenderCubemap : MonoBehaviour
         
         // Tell native plugin that rendering has started
         ConfigureCubemapFromUnity(texturePtrs, faceCount, width, height);
+        didPlay = true;
         
         yield return StartCoroutine("CallPluginAtEndOfFrames");
     }
     
     void OnDestroy()
     {
-        StopFromUnity();
+        if (didPlay)
+        {
+            StopFromUnity();
+            didPlay = false;
+        }
     }
     
     private IEnumerator CallPluginAtEndOfFrames()
