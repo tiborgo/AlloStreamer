@@ -25,3 +25,7 @@ Thumbs.db
 # Unity #
 #########
 AlloStreamer/
+
+# Logs #
+########
+Logs/
