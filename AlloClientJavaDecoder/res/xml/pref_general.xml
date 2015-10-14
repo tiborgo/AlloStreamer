@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+ <PreferenceCategory
+   android:summary="Stream Information"
+   android:title="Network Stream" >
+  <EditTextPreference
+     android:key="RTSPServer"
+     android:defaultValue="@string/defaultServer"
+     android:summary="Enter the URL to connect to a network stream"
+     android:title="RTSP Server URL" />
+    <EditTextPreference
+     android:key="OSCClient"
+     android:defaultValue="@string/defaultOSCClient"
+     android:summary="Enter the URL to connect to an OSC client"
+     android:title="OSC Client URL" />
+ </PreferenceCategory>
+
+</PreferenceScreen>
