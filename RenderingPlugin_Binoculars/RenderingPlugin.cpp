@@ -37,12 +37,12 @@ bool startedServer = false;
     // --------------------------------------------------------------------------
     // Include headers for the graphics APIs we support
 }
-/*#if SUPPORT_D3D9
+#if SUPPORT_D3D9
 	#include <d3d9.h>
 #endif
 #if SUPPORT_D3D11
 	#include <d3d11.h>
-#endif*/
+#endif
 #if SUPPORT_OPENGL
 	#if UNITY_WIN
 		#include <Windows.h>
@@ -80,7 +80,23 @@ static float g_Time=1;
 
 extern "C" void EXPORT_API SetTimeFromUnity (float t) { g_Time = t; }
 
+#if SUPPORT_D3D9
+IDirect3DDevice9* g_D3D9Device;
+#endif
+#if SUPPORT_D3D11
+ID3D11Device* g_D3D11Device;
+ID3D11Texture2D* g_D3D11GPUTexturePtr;
+ID3D11Texture2D* g_D3D11CPUTexturePtr;
+D3D11_MAPPED_SUBRESOURCE g_D3D11Resource;
+#endif
+#if SUPPORT_OPENGL
+GLuint g_gltex;
+#endif
 
+int texWidth, texHeight;
+
+
+static int g_DeviceType = -1;
 
 // --------------------------------------------------------------------------
 // SetTextureFromUnity, an example function we export which is called by one of the scripts.
@@ -107,6 +123,74 @@ extern "C" void EXPORT_API SetTextureFromUnity (void* texturePtr)
 	// needs to happen on the rendering thread).
 	g_TexturePointer = texturePtr;
 
+#if SUPPORT_D3D9
+	// D3D9 device, remember device pointer and device type.
+	// The pointer we get is IDirect3DDevice9.
+	if (g_DeviceType == kGfxRendererD3D9)
+	{
+		/*D3DSURFACE_DESC textureDescription;
+		HRESULT hr = texturePtr->GetLevelDesc(0, &textureDescription);
+
+		UINT width = textureDescription.Width;
+		UINT height = textureDescription.Height;
+		D3DFORMAT format = textureDescription.Format;
+
+		IDirect3DSurface9* gpuSurfacePtr;
+		IDirect3DSurface9* cpuSurfacePtr;
+
+		hr = texturePtr->GetSurfaceLevel(0, &gpuSurfacePtr);
+
+		hr = g_D3D9Device->CreateOffscreenPlainSurface(width, height, format,
+			D3DPOOL_SYSTEMMEM, &cpuSurfacePtr, NULL);
+
+		D3DLOCKED_RECT lockedRect;
+		ZeroMemory(&lockedRect, sizeof(D3DLOCKED_RECT));
+		hr = cpuSurfacePtr->LockRect(&lockedRect, 0, D3DLOCK_READONLY);
+		hr = cpuSurfacePtr->UnlockRect();*/
+	}
+#endif
+
+#if SUPPORT_D3D11
+	// D3D11 device, remember device pointer and device type.
+	// The pointer we get is ID3D11Device.
+	if (g_DeviceType == kGfxRendererD3D11)
+	{
+		g_D3D11GPUTexturePtr = (ID3D11Texture2D*)g_TexturePointer;
+
+		D3D11_TEXTURE2D_DESC textureDescription;
+		g_D3D11GPUTexturePtr->GetDesc(&textureDescription);
+
+		texWidth = textureDescription.Width;
+		texHeight = textureDescription.Height;
+
+		textureDescription.BindFlags = 0;
+		textureDescription.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+		textureDescription.Usage = D3D11_USAGE_STAGING;
+
+		HRESULT hr = g_D3D11Device->CreateTexture2D(&textureDescription, NULL, &g_D3D11CPUTexturePtr);
+
+		ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
+		g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
+
+		ZeroMemory(&g_D3D11Resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
+		unsigned int subresource = D3D11CalcSubresource(0, 0, 0);
+		hr = g_D3D11DeviceContext->Map(g_D3D11CPUTexturePtr, subresource, D3D11_MAP_READ, 0, &g_D3D11Resource);
+		g_D3D11DeviceContext->Unmap(g_D3D11CPUTexturePtr, subresource);
+	}
+#endif
+
+#if SUPPORT_OPENGL
+	// If we've got an OpenGL device, remember device type. There's no OpenGL
+	// "device pointer" to remember since OpenGL always operates on a currently set
+	// global context.
+	if (g_DeviceType == kGfxRendererOpenGL)
+	{
+		g_gltex = (GLuint)(size_t)(g_TexturePointer);
+		glBindTexture(GL_TEXTURE_2D, g_gltex);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
+	}
+#endif
 }
 
 
@@ -114,16 +198,9 @@ extern "C" void EXPORT_API SetTextureFromUnity (void* texturePtr)
 // --------------------------------------------------------------------------
 // UnitySetGraphicsDevice
 
-static int g_DeviceType = -1;
 
 
 // Actual setup/teardown functions defined below
-/*#if SUPPORT_D3D9
-static void SetGraphicsDeviceD3D9 (IDirect3DDevice9* device, GfxDeviceEventType eventType);
-#endif
-#if SUPPORT_D3D11
-static void SetGraphicsDeviceD3D11 (ID3D11Device* device, GfxDeviceEventType eventType);
-#endif*/
 
 
 extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType, int eventType)
@@ -133,14 +210,14 @@ extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType,
 	// Set device type to -1, i.e. "not recognized by our plugin"
 	g_DeviceType = -1;
 	
-/*#if SUPPORT_D3D9
+#if SUPPORT_D3D9
 	// D3D9 device, remember device pointer and device type.
 	// The pointer we get is IDirect3DDevice9.
 	if (deviceType == kGfxRendererD3D9)
 	{
 		DebugLog ("Set D3D9 graphics device\n");
 		g_DeviceType = deviceType;
-		SetGraphicsDeviceD3D9 ((IDirect3DDevice9*)device, (GfxDeviceEventType)eventType);
+		g_D3D9Device = (IDirect3DDevice9*)device;
 	}
 #endif
     
@@ -151,9 +228,9 @@ extern "C" void EXPORT_API UnitySetGraphicsDevice (void* device, int deviceType,
 	{
 		DebugLog ("Set D3D11 graphics device\n");
 		g_DeviceType = deviceType;
-		SetGraphicsDeviceD3D11 ((ID3D11Device*)device, (GfxDeviceEventType)eventType);
+		g_D3D11Device = (ID3D11Device*)device;
 	}
-#endif*/
+#endif
     
 #if SUPPORT_OPENGL
 	// If we've got an OpenGL device, remember device type. There's no OpenGL
@@ -251,7 +328,7 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 
 static void SetDefaultGraphicsState ()
 {
-/*#if SUPPORT_D3D9
+#if SUPPORT_D3D9
 	// D3D9 case
 	if (g_DeviceType == kGfxRendererD3D9)
 	{
@@ -271,12 +348,12 @@ static void SetDefaultGraphicsState ()
 	{
 		ID3D11DeviceContext* ctx = NULL;
 		g_D3D11Device->GetImmediateContext (&ctx);
-		ctx->OMSetDepthStencilState (g_D3D11DepthState, 0);
-		ctx->RSSetState (g_D3D11RasterState);
-		ctx->OMSetBlendState (g_D3D11BlendState, NULL, 0xFFFFFFFF);
+		//ctx->OMSetDepthStencilState (g_D3D11DepthState, 0);
+		//ctx->RSSetState (g_D3D11RasterState);
+		//ctx->OMSetBlendState (g_D3D11BlendState, NULL, 0xFFFFFFFF);
 		ctx->Release();
 	}
-#endif*/
+#endif
     
     
 #if SUPPORT_OPENGL
@@ -306,6 +383,43 @@ static void DoRendering (const float* worldMatrix, const float* identityMatrix, 
     //    fflush(pluginFile);
     logCount++;
 
+#if SUPPORT_D3D9
+	// D3D9 case
+	if (g_DeviceType == kGfxRendererD3D9)
+	{
+		//CubemapFaceD3D9* faceD3D9 = (CubemapFaceD3D9*)face;
+		// copy data from GPU to CPU
+		//HRESULT hr = g_D3D9Device->GetRenderTargetData(faceD3D9->gpuSurfacePtr, faceD3D9->cpuSurfacePtr);
+
+		/*CubemapFaceD3D9* faceD3D9 = (CubemapFaceD3D9*)face;
+		memcpy(faceD3D9->getPixels(),
+		faceD3D9->lockedRect.pBits,
+		faceD3D9->getWidth() * faceD3D9->getHeight() * 4);*/
+	}
+#endif
+
+
+#if SUPPORT_D3D11
+	// D3D11 case
+	if (g_DeviceType == kGfxRendererD3D11)
+	{
+		ID3D11DeviceContext* g_D3D11DeviceContext = NULL;
+		g_D3D11Device->GetImmediateContext(&g_D3D11DeviceContext);
+
+		// Copy data from GPU to CPU
+		// Since the texture is YUV420p encoded we only need 3/8 the amount of data
+		D3D11_BOX region =
+		{
+			0, 0, 0,
+			texWidth, texHeight, 1
+		};
+		g_D3D11DeviceContext->CopySubresourceRegion(g_D3D11CPUTexturePtr, 0, 0, 0, 0, g_D3D11GPUTexturePtr, 0, &region);
+
+		memcpy(data->pixels,
+			g_D3D11Resource.pData,
+			texWidth * texHeight * 4);
+	}
+#endif
     
 #if SUPPORT_OPENGL
 	// OpenGL case
@@ -343,11 +457,7 @@ static void DoRendering (const float* worldMatrix, const float* identityMatrix, 
             //            fprintf(pluginFile, "texture pointer: %u\n", g_TexturePointer);
             //            fflush(pluginFile);
             
-			GLuint gltex = (GLuint)(size_t)(g_TexturePointer);
-			glBindTexture (GL_TEXTURE_2D, gltex);
-			int texWidth, texHeight;
-			glGetTexLevelParameteriv (GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
-			glGetTexLevelParameteriv (GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
+			glBindTexture(GL_TEXTURE_2D, g_gltex);
             
 //            glEnableClientState (GL_TEXTURE_COORD_ARRAY); 
 //            glVertexPointer (3, GL_FLOAT, sizeof(verts[0]), &verts[0].x);
@@ -364,7 +474,7 @@ static void DoRendering (const float* worldMatrix, const float* identityMatrix, 
             
             
             //unsigned char tempData[100*3] = {0};
-            glGetTexImage(GL_TEXTURE_2D,0,GL_RGB,GL_UNSIGNED_BYTE,data->pixels);
+            glGetTexImage(GL_TEXTURE_2D,0,GL_RGBA,GL_UNSIGNED_BYTE,data->pixels);
             
 		}
 	}

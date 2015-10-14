@@ -179,7 +179,7 @@ static void initEncoder()
     exit(1);
   }
     
-    iframe->format = AV_PIX_FMT_RGB24;
+    iframe->format = AV_PIX_FMT_RGBA;
     iframe->width  = texture_width;//image_width;//c->width;
     iframe->height = texture_height;//image_height;//c->height;
     
@@ -195,7 +195,7 @@ static void initEncoder()
 
   /* the image can be allocated by any means and av_image_alloc() is
    * just the most convenient way if av_malloc() is to be used */
-    ret = av_image_alloc(iframe->data, iframe->linesize, image_width, image_height, AV_PIX_FMT_RGB24, 32);
+    ret = av_image_alloc(iframe->data, iframe->linesize, image_width, image_height, AV_PIX_FMT_RGBA, 32);
     //ret = av_image_alloc(iframeScaled->data, frame->linesize, image_width, image_height, AV_PIX_FMT_RGB24, 32);
     ret = av_image_alloc(frame->data, frame->linesize, image_width, image_height, AV_PIX_FMT_YUV420P, 32);
   
@@ -206,7 +206,7 @@ static void initEncoder()
   }
 
   //scaleCtx = sws_getContext(texture_width, texture_height, PIX_FMT_RGB24, image_width, image_height, PIX_FMT_RGB24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
-  convertCtx = sws_getContext(image_width, image_height, PIX_FMT_RGB24, image_width, image_height, PIX_FMT_YUV420P, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+  convertCtx = sws_getContext(image_width, image_height, AV_PIX_FMT_RGBA, image_width, image_height, PIX_FMT_YUV420P, SWS_FAST_BILINEAR, NULL, NULL, NULL);
     
 
   
@@ -219,8 +219,8 @@ void uploadFrames()
   
     while(sharedData->shutdownServer==false/*true*/)
     {
-        avpicture_fill((AVPicture *) iframe, sharedData->pixels/*randomPixels*/, AV_PIX_FMT_RGB24,image_width,image_height);
-        //avpicture_fill((AVPicture *) iframeScaled, frame_bufferScaled, AV_PIX_FMT_RGB24,image_width,image_height);
+        avpicture_fill((AVPicture *) iframe, sharedData->pixels/*randomPixels*/, AV_PIX_FMT_RGBA,image_width,image_height);
+        //avpicture_fill((AVPicture *) iframeScaled, frame_bufferScaled, AV_PIX_FMT_RGBA,image_width,image_height);
         //avpicture_fill((AVPicture *) frame, frame_bufferYUV, AV_PIX_FMT_YUV420P,image_width,image_height);
 
         //First scale the image (to avoid segfault)
@@ -241,7 +241,7 @@ void uploadFrames()
         num++;
         if(num%15 == 0)
         {
-            for(int i=0; i<image_height*image_width*3; i++)
+            for(int i=0; i<image_height*image_width*4; i++)
             {
                 randomPixels[i] = rand() % 255;
                 

@@ -10,7 +10,7 @@ struct FrameData
     {}
 
     //unsigned char pixels[1024*640*3];
-    unsigned char pixels[1024*576*3];
+    unsigned char pixels[1024*576*4];
 	//unsigned char pixels[1024*1024*3];
     //unsigned char pixels[2048*2048*3];
     //unsigned char pixels1[1];
