@@ -9,10 +9,25 @@ using System.Reflection;
 public class RenderBinoculars : MonoBehaviour
 {
 
+    private RenderTexture stereoTexture;
+    private RenderTexture leftEyeTexture;
+    private RenderTexture rightEyeTexture;
+    private Material leftEyeMaterial;
+    private Material rightEyeMaterial;
+
     // Use this for initialization
     void Start()
     {
+        // Setup resources (materials, render textures) for binoculars
+        stereoTexture = new RenderTexture(1024, 1024, 0, RenderTextureFormat.ARGB32);
+        leftEyeTexture = new RenderTexture(1024, 1024, 24, RenderTextureFormat.ARGB32);
+        rightEyeTexture = new RenderTexture(1024, 1024, 24, RenderTextureFormat.ARGB32);
+        leftEyeMaterial = new Material(Shader.Find("Unlit/Texture"));
+        leftEyeMaterial.mainTexture = leftEyeTexture;
+        rightEyeMaterial = new Material(Shader.Find("Unlit/Texture"));
+        rightEyeMaterial.mainTexture = rightEyeTexture;
 
+        // Setup GameObjects for binoculars
         GameObject binoculars = new GameObject("Binoculars");
         binoculars.transform.parent = transform;
         binoculars.transform.localPosition = Vector3.zero;
@@ -37,7 +52,7 @@ public class RenderBinoculars : MonoBehaviour
         cameraCam.orthographicSize = 0.88f;
         cameraCam.nearClipPlane = 0.01f;
         cameraCam.farClipPlane = 0.11f;
-        cameraCam.targetTexture = Resources.Load("Binoculars/StereoTexture", typeof(RenderTexture)) as RenderTexture;
+        cameraCam.targetTexture = stereoTexture;
 
         GameObject leftEyeMesh = new GameObject("LeftEyeMesh");
         leftEyeMesh.transform.parent = rendererStereo.transform;
@@ -46,7 +61,7 @@ public class RenderBinoculars : MonoBehaviour
         leftEyeMesh.layer = 8;
 
         MeshRenderer meshRenderer = leftEyeMesh.AddComponent<MeshRenderer>();
-        meshRenderer.material = Resources.Load("Binoculars/LeftEyeMaterial", typeof(Material)) as Material;
+        meshRenderer.material = leftEyeMaterial;
         MeshFilter meshFilter = leftEyeMesh.AddComponent<MeshFilter>();
         MxrPredistortionMesh mxrPredistortionMesh = leftEyeMesh.AddComponent<MxrPredistortionMesh>();
         mxrPredistortionMesh.resolutionX = 50;
@@ -59,7 +74,7 @@ public class RenderBinoculars : MonoBehaviour
         rightEyeMesh.layer = 8;
 
         MeshRenderer meshRenderer2 = rightEyeMesh.AddComponent<MeshRenderer>();
-        meshRenderer2.material = Resources.Load("Binoculars/RightEyeMaterial", typeof(Material)) as Material;
+        meshRenderer2.material = rightEyeMaterial;
         MeshFilter meshFilter2 = rightEyeMesh.AddComponent<MeshFilter>();
         MxrPredistortionMesh mxrPredistortionMesh2 = rightEyeMesh.AddComponent<MxrPredistortionMesh>();
         mxrPredistortionMesh2.resolutionX = 50;
@@ -83,7 +98,7 @@ public class RenderBinoculars : MonoBehaviour
         leftEyeCamera.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
         Camera leftEyeCameraCam = leftEyeCamera.AddComponent<Camera>();
-        leftEyeCameraCam.targetTexture = Resources.Load("Binoculars/LeftEyeTexture", typeof(RenderTexture)) as RenderTexture;
+        leftEyeCameraCam.targetTexture = leftEyeTexture;
 
         GameObject rightEyeCamera = new GameObject("RightEyeCamera");
         rightEyeCamera.transform.parent = hmd.transform;
@@ -91,6 +106,6 @@ public class RenderBinoculars : MonoBehaviour
         rightEyeCamera.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
         Camera rightEyeCameraCam = rightEyeCamera.AddComponent<Camera>();
-        rightEyeCameraCam.targetTexture = Resources.Load("Binoculars/RightEyeTexture", typeof(RenderTexture)) as RenderTexture;
+        rightEyeCameraCam.targetTexture = rightEyeTexture;
     }
 }
