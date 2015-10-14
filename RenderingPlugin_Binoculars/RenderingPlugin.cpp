@@ -11,6 +11,7 @@
 #include <osc/OscReceivedElements.h>
 #include <osc/OscPacketListener.h>
 #include <ip/UdpSocket.h>
+#include <boost/thread/barrier.hpp>
 
 #include "AlloServer_Binoculars/FrameData.h"
 
@@ -531,6 +532,10 @@ protected:
 UdpListeningReceiveSocket* s = NULL;
 UdpListeningReceiveSocket* qs = NULL;
 //UdpListeningReceiveSocket s;
+
+boost::barrier sBreakBarrier(2);
+boost::barrier qsBreakBarrier(2);
+
 extern "C" void EXPORT_API oscStart()
 {
 	/*
@@ -540,7 +545,7 @@ extern "C" void EXPORT_API oscStart()
     s = new UdpListeningReceiveSocket(IpEndpointName( IpEndpointName::ANY_ADDRESS, PORT ), &listener );
     
     s->Run();
-    
+	sBreakBarrier.wait();
 }
 
 extern "C" void EXPORT_API oscPhaseSpaceStart()
@@ -552,7 +557,7 @@ extern "C" void EXPORT_API oscPhaseSpaceStart()
     qs = new UdpListeningReceiveSocket(IpEndpointName( IpEndpointName::ANY_ADDRESS, QPORT ), &qlistener );
     
     qs->Run();
-    
+	qsBreakBarrier.wait();
 }
 
 unsigned char testPixels[i_width*i_height*3];
@@ -611,12 +616,14 @@ extern "C" int EXPORT_API initInterprocessMemory()
     if(s != NULL)
     {
         s->AsynchronousBreak();
+		sBreakBarrier.wait();
         delete s;
         s = NULL;
     }
     if(qs != NULL)
     {
         qs->AsynchronousBreak();
+		qsBreakBarrier.wait();
         delete qs;
         qs = NULL;
     }
