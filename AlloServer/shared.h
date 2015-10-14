@@ -9,7 +9,6 @@ extern "C" {
 #include <x264.h>
 }
 
-#include <pthread.h>
 #include "ConcurrentQueue.h"
 
 extern ConcurrentQueue<x264_nal_t> m_queue;
@@ -19,7 +18,7 @@ extern x264_t* encoder;
 extern x264_picture_t pic_in, pic_out;
 //extern unsigned char image[1280*720*3];
 //extern unsigned char image[1024*576*3];
-extern pthread_mutex_t mutex;
+//extern pthread_mutex_t mutex;
 extern AVCodec *codec;
 extern AVCodecContext *c;
 extern AVFrame *frame;

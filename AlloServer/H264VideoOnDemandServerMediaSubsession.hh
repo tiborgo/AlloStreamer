@@ -23,7 +23,7 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 #define _H264_ON_DEMAND_SERVER_MEDIA_SUBSESSION_HH
 
 #ifndef _ON_DEMAND_SERVER_MEDIA_SUBSESSION_HH
-#include "OnDemandServerMediaSubsession.hh"
+#include <OnDemandServerMediaSubsession.hh>
 #endif
 
 class H264VideoOnDemandServerMediaSubsession: public OnDemandServerMediaSubsession {

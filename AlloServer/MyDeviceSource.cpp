@@ -106,7 +106,7 @@ MyDeviceSource::MyDeviceSource(UsageEnvironment& env)
     //%%% TO BE WRITTEN %%%
   }
   ++referenceCount;
-myfile = fopen("/Users/tiborgoldschwendt/Desktop/AlloMathieu/Logs/deviceglxgears.log", "w");
+myfile = fopen(ROOT_DIR "/Logs/deviceglxgears.log", "w");
   // Any instance-specific initialization of the device would be done here:
   //%%% TO BE WRITTEN %%%
 

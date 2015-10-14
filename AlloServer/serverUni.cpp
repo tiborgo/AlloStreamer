@@ -22,11 +22,11 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 #define UINT64_C(c) (c ## ULL)
 #endif
 
-#include "liveMedia.hh"
+#include <liveMedia.hh>
 #define EventTime server_EventTime
-#include "BasicUsageEnvironment.hh"
+#include <BasicUsageEnvironment.hh>
 #undef EventTime
-#include <pthread.h>
+//#include <pthread.h>
 #include "H264VideoOnDemandServerMediaSubsession.hh"
 #include "shared.h"
 //RTPSink* videoSink;

@@ -19,15 +19,18 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 // on demand, from a H264 video file.
 // Implementation
 
+#include <H264VideoRTPSink.hh>
+#include <H264VideoStreamFramer.hh>
+
+#include "H264VideoOnDemandServerMediaSubsession.hh"
+#include "MyDeviceSource.hh"
+
 #ifndef INT64_C
 #define INT64_C(c) (c ## LL)
 #define UINT64_C(c) (c ## ULL)
 #endif
 
-#include "H264VideoOnDemandServerMediaSubsession.hh"
-#include "H264VideoRTPSink.hh"
-#include "MyDeviceSource.hh"
-#include "H264VideoStreamFramer.hh"
+
 UsageEnvironment* envi;
 H264VideoOnDemandServerMediaSubsession*
 H264VideoOnDemandServerMediaSubsession::createNew(UsageEnvironment& env,

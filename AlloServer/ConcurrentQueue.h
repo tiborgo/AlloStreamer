@@ -15,7 +15,7 @@ private:
 public:
   ConcurrentQueue()
   {
-    queueFile = fopen("/Users/tiborgoldschwendt/Desktop/AlloMathieu/Logs/queue.log", "w");
+	  queueFile = fopen(ROOT_DIR "/Logs/queue.log", "w");
   }
     void push(Data const& data)
     {

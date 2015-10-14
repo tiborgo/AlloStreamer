@@ -47,7 +47,7 @@ extern "C" {
 
 #include <string.h>
 
-#include <pthread.h>
+//#include <pthread.h>
 //#define FORSTREAMING 1
 //#ifdef FORSTREAMING
 //#include <libavcodec/avcodec.h>
@@ -57,10 +57,13 @@ extern "C" {
 //#include <libswscale/swscale.h>
 }
 
+#include <chrono>
+#include <thread>
+
 /* disable printf */
 //#define printf(...)
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+//pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 //#include "shared.h"
 
 extern MyDeviceSource *fileSource;
@@ -109,8 +112,8 @@ const int FPS = 60;
 //unsigned char image[image_width*image_height*3];
 
 
-#include <sys/time.h>
-#include <unistd.h>
+//#include <sys/time.h>
+//#include <unistd.h>
 
 
 AVFrame *frame1;
@@ -144,7 +147,7 @@ static void initEncoder()
     c->width = image_width;
   c->height = image_height;
   /* frames per second */
-  c->time_base= (AVRational){1,FPS};
+  c->time_base= av_make_q(1,FPS);
   c->gop_size = 20; /* emit one intra frame every ten frames */
   c->max_b_frames=0;
   c->pix_fmt = AV_PIX_FMT_YUV420P;
@@ -244,7 +247,7 @@ void uploadFrames()
                 
             }
         }
-        usleep(15000);
+		std::this_thread::sleep_for(std::chrono::microseconds(15000));
 
     }
     fprintf(logz,"exiting... \n");
@@ -256,7 +259,7 @@ void uploadFrames()
 int
 main(int argc, char *argv[])
 {
-    logz = fopen("/Users/tiborgoldschwendt/Desktop/AlloMathieu/Logs/AlloServer.log", "w");
+    logz = fopen(ROOT_DIR "/Logs/AlloServer.log", "w");
 
 
   avcodec_register_all();
