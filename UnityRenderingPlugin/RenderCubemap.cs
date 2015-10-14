@@ -103,7 +103,7 @@ public class RenderCubemap : MonoBehaviour
             
             RenderTexture outTex;
             
-            if (shader)
+            if (SystemInfo.graphicsDeviceVersion.StartsWith("Direct3D"))
             {
                 outTex = new RenderTexture(width, height, 1, RenderTextureFormat.ARGB32);
                 outTex.enableRandomWrite = true;
@@ -137,7 +137,7 @@ public class RenderCubemap : MonoBehaviour
             
             if (extract)
             {
-                if (shader)
+                if (SystemInfo.graphicsDeviceVersion.StartsWith("Direct3D"))
                 {
                     for (int i = 0; i < faceCount; i++)
                     {
