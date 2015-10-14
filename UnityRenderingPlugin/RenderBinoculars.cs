@@ -32,6 +32,7 @@ public class RenderBinoculars : MonoBehaviour
         Camera cameraCam = camera.AddComponent<Camera>();
         cameraCam.clearFlags = CameraClearFlags.SolidColor;
         cameraCam.backgroundColor = Color.black;
+        cameraCam.orthographic = true;
         cameraCam.cullingMask = 1 << 8;
         cameraCam.orthographicSize = 0.88f;
         cameraCam.nearClipPlane = 0.01f;
@@ -42,6 +43,7 @@ public class RenderBinoculars : MonoBehaviour
         leftEyeMesh.transform.parent = rendererStereo.transform;
         leftEyeMesh.transform.localPosition = new Vector3(0.45f, -0.008f, 0f);
         leftEyeMesh.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+        leftEyeMesh.layer = 8;
 
         MeshRenderer meshRenderer = leftEyeMesh.AddComponent<MeshRenderer>();
         meshRenderer.material = Resources.Load("Binoculars/LeftEyeMaterial", typeof(Material)) as Material;
@@ -54,6 +56,7 @@ public class RenderBinoculars : MonoBehaviour
         rightEyeMesh.transform.parent = rendererStereo.transform;
         rightEyeMesh.transform.localPosition = new Vector3(-0.45f, -0.008f, 0f);
         rightEyeMesh.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+        rightEyeMesh.layer = 8;
 
         MeshRenderer meshRenderer2 = rightEyeMesh.AddComponent<MeshRenderer>();
         meshRenderer2.material = Resources.Load("Binoculars/RightEyeMaterial", typeof(Material)) as Material;
