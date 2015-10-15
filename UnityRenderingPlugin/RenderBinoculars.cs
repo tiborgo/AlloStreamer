@@ -13,30 +13,58 @@ public class RenderBinoculars : MonoBehaviour
     private RenderTexture rightEyeTexture;
     private Material leftEyeMaterial;
     private Material rightEyeMaterial;
-	private Camera leftEyeCameraCam;
-	private Camera rightEyeCameraCam;
+    private GameObject leftEyeCamera;
+    private GameObject rightEyeCamera;
+    private Camera leftEyeCameraCam;
+    private Camera rightEyeCameraCam;
 
-	[SerializeField] [HideInInspector]
-	private float fieldOfView;
+    [SerializeField]
+    [HideInInspector]
+    private float fieldOfView = 90f;
 
-	[ExposeProperty]
-	public float FieldOfView
+    [SerializeField]
+    [HideInInspector]
+    private float eyeSeparation = 0.064f;
+
+    [ExposeProperty]
+    public float FieldOfView
     {
         get
-		{
-			return fieldOfView;
-		}
+        {
+            return fieldOfView;
+        }
         set
         {
-			if (value >= 0.0f && value <= 179f)
-			{
-				if (leftEyeCameraCam && rightEyeCameraCam)
-				{
-					leftEyeCameraCam.fieldOfView = value;
-					rightEyeCameraCam.fieldOfView = value;
-				}
-				fieldOfView = value;
-			}
+            if (value >= 0.0f && value <= 179f)
+            {
+                if (leftEyeCameraCam && rightEyeCameraCam)
+                {
+                    leftEyeCameraCam.fieldOfView = value;
+                    rightEyeCameraCam.fieldOfView = value;
+                }
+                fieldOfView = value;
+            }
+        }
+    }
+
+    [ExposeProperty]
+    public float EyeSeparation
+    {
+        get
+        {
+            return eyeSeparation;
+        }
+        set
+        {
+            if (value >= 0.0f)
+            {
+                if (leftEyeCamera && rightEyeCamera)
+                {
+                    leftEyeCamera.transform.localPosition = new Vector3(-value / 2, 0f, 0f);
+                    rightEyeCamera.transform.localPosition = new Vector3(value / 2, 0f, 0f);
+                }
+                eyeSeparation = value;
+            }
         }
     }
 
@@ -119,22 +147,22 @@ public class RenderBinoculars : MonoBehaviour
         hmd.transform.localPosition = new Vector3(0f, 0f, 0f);
         hmd.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
-        GameObject leftEyeCamera = new GameObject("LeftEyeCamera");
+        leftEyeCamera = new GameObject("LeftEyeCamera");
         leftEyeCamera.transform.parent = hmd.transform;
-        leftEyeCamera.transform.localPosition = new Vector3(0f, 0f, 0f);
+        leftEyeCamera.transform.localPosition = new Vector3(-eyeSeparation / 2, 0f, 0f);
         leftEyeCamera.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
         leftEyeCameraCam = leftEyeCamera.AddComponent<Camera>();
         leftEyeCameraCam.targetTexture = leftEyeTexture;
-		leftEyeCameraCam.fieldOfView = fieldOfView;
+        leftEyeCameraCam.fieldOfView = fieldOfView;
 
-        GameObject rightEyeCamera = new GameObject("RightEyeCamera");
+        rightEyeCamera = new GameObject("RightEyeCamera");
         rightEyeCamera.transform.parent = hmd.transform;
-        rightEyeCamera.transform.localPosition = new Vector3(0f, 0f, 0f);
+        rightEyeCamera.transform.localPosition = new Vector3(eyeSeparation / 2, 0f, 0f);
         rightEyeCamera.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
         rightEyeCameraCam = rightEyeCamera.AddComponent<Camera>();
         rightEyeCameraCam.targetTexture = rightEyeTexture;
-		rightEyeCameraCam.fieldOfView = fieldOfView;
+        rightEyeCameraCam.fieldOfView = fieldOfView;
     }
 }
