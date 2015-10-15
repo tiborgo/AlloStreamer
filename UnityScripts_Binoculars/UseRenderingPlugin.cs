@@ -195,7 +195,7 @@ public class UseRenderingPlugin : MonoBehaviour
             //File.WriteAllBytes(Application.dataPath + "/../SavedScreen" + num + ".png", bytes);
             //num++;
 
-            GL.IssuePluginEvent(1);
+            GL.IssuePluginEvent(0);
         }
     }
 }

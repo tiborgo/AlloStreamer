@@ -265,50 +265,57 @@ mapped_region region;
 shared_memory_object shm;
 extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 {
-	// Unknown graphics device type? Do nothing.
-	if (g_DeviceType == -1)
-		return;
+	// When we use the RenderCubemap.cs and USeRenderingPlugin.cs scripts
+	// This function will get called twice (with different eventIDs).
+	// We have to make sure that the extraction only happens once for the cubemap
+	// and binoculars respectively!
+	if (eventID == 0)
+	{
+		// Unknown graphics device type? Do nothing.
+		if (g_DeviceType == -1)
+			return;
     
     
-	// A colored triangle. Note that colors will come out differently
-	// in D3D9/11 and OpenGL, for example, since they expect color bytes
-	// in different ordering.
-	MyVertex verts[3] = {
-		{ -0.5f, -0.25f,  0, 0xFFff0000 },
-		{  0.5f, -0.25f,  0, 0xFF00ff00 },
-		{  0,     0.5f ,  0, 0xFF0000ff },
-	};
+		// A colored triangle. Note that colors will come out differently
+		// in D3D9/11 and OpenGL, for example, since they expect color bytes
+		// in different ordering.
+		MyVertex verts[3] = {
+			{ -0.5f, -0.25f,  0, 0xFFff0000 },
+			{  0.5f, -0.25f,  0, 0xFF00ff00 },
+			{  0,     0.5f ,  0, 0xFF0000ff },
+		};
     
     
-	// Some transformation matrices: rotate around Z axis for world
-	// matrix, identity view matrix, and identity projection matrix.
+		// Some transformation matrices: rotate around Z axis for world
+		// matrix, identity view matrix, and identity projection matrix.
     
-	float phi = g_Time;
-	float cosPhi = cosf(phi);
-	float sinPhi = sinf(phi);
+		float phi = g_Time;
+		float cosPhi = cosf(phi);
+		float sinPhi = sinf(phi);
     
-	float worldMatrix[16] = {
-		cosPhi,-sinPhi,0,0,
-		sinPhi,cosPhi,0,0,
-		0,0,1,0,
-		0,0,0.7f,1,
-	};
-	float identityMatrix[16] = {
-		1,0,0,0,
-		0,1,0,0,
-		0,0,1,0,
-		0,0,0,1,
-	};
-	float projectionMatrix[16] = {
-		1,0,0,0,
-		0,1,0,0,
-		0,0,1,0,
-		0,0,0,1,
-	};
+		float worldMatrix[16] = {
+			cosPhi,-sinPhi,0,0,
+			sinPhi,cosPhi,0,0,
+			0,0,1,0,
+			0,0,0.7f,1,
+		};
+		float identityMatrix[16] = {
+			1,0,0,0,
+			0,1,0,0,
+			0,0,1,0,
+			0,0,0,1,
+		};
+		float projectionMatrix[16] = {
+			1,0,0,0,
+			0,1,0,0,
+			0,0,1,0,
+			0,0,0,1,
+		};
     
-	// Actual functions defined below
-	SetDefaultGraphicsState ();
-	DoRendering (worldMatrix, identityMatrix, projectionMatrix, verts);
+		// Actual functions defined below
+		SetDefaultGraphicsState ();
+		DoRendering (worldMatrix, identityMatrix, projectionMatrix, verts);
+	}
 }
 
 
