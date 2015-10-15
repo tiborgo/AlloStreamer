@@ -140,6 +140,12 @@ public class RenderBinoculars : MonoBehaviour
         virtualCameraStereo.transform.localPosition = new Vector3(-320.953f, -15.1f, -134.3123f);
         virtualCameraStereo.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
+        LineRenderer lineRenderer = virtualCameraStereo.AddComponent<LineRenderer>();
+        lineRenderer.material = new Material(Shader.Find("Particles/Additive (Soft)"));
+        lineRenderer.SetColors(new Color(1.0f, 0, 0, 0.5f), new Color(1.0f, 0, 0, 0.5f));
+        lineRenderer.SetWidth(0.1f, 0.1f);
+        lineRenderer.SetVertexCount(2);
+
         virtualCameraStereo.AddComponent<MouseLook>();
 
         GameObject hmd = new GameObject("HMD");

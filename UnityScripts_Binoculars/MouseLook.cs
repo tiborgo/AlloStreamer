@@ -79,6 +79,7 @@ public class MouseLook : MonoBehaviour
         //mainScript = sys.GetComponent<MainScript>();
         mobileDeviceRotation = Quaternion.identity;
         phaseSpaceRotation = Quaternion.identity;
+        lineRenderer = GetComponent<LineRenderer>();
     }
 
     bool isFirstTouch = true;
@@ -87,6 +88,8 @@ public class MouseLook : MonoBehaviour
 
     float oldDragX = 0.0f;
     float oldDragY = 0.0f;
+
+    private LineRenderer lineRenderer;
 
 
     void Update()
@@ -103,6 +106,8 @@ public class MouseLook : MonoBehaviour
         //			float phaseSpaceY = getPSQuatY();
         //			float phaseSpaceZ = getPSQuatZ();
         //			float phaseSpaceW = getPSQuatW();
+
+        // 
 
         mobileDeviceRotation = Quaternion.Euler(pitch /*- calibY*/, roll /*- calibX + 335f*/, yaw); // 335 is the rotation halfway between the two scene cameras (used for calibration)
         //			phaseSpaceRotation = new Quaternion(phaseSpaceX, phaseSpaceY, phaseSpaceZ, phaseSpaceW);
@@ -123,6 +128,20 @@ public class MouseLook : MonoBehaviour
 
         transform.rotation = mobileDeviceRotation;
         //			transform.rotation = phaseSpaceRotation;
+
+        Ray ray = new Ray(transform.position, mobileDeviceRotation * Vector3.forward);
+        RaycastHit hit;
+
+        if (Physics.Raycast(ray, out hit))
+        {
+            lineRenderer.SetPosition(0, transform.position + new Vector3(0f, 0.5f, 0f));
+            lineRenderer.SetPosition(1, hit.point);
+        }
+        else
+        {
+            lineRenderer.SetPosition(0, transform.position);
+            lineRenderer.SetPosition(1, transform.position);
+        }
 
 
         //transform.localRotation = Quaternion.Euler (30f,30f,0f);
