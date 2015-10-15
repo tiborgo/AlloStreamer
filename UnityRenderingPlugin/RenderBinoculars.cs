@@ -5,7 +5,6 @@ using System;
 using System.Reflection;
 
 
-
 public class RenderBinoculars : MonoBehaviour
 {
 
@@ -14,10 +13,38 @@ public class RenderBinoculars : MonoBehaviour
     private RenderTexture rightEyeTexture;
     private Material leftEyeMaterial;
     private Material rightEyeMaterial;
+	private Camera leftEyeCameraCam;
+	private Camera rightEyeCameraCam;
+
+	[SerializeField] [HideInInspector]
+	private float fieldOfView;
+
+	[ExposeProperty]
+	public float FieldOfView
+    {
+        get
+		{
+			return fieldOfView;
+		}
+        set
+        {
+			if (value >= 0.0f && value <= 179f)
+			{
+				if (leftEyeCameraCam && rightEyeCameraCam)
+				{
+					leftEyeCameraCam.fieldOfView = value;
+					rightEyeCameraCam.fieldOfView = value;
+				}
+				fieldOfView = value;
+			}
+        }
+    }
 
     // Use this for initialization
     void Start()
     {
+        Debug.Log("start");
+
         // Setup resources (materials, render textures) for binoculars
         stereoTexture = new RenderTexture(1024, 1024, 0, RenderTextureFormat.ARGB32);
         leftEyeTexture = new RenderTexture(1024, 1024, 24, RenderTextureFormat.ARGB32);
@@ -97,15 +124,17 @@ public class RenderBinoculars : MonoBehaviour
         leftEyeCamera.transform.localPosition = new Vector3(0f, 0f, 0f);
         leftEyeCamera.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
-        Camera leftEyeCameraCam = leftEyeCamera.AddComponent<Camera>();
+        leftEyeCameraCam = leftEyeCamera.AddComponent<Camera>();
         leftEyeCameraCam.targetTexture = leftEyeTexture;
+		leftEyeCameraCam.fieldOfView = fieldOfView;
 
         GameObject rightEyeCamera = new GameObject("RightEyeCamera");
         rightEyeCamera.transform.parent = hmd.transform;
         rightEyeCamera.transform.localPosition = new Vector3(0f, 0f, 0f);
         rightEyeCamera.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
-        Camera rightEyeCameraCam = rightEyeCamera.AddComponent<Camera>();
+        rightEyeCameraCam = rightEyeCamera.AddComponent<Camera>();
         rightEyeCameraCam.targetTexture = rightEyeTexture;
+		rightEyeCameraCam.fieldOfView = fieldOfView;
     }
 }

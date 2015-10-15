@@ -51,6 +51,8 @@ public class RenderStereoCubemap : MonoBehaviour
     private RenderTexture[] outTextures;
     private ComputeShader shader;
 
+    private bool didPlay = false;
+
     [DllImport("CubemapExtractionPlugin")]
     private static extern void ConfigureCubemapFromUnity(System.IntPtr[] texturePtrs, int cubemapFacesCount, int width, int height);
     [DllImport("CubemapExtractionPlugin")]
@@ -1084,6 +1086,7 @@ public class RenderStereoCubemap : MonoBehaviour
 
         // Tell native plugin that rendering has started
         ConfigureCubemapFromUnity(texturePtrs, faceCount, resolution, resolution);
+        didPlay = true;
 
         yield return StartCoroutine("CallPluginAtEndOfFrames");
 
@@ -1190,7 +1193,11 @@ public class RenderStereoCubemap : MonoBehaviour
 
     void OnDestroy()
     {
-        StopFromUnity();
+        if (didPlay)
+        {
+            StopFromUnity();
+            didPlay = false;
+        }
     }
     private IEnumerator CallPluginAtEndOfFrames()
     {
