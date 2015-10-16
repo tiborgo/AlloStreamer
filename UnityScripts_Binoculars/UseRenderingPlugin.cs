@@ -151,7 +151,7 @@ public class UseRenderingPlugin : MonoBehaviour
             yield return new WaitForEndOfFrame();
 
             //Need to call this (or any plugin function) to keep calling native rendering events
-            SetTextureFromUnity(tex.GetNativeTexturePtr());
+            //SetTextureFromUnity(tex.GetNativeTexturePtr());
 
             //movingCamera.Render();
             RenderTexture.active = movingCamera.targetTexture;
