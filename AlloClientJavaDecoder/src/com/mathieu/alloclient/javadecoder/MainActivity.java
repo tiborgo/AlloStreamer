@@ -142,11 +142,11 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
 	        }
 		}
 		
-		SurfaceView sv = new SurfaceView(this);
+		setContentView(R.layout.activity_main);
+		
+		SurfaceView sv = (SurfaceView) findViewById(R.id.mSurface);
 		svHolder = sv.getHolder();
 		sv.getHolder().addCallback(this);
-		setContentView(sv);
-		
 	}
 	
 	
@@ -731,10 +731,10 @@ private SensorManager mSensorManager = null;
             float oneMinusCoeff = 1.0f - FILTER_COEFFICIENT;
             
             /*
-             * Fix for 179° <--> -179° transition problem:
+             * Fix for 179ï¿½ <--> -179ï¿½ transition problem:
              * Check whether one of the two orientation angles (gyro or accMag) is negative while the other one is positive.
-             * If so, add 360° (2 * math.PI) to the negative value, perform the sensor fusion, and remove the 360° from the result
-             * if it is greater than 180°. This stabilizes the output in positive-to-negative-transition cases.
+             * If so, add 360ï¿½ (2 * math.PI) to the negative value, perform the sensor fusion, and remove the 360ï¿½ from the result
+             * if it is greater than 180ï¿½. This stabilizes the output in positive-to-negative-transition cases.
              */
             
             // azimuth
