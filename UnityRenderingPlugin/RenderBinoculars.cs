@@ -24,7 +24,7 @@ public class RenderBinoculars : MonoBehaviour
 
     [SerializeField]
     [HideInInspector]
-    private float eyeSeparation = 0.064f;
+    private float eyeSeparation = 0.128f;
 
     [ExposeProperty]
     public float FieldOfView

@@ -76,7 +76,8 @@ public class RenderCubemap : MonoBehaviour
         
         // Move the cubemap to the origin of the parent cam
         cubemap.transform.localPosition = Vector3.zero;
-        
+        cubemap.transform.localEulerAngles = Vector3.zero;
+
         System.IntPtr[] texturePtrs = new System.IntPtr[faceCount];
         inTextures = new RenderTexture[faceCount];
         outTextures = new RenderTexture[faceCount];
@@ -96,9 +97,9 @@ public class RenderCubemap : MonoBehaviour
             
             // Set orientation
             cam.fieldOfView = 90;
-            go.transform.eulerAngles = cubemapFaceRotations[i];
             go.transform.parent = cubemap.transform;
-            
+            go.transform.localEulerAngles = cubemapFaceRotations[i];
+
             // Move the cubemap to the origin of the parent cam
             cam.transform.localPosition = Vector3.zero;
             
