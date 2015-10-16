@@ -87,10 +87,19 @@ public class RenderBinoculars : MonoBehaviour
         binoculars.transform.parent = transform;
         binoculars.transform.localPosition = Vector3.zero;
 
+        GameObject distanceSphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        distanceSphere.transform.parent = binoculars.transform;
+        distanceSphere.name = "DistanceSphere";
+        Material dinstanceSphereMat = new Material(Shader.Find("Unlit/Color"));
+        dinstanceSphereMat.color = new Color(1.0f, 0, 0, 0.5f);
+        distanceSphere.GetComponent<MeshRenderer>().material = dinstanceSphereMat;
+        // Remove the collider of the sphere. Otherwise distance measurmen would interfere with the sphere.
+        GameObject.Destroy(distanceSphere.GetComponent<SphereCollider>());
+
         GameObject rendererStereo = new GameObject("RendererStereo");
         rendererStereo.transform.parent = binoculars.transform;
-        rendererStereo.transform.localPosition = new Vector3(-320.953f, -9.005943f, -136.6786f);
-        rendererStereo.transform.localRotation = Quaternion.Euler(0f, 164.2724f, 0f);
+        rendererStereo.transform.localPosition = new Vector3(0f, 0f, 0f);
+        rendererStereo.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
         GameObject camera = new GameObject("Camera");
         camera.transform.parent = rendererStereo.transform;
@@ -137,7 +146,7 @@ public class RenderBinoculars : MonoBehaviour
 
         GameObject virtualCameraStereo = new GameObject("VirtualCameraStereo");
         virtualCameraStereo.transform.parent = binoculars.transform;
-        virtualCameraStereo.transform.localPosition = new Vector3(-320.953f, -15.1f, -134.3123f);
+        virtualCameraStereo.transform.localPosition = new Vector3(0f, 0f, 0f);
         virtualCameraStereo.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
         LineRenderer lineRenderer = virtualCameraStereo.AddComponent<LineRenderer>();

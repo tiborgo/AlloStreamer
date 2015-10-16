@@ -76,6 +76,7 @@ public class MouseLook : MonoBehaviour
 
     Quaternion mobileDeviceRotation;
     Quaternion phaseSpaceRotation;
+    GameObject distanceSphere;
     void Awake()
     {
         //sys = GameObject.Find("System");
@@ -83,6 +84,7 @@ public class MouseLook : MonoBehaviour
         mobileDeviceRotation = Quaternion.identity;
         phaseSpaceRotation = Quaternion.identity;
         lineRenderer = GetComponent<LineRenderer>();
+        distanceSphere = GameObject.Find("DistanceSphere");
     }
 
     bool isFirstTouch = true;
@@ -137,15 +139,17 @@ public class MouseLook : MonoBehaviour
 
         if (Physics.Raycast(ray, out hit))
         {
-            lineRenderer.SetPosition(0, transform.position + new Vector3(0f, 0.5f, 0f));
+            lineRenderer.SetPosition(0, transform.position + new Vector3(0f, -0.5f, 0f));
             lineRenderer.SetPosition(1, hit.point);
             setDistance(hit.distance);
+            distanceSphere.transform.position = hit.point;
         }
         else
         {
             lineRenderer.SetPosition(0, transform.position);
             lineRenderer.SetPosition(1, transform.position);
             setDistance(-1);
+            distanceSphere.transform.position = transform.position;
         }
 
 
