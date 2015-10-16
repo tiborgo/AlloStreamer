@@ -3,6 +3,7 @@ package com.mathieu.alloclient.javadecoder;
 
 import java.math.RoundingMode;
 import java.net.InetAddress;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.text.DecimalFormat;
 import java.util.Timer;
@@ -36,7 +37,9 @@ import android.view.WindowManager;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
+import com.illposed.osc.OSCListener;
 import com.illposed.osc.OSCMessage;
+import com.illposed.osc.OSCPortIn;
 import com.illposed.osc.OSCPortOut;
 
 public class MainActivity extends Activity implements SurfaceHolder.Callback, SensorEventListener {
@@ -50,6 +53,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
     OSCMessage message;
     Object args[];
 
+    OSCPortIn receiver;
 	
 	static
 	{
@@ -140,6 +144,20 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
 	        }catch (Exception e){
 	            Log.w("dbg", "oscoutport: " + e.toString());
 	        }
+	        
+	        // Start OSC listener (binoculars distance)
+	        try {
+				receiver = new OSCPortIn(7001);
+				OSCListener listener = new OSCListener() {
+		    		public void acceptMessage(java.util.Date time, OSCMessage message) {
+		    			System.out.println("Distance received: " + message.getArguments()[0]);
+		    		}
+		    	};
+		    	receiver.addListener("/distance", listener);
+		    	receiver.startListening();
+			} catch (SocketException e) {
+				Log.w("dbg", "oscintport: " + e.toString());
+			}
 		}
 		
 		setContentView(R.layout.activity_main);
