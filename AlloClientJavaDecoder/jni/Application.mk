@@ -1,6 +1,6 @@
 APP_MODULES      := \
 	BasicUsageEnvironment groupsock liveMedia UsageEnvironment streamer
-APP_PROJECT_PATH := /Users/tiborgoldschwendt/Desktop/AlloClientJavaDecoder #$(call my-dir)
+APP_PROJECT_PATH := .
 
 APP_STL := gnustl_static
 
