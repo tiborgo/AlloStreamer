@@ -2,6 +2,10 @@
 ###################
 Lib/
 Bin/
+AlloClientJavaDecoder/bin
+AlloClientJavaDecoder/obj
+AlloClientJavaDecoder/libs
+AlloClientJavaDecoder/gen
 
 # CMake generated files #
 ########################
