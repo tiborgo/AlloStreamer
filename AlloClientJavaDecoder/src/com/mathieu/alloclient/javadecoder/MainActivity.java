@@ -55,7 +55,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
 
     OSCPortIn receiver;
     
-    TextView distanceView;
+    TextView distanceViewLeft;
+    TextView distanceViewRight;
 	
 	static
 	{
@@ -138,7 +139,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
 		SurfaceView sv = (SurfaceView) findViewById(R.id.mSurface);
 		svHolder = sv.getHolder();
 		sv.getHolder().addCallback(this);
-		distanceView = (TextView) findViewById(R.id.mDistanceView);
+		distanceViewLeft = (TextView) findViewById(R.id.mDistanceViewLeft);
+		distanceViewRight = (TextView) findViewById(R.id.mDistanceViewRight);
 		
 		if(preferenceOSCClient.equals(defaultOSCClient))
 		{
@@ -164,14 +166,17 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
 		    				
 							@Override
 							public void run() {
+								String content;
 								if (distance == -1)
 								{
-									distanceView.setText("\u221e m / \u221e ft");
+									content = "\u221e m / \u221e ft";
 								}
 								else
 								{
-									distanceView.setText(String.format("%.1f m / %.1f ft", distance, distance * 3.28084));
+									content = String.format("%.1f m / %.1f ft", distance, distance * 3.28084);
 								}
+								distanceViewLeft.setText(content);
+								distanceViewRight.setText(content);
 							}
 						});
 		    		}

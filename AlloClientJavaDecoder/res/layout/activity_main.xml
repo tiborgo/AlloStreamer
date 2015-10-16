@@ -9,18 +9,49 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content" />
 
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent" >
+        android:layout_height="match_parent"
+        android:orientation="horizontal" >
 
-        <TextView
-            android:id="@+id/mDistanceView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentEnd="true"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:textColor="#ff0000" />
-    </RelativeLayout>
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1" >
+
+            <TextView
+                android:id="@+id/mDistanceViewLeft"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_centerHorizontal="true"
+                android:layout_marginBottom="100dp"
+                android:text="m / ft"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textColor="#aaff0000"
+                android:textSize="25sp" />
+
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1" >
+
+            <TextView
+                android:id="@+id/mDistanceViewRight"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_centerHorizontal="true"
+                android:layout_marginBottom="100dp"
+                android:text="m / ft"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textColor="#aaff0000"
+                android:textSize="25sp" />
+            
+        </RelativeLayout>
+
+    </LinearLayout>
 
 </FrameLayout>
