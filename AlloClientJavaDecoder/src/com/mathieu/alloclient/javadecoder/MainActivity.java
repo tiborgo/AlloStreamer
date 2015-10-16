@@ -54,6 +54,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
     Object args[];
 
     OSCPortIn receiver;
+    
+    TextView distanceView;
 	
 	static
 	{
@@ -132,6 +134,12 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
 			
 		}
 		
+		setContentView(R.layout.activity_main);
+		SurfaceView sv = (SurfaceView) findViewById(R.id.mSurface);
+		svHolder = sv.getHolder();
+		sv.getHolder().addCallback(this);
+		distanceView = (TextView) findViewById(R.id.mDistanceView);
+		
 		if(preferenceOSCClient.equals(defaultOSCClient))
 		{
 			startActivity(new Intent(this, SettingsActivity.class));
@@ -150,7 +158,22 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
 				receiver = new OSCPortIn(7001);
 				OSCListener listener = new OSCListener() {
 		    		public void acceptMessage(java.util.Date time, OSCMessage message) {
-		    			System.out.println("Distance received: " + message.getArguments()[0]);
+		    			final float distance = (Float)message.getArguments()[0];
+		    			System.out.println("Distance received: " + distance);
+		    			runOnUiThread(new Runnable() {
+		    				
+							@Override
+							public void run() {
+								if (distance == -1)
+								{
+									distanceView.setText("\u221e m / \u221e ft");
+								}
+								else
+								{
+									distanceView.setText(String.format("%.1f m / %.1f ft", distance, distance * 3.28084));
+								}
+							}
+						});
 		    		}
 		    	};
 		    	receiver.addListener("/distance", listener);
@@ -159,12 +182,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
 				Log.w("dbg", "oscintport: " + e.toString());
 			}
 		}
-		
-		setContentView(R.layout.activity_main);
-		
-		SurfaceView sv = (SurfaceView) findViewById(R.id.mSurface);
-		svHolder = sv.getHolder();
-		sv.getHolder().addCallback(this);
 	}
 	
 	

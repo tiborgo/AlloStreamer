@@ -14,12 +14,11 @@
         android:layout_height="match_parent" >
 
         <TextView
-            android:id="@+id/textView1"
+            android:id="@+id/mDistanceView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
-            android:layout_alignParentRight="true"
-            android:text="Large Text"
+            android:layout_alignParentEnd="true"
             android:textAppearance="?android:attr/textAppearanceLarge"
             android:textColor="#ff0000" />
     </RelativeLayout>
