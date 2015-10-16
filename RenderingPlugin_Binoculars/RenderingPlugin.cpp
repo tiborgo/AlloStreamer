@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <osc/OscReceivedElements.h>
 #include <osc/OscPacketListener.h>
+#include <osc/OscOutboundPacketStream.h>
 #include <ip/UdpSocket.h>
 #include <boost/thread/barrier.hpp>
 
@@ -491,6 +492,7 @@ static void DoRendering (const float* worldMatrix, const float* identityMatrix, 
 
 #define PORT 7000
 #define QPORT 8008
+#define SEND_PORT 7001
 float a1 = 0;
 float a2 = 0;
 float a3 = 0;
@@ -516,6 +518,7 @@ extern "C" {
 	float EXPORT_API getPSQuatY();
 	float EXPORT_API getPSQuatZ();
 	float EXPORT_API getPSQuatW();
+	void EXPORT_API setDistance(float distance);
 	void EXPORT_API endServer();
 	void EXPORT_API oscStart();
 	void EXPORT_API oscPhaseSpaceStart();
@@ -572,6 +575,26 @@ extern "C" float EXPORT_API getPSQuatZ()
 extern "C" float EXPORT_API getPSQuatW()
 {
 	return q4;
+}
+
+UdpTransmitSocket* transmitSocket = nullptr;
+
+extern "C" void EXPORT_API setDistance(float distance)
+{
+	if (!transmitSocket)
+	{
+		transmitSocket = new UdpTransmitSocket(IpEndpointName("192.168.1.183", SEND_PORT));
+	}
+	
+	const int OUTPUT_BUFFER_SIZE = 64;
+	char buffer[OUTPUT_BUFFER_SIZE];
+	osc::OutboundPacketStream p(buffer, OUTPUT_BUFFER_SIZE);
+
+	p << osc::BeginBundleImmediate
+		<< osc::BeginMessage("/distance")
+		<< distance << osc::EndMessage
+		<< osc::EndBundle;
+	transmitSocket->Send(p.Data(), p.Size());
 }
 
 class QuaternionPacketListener : public osc::OscPacketListener {
