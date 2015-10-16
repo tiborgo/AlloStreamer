@@ -73,6 +73,9 @@ public class RenderBinoculars : MonoBehaviour
     {
         Debug.Log("start");
 
+        // Don't render binoculars mesh
+        GetComponent<Camera>().cullingMask &= ~(1 << 8);
+
         // Setup resources (materials, render textures) for binoculars
         stereoTexture = new RenderTexture(1024, 1024, 0, RenderTextureFormat.ARGB32);
         leftEyeTexture = new RenderTexture(1024, 1024, 24, RenderTextureFormat.ARGB32);
@@ -170,6 +173,7 @@ public class RenderBinoculars : MonoBehaviour
         leftEyeCameraCam = leftEyeCamera.AddComponent<Camera>();
         leftEyeCameraCam.targetTexture = leftEyeTexture;
         leftEyeCameraCam.fieldOfView = fieldOfView;
+        leftEyeCameraCam.cullingMask &= ~(1 << 8);
 
         rightEyeCamera = new GameObject("RightEyeCamera");
         rightEyeCamera.transform.parent = hmd.transform;
@@ -179,5 +183,6 @@ public class RenderBinoculars : MonoBehaviour
         rightEyeCameraCam = rightEyeCamera.AddComponent<Camera>();
         rightEyeCameraCam.targetTexture = rightEyeTexture;
         rightEyeCameraCam.fieldOfView = fieldOfView;
+        rightEyeCameraCam.cullingMask &= ~(1 << 8);
     }
 }
