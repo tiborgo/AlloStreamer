@@ -1213,7 +1213,8 @@ public class RenderStereoCubemap : MonoBehaviour
                     RenderTexture inTex = inTextures[i];
                     RenderTexture outTex = outTextures[i];
 
-                    shader.SetInt("Pitch", resolution);
+                    shader.SetInt("Width", resolution);
+                    shader.SetInt("Height", resolution);
                     shader.SetTexture(shader.FindKernel("Convert"), "In", inTex);
                     shader.SetTexture(shader.FindKernel("Convert"), "Out", outTex);
                     shader.Dispatch(shader.FindKernel("Convert"), (resolution / 8) * (resolution / 2), 1, 1);
