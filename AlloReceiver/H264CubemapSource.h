@@ -51,7 +51,7 @@ private:
     void sinkOnColorConvertedFrame(H264RawPixelsSink* sink, u_int8_t type, size_t size);
   
     boost::mutex frameMapMutex;
-    std::map<int64_t, std::vector<AVFrame*> > frameMap;
+    std::map<int, std::vector<AVFrame*> >     frameMap;
     std::vector<H264RawPixelsSink*>           sinks;
     std::map<H264RawPixelsSink*, int>         sinksFaceMap;
     AVPixelFormat                             format;
@@ -59,6 +59,7 @@ private:
     boost::thread                             getNextCubemapThread;
     boost::thread                             getNextFramesThread;
 	StereoCubemap*                            oldCubemap;
-    int64_t                                   lastDisplayPTS;
+    //int64_t                                   lastDisplayPTS;
+    int                                       lastFrameSeqNum;
     bool                                      matchStereoPairs;
 };

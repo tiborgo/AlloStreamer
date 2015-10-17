@@ -634,6 +634,7 @@ void H264RawPixelsSink::convertFrameLoop()
                   resizedFrame->data, resizedFrame->linesize);
         
         resizedFrame->pts = frame->pts;
+        resizedFrame->coded_picture_number = frame->coded_picture_number;
         
         if (onColorConvertedFrame) onColorConvertedFrame(this,
                                                          frame->key_frame,

@@ -47,12 +47,12 @@ void onDecodedFrame(CubemapSource* source, u_int8_t type, size_t size, int face)
 
 void onColorConvertedFrame(CubemapSource* source, u_int8_t type, size_t size, int face)
 {
-    stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::COLOR_CONVERTED));
+    //stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::COLOR_CONVERTED));
 }
 
 void onAddedFrameToCubemap(CubemapSource* source, int face)
 {
-    stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::ADDED));
+    //stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::ADDED));
 }
 
 void setOnScheduledFrameInCubemap(CubemapSource* source, int face)

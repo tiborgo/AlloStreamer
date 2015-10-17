@@ -59,30 +59,38 @@ void H264CubemapSource::getNextFramesLoop()
                 
                 boost::mutex::scoped_lock lock(frameMapMutex);
                 
-                //
-                if (std::abs(lastDisplayPTS - frames[i]->pts) < 3000 || frames[i]->pts < lastDisplayPTS)
+//                //
+//                if (std::abs(lastDisplayPTS - frames[i]->pts) < 3000 || frames[i]->pts < lastDisplayPTS)
+//                {
+//                    std::cout << "frame comes too late" << std::endl;
+//                    sinks[i]->returnFrame(frames[i]);
+//                    continue;
+//                }
+//                
+//                // The pts get changed a little by live555.
+//                // Find a pts that is close enough so that we can put it in the container
+//                // with the right other faces
+//                uint64_t key = 0;
+//                for (auto it = frameMap.begin(); it != frameMap.end(); ++it)
+//                {
+//                    if (std::abs(it->first - frames[i]->pts) < 3000)
+//                    {
+//                        key = it->first;
+//                        break;
+//                    }
+//                }
+                
+                int key = frames[i]->coded_picture_number;
+                
+                if (key <= lastFrameSeqNum)
                 {
                     std::cout << "frame comes too late" << std::endl;
                     sinks[i]->returnFrame(frames[i]);
                     continue;
                 }
                 
-                // The pts get changed a little by live555.
-                // Find a pts that is close enough so that we can put it in the container
-                // with the right other faces
-                uint64_t key = 0;
-                for (auto it = frameMap.begin(); it != frameMap.end(); ++it)
+                if (frameMap.find(key) == frameMap.end())
                 {
-                    if (std::abs(it->first - frames[i]->pts) < 3000)
-                    {
-                        key = it->first;
-                        break;
-                    }
-                }
-                
-                if (key == 0)
-                {
-                    key = frames[i]->pts;
                     frameMap[key].resize(sinks.size());
                 }
                 
@@ -91,7 +99,7 @@ void H264CubemapSource::getNextFramesLoop()
                 {
                     // Matches should not happen here.
                     // If it happens give back frame immediately
-                    //std::cout << "match!? (" << i << ")" << bucketFrames[i]->pts << " " << frames[i]->pts << std::endl;
+                    std::cout << "match!? (" << i << ", " << key << ")" << std::endl;
                     sinks[i]->returnFrame(frames[i]);
                 }
                 else
@@ -113,8 +121,9 @@ void H264CubemapSource::getNextCubemapLoop()
     
     while (true)
     {
-        uint64_t pts;
+        //uint64_t pts;
         size_t pendingCubemaps;
+        int frameSeqNum;
         // Get frames with the oldest pts and remove the associated bucket
         std::vector<AVFrame*> frames;
         {
@@ -126,9 +135,11 @@ void H264CubemapSource::getNextCubemapLoop()
             }
             pendingCubemaps = frameMap.size();
             
-            std::map<int64_t, std::vector<AVFrame*>>::iterator it = frameMap.begin();
-            pts = it->first;
-            lastDisplayPTS = it->first;
+            auto it = frameMap.begin();
+            frameSeqNum = it->first;
+            lastFrameSeqNum = frameSeqNum;
+            //pts = it->first;
+            //lastDisplayPTS = it->first;
             frames = it->second;
             frameMap.erase(it);
         }
@@ -235,33 +246,33 @@ void H264CubemapSource::getNextCubemapLoop()
             }
         }
 
-        //std::cout << count << std::endl;
+        //std::cout << count << " " << frameSeqNum << std::endl;
         
         // Give it to the user of this library (AlloPlayer etc.)
         if (onNextCubemap)
         {
-            if (lastPTS == 0)
-            {
-                lastPTS = pts;
-            }
-            
-            if (lastDisplayTime.time_since_epoch().count() == 0)
-            {
-                lastDisplayTime = boost::chrono::system_clock::now();
-                lastDisplayTime += boost::chrono::seconds(5);
-            }
-            
-            // Wait until frame should be displayed
-            if (lastPTS == 0)
-            {
-                lastPTS = pts;
-            }
-            
-            uint64_t ptsDiff = pts - lastPTS;
-            lastDisplayTime += boost::chrono::microseconds(ptsDiff);
-            lastPTS = pts;
-            
-            boost::chrono::milliseconds sleepDuration = boost::chrono::duration_cast<boost::chrono::milliseconds>(lastDisplayTime - boost::chrono::system_clock::now());
+//            if (lastPTS == 0)
+//            {
+//                lastPTS = pts;
+//            }
+//            
+//            if (lastDisplayTime.time_since_epoch().count() == 0)
+//            {
+//                lastDisplayTime = boost::chrono::system_clock::now();
+//                lastDisplayTime += boost::chrono::seconds(5);
+//            }
+//            
+//            // Wait until frame should be displayed
+//            if (lastPTS == 0)
+//            {
+//                lastPTS = pts;
+//            }
+//            
+//            uint64_t ptsDiff = pts - lastPTS;
+//            lastDisplayTime += boost::chrono::microseconds(ptsDiff);
+//            lastPTS = pts;
+//            
+//            boost::chrono::milliseconds sleepDuration = boost::chrono::duration_cast<boost::chrono::milliseconds>(lastDisplayTime - boost::chrono::system_clock::now());
             
 //            if (sleepDuration.count() < 80)
 //            {
@@ -284,7 +295,7 @@ H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
                                      AVPixelFormat                    format,
                                      bool                             matchStereoPairs)
     :
-    sinks(sinks), format(format), oldCubemap(nullptr), lastDisplayPTS(0), matchStereoPairs(matchStereoPairs)
+    sinks(sinks), format(format), oldCubemap(nullptr), /*lastDisplayPTS(0),*/ lastFrameSeqNum(0), matchStereoPairs(matchStereoPairs)
 {
     
     av_log_set_level(AV_LOG_WARNING);
