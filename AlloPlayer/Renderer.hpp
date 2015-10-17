@@ -32,4 +32,5 @@ private:
     std::vector<al::Texture*>        textures;
     al_sec                           now;
     CubemapSource*                   cubemapSource;
+    al::ShaderProgram                gammaShader;
 };

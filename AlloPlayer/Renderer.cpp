@@ -1,5 +1,24 @@
 #include "Renderer.hpp"
 
+static const char* gammaVertShader = AL_STRINGIFY
+(
+    void main(void)
+    {
+        gl_TexCoord[0] = gl_MultiTexCoord0;
+        gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    }
+);
+
+static const char* gammaFragShader = AL_STRINGIFY
+(
+    uniform sampler2D texture;
+
+    void main(void)
+    {
+        gl_FragColor = texture2D(texture, gl_TexCoord[0].st);
+    }
+);
+
 Renderer::Renderer(CubemapSource* cubemapSource)
     :
     al::OmniApp("AlloPlayer", false, 2048), cubemapSource(cubemapSource)
@@ -30,7 +49,24 @@ Renderer::~Renderer()
 bool Renderer::onCreate()
 {
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << ", GLSL version " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+    
+    
+    al::Shader vert, frag;
+    vert.source(gammaVertShader, al::Shader::VERTEX).compile();
+    vert.printLog();
+    frag.source(gammaFragShader, al::Shader::FRAGMENT).compile();
+    frag.printLog();
+    gammaShader.attach(vert).attach(frag).link();
+    gammaShader.printLog();
+    /*gammaShader.begin();
+    gammaShader.uniform("lighting", lightingAmount);
+    gammaShader.uniform("texture", 0.0);
+    gammaShader.end();*/
+    
     return OmniApp::onCreate();
+    
+    
+    
 }
 
 bool Renderer::onFrame()
@@ -126,7 +162,17 @@ void Renderer::onDraw(al::Graphics& gl)
     // render cubemap
     if (tex)
     {
-        al::ShaderProgram::use(0);
+        // Increase gamma to make backdrop brighter in the AlloSphere
+        gammaShader.begin();
+        /*
+         varying vec2 texCoord;
+         uniform float brightness;
+         void main() {
+            vec4 color = texture2D(texture, texCoord);
+            // change brightness of color
+            gl_FragColor = color;
+         }
+         */
         
         // Borrow a temporary Mesh from Graphics
         al::Mesh& m = gl.mesh();
@@ -150,6 +196,8 @@ void Renderer::onDraw(al::Graphics& gl)
         tex->bind();
         gl.draw(m);
         tex->unbind();
+        
+        gammaShader.end();
     }
 }
 
