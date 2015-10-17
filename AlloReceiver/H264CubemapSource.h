@@ -18,25 +18,28 @@ public:
     typedef std::function<void (H264CubemapSource*, u_int8_t, size_t, int)>     OnDecodedFrame;
     typedef std::function<void (H264CubemapSource*, u_int8_t, size_t, int)>     OnColorConvertedFrame;
     typedef std::function<void (H264CubemapSource*, int)>                       OnAddedFrameToCubemap;
+    typedef std::function<void (H264CubemapSource*, int)>                       OnScheduledFrameInCubemap;
     
-    virtual void setOnReceivedNALU       (const OnReceivedNALU&        callback);
-    virtual void setOnReceivedFrame      (const OnReceivedFrame&       callback);
-    virtual void setOnDecodedFrame       (const OnDecodedFrame&        callback);
-    virtual void setOnColorConvertedFrame(const OnColorConvertedFrame& callback);
-	virtual void setOnNextCubemap        (const OnNextCubemap&         callback);
-    virtual void setOnAddedFrameToCubemap(const OnAddedFrameToCubemap& callback);
+    virtual void setOnReceivedNALU           (const OnReceivedNALU&            callback);
+    virtual void setOnReceivedFrame          (const OnReceivedFrame&           callback);
+    virtual void setOnDecodedFrame           (const OnDecodedFrame&            callback);
+    virtual void setOnColorConvertedFrame    (const OnColorConvertedFrame&     callback);
+	virtual void setOnNextCubemap            (const OnNextCubemap&             callback);
+    virtual void setOnAddedFrameToCubemap    (const OnAddedFrameToCubemap&     callback);
+    virtual void setOnScheduledFrameInCubemap(const OnScheduledFrameInCubemap& callback);
     
     H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
                       AVPixelFormat                    format,
                       bool                             matchStereoPairs);
 
 protected:
-    OnReceivedNALU        onReceivedNALU;
-    OnReceivedFrame       onReceivedFrame;
-    OnDecodedFrame        onDecodedFrame;
-    OnColorConvertedFrame onColorConvertedFrame;
-    OnNextCubemap         onNextCubemap;
-    OnAddedFrameToCubemap onAddedFrameToCubemap;
+    OnReceivedNALU            onReceivedNALU;
+    OnReceivedFrame           onReceivedFrame;
+    OnDecodedFrame            onDecodedFrame;
+    OnColorConvertedFrame     onColorConvertedFrame;
+    OnNextCubemap             onNextCubemap;
+    OnAddedFrameToCubemap     onAddedFrameToCubemap;
+    OnScheduledFrameInCubemap onScheduledFrameInCubemap;
     
 private:
     void getNextFramesLoop();

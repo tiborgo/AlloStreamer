@@ -33,7 +33,7 @@ public:
     class CubemapFace
     {
     public:
-        enum Status {ADDED, DISPLAYED};
+        enum Status {ADDED, DISPLAYED, SCHEDULED};
         
         CubemapFace(int face, Status status) : face(face), status(status) {}
         int face;

@@ -55,6 +55,11 @@ void onAddedFrameToCubemap(CubemapSource* source, int face)
     stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::ADDED));
 }
 
+void setOnScheduledFrameInCubemap(CubemapSource* source, int face)
+{
+    stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::SCHEDULED));
+}
+
 void onDisplayedCubemapFace(Renderer* renderer, int face)
 {
     stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::DISPLAYED));
@@ -70,11 +75,12 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
     H264CubemapSource* h264CubemapSource = dynamic_cast<H264CubemapSource*>(cubemapSource);
     if (h264CubemapSource)
     {
-        h264CubemapSource->setOnReceivedNALU       (boost::bind(&onReceivedNALU,        _1, _2, _3, _4));
-        h264CubemapSource->setOnReceivedFrame      (boost::bind(&onReceivedFrame,       _1, _2, _3, _4));
-        h264CubemapSource->setOnDecodedFrame       (boost::bind(&onDecodedFrame,        _1, _2, _3, _4));
-        h264CubemapSource->setOnColorConvertedFrame(boost::bind(&onColorConvertedFrame, _1, _2, _3, _4));
-        h264CubemapSource->setOnAddedFrameToCubemap(boost::bind(&onAddedFrameToCubemap, _1, _2));
+        h264CubemapSource->setOnReceivedNALU           (boost::bind(&onReceivedNALU,               _1, _2, _3, _4));
+        h264CubemapSource->setOnReceivedFrame          (boost::bind(&onReceivedFrame,              _1, _2, _3, _4));
+        h264CubemapSource->setOnDecodedFrame           (boost::bind(&onDecodedFrame,               _1, _2, _3, _4));
+        h264CubemapSource->setOnColorConvertedFrame    (boost::bind(&onColorConvertedFrame,        _1, _2, _3, _4));
+        h264CubemapSource->setOnAddedFrameToCubemap    (boost::bind(&onAddedFrameToCubemap,        _1, _2));
+        h264CubemapSource->setOnScheduledFrameInCubemap(boost::bind(&setOnScheduledFrameInCubemap, _1, _2));
     }
     
     

@@ -32,6 +32,11 @@ void H264CubemapSource::setOnAddedFrameToCubemap(const OnAddedFrameToCubemap& ca
     onAddedFrameToCubemap = callback;
 }
 
+void H264CubemapSource::setOnScheduledFrameInCubemap(const OnScheduledFrameInCubemap& callback)
+{
+    onScheduledFrameInCubemap = callback;
+}
+
 void H264CubemapSource::getNextFramesLoop()
 {
 	std::vector<AVFrame*> frames(sinks.size(), nullptr);
@@ -209,6 +214,7 @@ void H264CubemapSource::getNextCubemapLoop()
                 leftFace->setNewFaceFlag(true);
                 memcpy(leftFace->getContent()->getPixels(), leftFrame->data[0], leftFrame->width * leftFrame->height * 4);
                 sinks[i]->returnFrame(leftFrame);
+                if (onScheduledFrameInCubemap) onScheduledFrameInCubemap(this, i);
             }
             else
             {
@@ -221,6 +227,7 @@ void H264CubemapSource::getNextCubemapLoop()
                 rightFace->setNewFaceFlag(true);
                 memcpy(rightFace->getContent()->getPixels(), rightFrame->data[0], rightFrame->width * rightFrame->height * 4);
                 sinks[i + CUBEMAP_MAX_FACES_COUNT]->returnFrame(rightFrame);
+                if (onScheduledFrameInCubemap) onScheduledFrameInCubemap(this, i+CUBEMAP_MAX_FACES_COUNT);
             }
             else if (rightFace)
             {
