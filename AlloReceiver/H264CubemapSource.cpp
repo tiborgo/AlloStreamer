@@ -27,6 +27,11 @@ void H264CubemapSource::setOnNextCubemap(const OnNextCubemap& callback)
     onNextCubemap = callback;
 }
 
+void H264CubemapSource::setOnAddedFrameToCubemap(const OnAddedFrameToCubemap& callback)
+{
+    onAddedFrameToCubemap = callback;
+}
+
 void H264CubemapSource::getNextFramesLoop()
 {
 	std::vector<AVFrame*> frames(sinks.size(), nullptr);
@@ -88,6 +93,7 @@ void H264CubemapSource::getNextFramesLoop()
                 {
                     bucketFrames[i] = frames[i];
                     //std::cout << "matched bucket " << frames[i] << " " << key << " " << frames[i]->pts << std::endl;
+                    if (onAddedFrameToCubemap) onAddedFrameToCubemap(this, i);
                 }
             }
         }

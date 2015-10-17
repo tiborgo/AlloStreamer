@@ -24,7 +24,7 @@ StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
     for (int i = 0; i < cubemap->getEye(0)->getFacesCount(); i++)
     {
-        stats.store(StatsUtils::CubemapFace(i));
+        stats.store(StatsUtils::CubemapFace(i, StatsUtils::CubemapFace::DISPLAYED));
     }
     stats.store(StatsUtils::Cubemap());
     return cubemap;
@@ -50,9 +50,14 @@ void onColorConvertedFrame(CubemapSource* source, u_int8_t type, size_t size, in
     stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::COLOR_CONVERTED));
 }
 
+void onAddedFrameToCubemap(CubemapSource* source, int face)
+{
+    stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::ADDED));
+}
+
 void onDisplayedCubemapFace(Renderer* renderer, int face)
 {
-    stats.store(StatsUtils::CubemapFace(face));
+    stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::DISPLAYED));
 }
 
 void onDisplayedFrame(Renderer* renderer)
@@ -69,6 +74,7 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
         h264CubemapSource->setOnReceivedFrame      (boost::bind(&onReceivedFrame,       _1, _2, _3, _4));
         h264CubemapSource->setOnDecodedFrame       (boost::bind(&onDecodedFrame,        _1, _2, _3, _4));
         h264CubemapSource->setOnColorConvertedFrame(boost::bind(&onColorConvertedFrame, _1, _2, _3, _4));
+        h264CubemapSource->setOnAddedFrameToCubemap(boost::bind(&onAddedFrameToCubemap, _1, _2));
     }
     
     
