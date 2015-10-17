@@ -12,10 +12,17 @@ static const char* gammaVertShader = AL_STRINGIFY
 static const char* gammaFragShader = AL_STRINGIFY
 (
     uniform sampler2D texture;
-
+    uniform float pow;
+    uniform float min;
+    uniform float max;
+ 
     void main(void)
     {
-        gl_FragColor = texture2D(texture, gl_TexCoord[0].st);
+        vec4 color = texture2D(texture, gl_TexCoord[0].st);
+        color.x = pow(clamp(color.x, min, max), pow);
+        color.y = pow(clamp(color.y, min, max), pow);
+        color.z = pow(clamp(color.z, min, max), pow);
+        gl_FragColor = color;
     }
 );
 
@@ -58,15 +65,13 @@ bool Renderer::onCreate()
     frag.printLog();
     gammaShader.attach(vert).attach(frag).link();
     gammaShader.printLog();
-    /*gammaShader.begin();
-    gammaShader.uniform("lighting", lightingAmount);
-    gammaShader.uniform("texture", 0.0);
-    gammaShader.end();*/
+    gammaShader.begin();
+    gammaShader.uniform("pow", 1.0f);
+    gammaShader.uniform("min", 0.0f);
+    gammaShader.uniform("max", 1.0f);
+    gammaShader.end();
     
     return OmniApp::onCreate();
-    
-    
-    
 }
 
 bool Renderer::onFrame()
@@ -162,17 +167,8 @@ void Renderer::onDraw(al::Graphics& gl)
     // render cubemap
     if (tex)
     {
-        // Increase gamma to make backdrop brighter in the AlloSphere
+        // Configure gamma to make backdrop more visible in the AlloSphere
         gammaShader.begin();
-        /*
-         varying vec2 texCoord;
-         uniform float brightness;
-         void main() {
-            vec4 color = texture2D(texture, texCoord);
-            // change brightness of color
-            gl_FragColor = color;
-         }
-         */
         
         // Borrow a temporary Mesh from Graphics
         al::Mesh& m = gl.mesh();
