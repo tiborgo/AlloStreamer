@@ -1,5 +1,7 @@
 #include <vector>
 #include <unordered_map>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/median.hpp>
 #include "H264CubemapSource.h"
 
 void H264CubemapSource::setOnReceivedNALU(const OnReceivedNALU& callback)
@@ -251,41 +253,38 @@ void H264CubemapSource::getNextCubemapLoop()
         // Give it to the user of this library (AlloPlayer etc.)
         if (onNextCubemap)
         {
-//            if (lastPTS == 0)
-//            {
-//                lastPTS = pts;
-//            }
-//            
-//            if (lastDisplayTime.time_since_epoch().count() == 0)
-//            {
-//                lastDisplayTime = boost::chrono::system_clock::now();
-//                lastDisplayTime += boost::chrono::seconds(5);
-//            }
-//            
-//            // Wait until frame should be displayed
-//            if (lastPTS == 0)
-//            {
-//                lastPTS = pts;
-//            }
-//            
-//            uint64_t ptsDiff = pts - lastPTS;
-//            lastDisplayTime += boost::chrono::microseconds(ptsDiff);
-//            lastPTS = pts;
-//            
-//            boost::chrono::milliseconds sleepDuration = boost::chrono::duration_cast<boost::chrono::milliseconds>(lastDisplayTime - boost::chrono::system_clock::now());
+            // calculate PTS for the cubemap (median of the individual faces' PTS)
+            boost::accumulators::accumulator_set<int64_t, boost::accumulators::features<boost::accumulators::tag::median> > acc;
+            for (AVFrame* frame : frames)
+            {
+                if (frame)
+                {
+                    acc(frame->pts);
+                }
+            }
+            int64_t pts = boost::accumulators::median(acc);
             
-//            if (sleepDuration.count() < 80)
-//            {
-//                lastDisplayTime += (boost::chrono::milliseconds(80) - sleepDuration);
-//            }
-//            
-//            sleepDuration = boost::chrono::duration_cast<boost::chrono::milliseconds>(lastDisplayTime - boost::chrono::system_clock::now());
+            // Calculate time interval from until this cubemap should be displayed
+            if (lastPTS == 0)
+            {
+                lastPTS = pts;
+            }
             
-            //std::cout << "sleep duration " << sleepDuration.count() << "ms" << ", faces " << count << ", pending cubemaps " << pendingCubemaps << std::endl;
-            //std::cout << "pts diff " << ptsDiff << std::endl;
+            if (lastDisplayTime.time_since_epoch().count() == 0)
+            {
+                lastDisplayTime = boost::chrono::system_clock::now();
+                lastDisplayTime += boost::chrono::seconds(5);
+            }
+            uint64_t ptsDiff = pts - lastPTS;
+            lastDisplayTime += boost::chrono::microseconds(ptsDiff);
+            lastPTS = pts;
             
-            //boost::this_thread::sleep_until(lastDisplayTime);
+            boost::chrono::milliseconds sleepDuration = boost::chrono::duration_cast<boost::chrono::milliseconds>(lastDisplayTime - boost::chrono::system_clock::now());
             
+            // Wait until frame should be displayed
+            //boost::this_thread::sleep_for(sleepDuration);
+            
+            // Display frame
             oldCubemap = onNextCubemap(this, cubemap);
 		}
     }
