@@ -87,7 +87,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 			abort();
         }
         resizedFrame->format = format;
-        resizedFramePool.push(resizedFrame);
+        convertedFramePool.push(resizedFrame);
 	}
 
 
@@ -591,7 +591,7 @@ void H264RawPixelsSink::convertFrameLoop()
     while(true)
     {
         AVFrame* frame;
-        AVFrame* resizedFrame;
+        AVFrame* convertedFrame;
         
         if (!frameBuffer.wait_and_pop(frame))
         {
@@ -600,41 +600,52 @@ void H264RawPixelsSink::convertFrameLoop()
         }
         //std::cout /*<< this << " "*/ << frameBuffer.size() << std::endl;
         
-        if (!resizedFramePool.wait_and_pop(resizedFrame))
+        if (!convertedFramePool.wait_and_pop(convertedFrame))
         {
             // queue did close
             return;
         }
         
-        if (!resizedFrame->data[0])
+        if (!convertedFrame->data[0])
         {
-            resizedFrame->width = frame->width;
-            resizedFrame->height = frame->height;
-            if (av_image_alloc(resizedFrame->data, resizedFrame->linesize, resizedFrame->width, resizedFrame->height,
-                               (AVPixelFormat)resizedFrame->format, 32) < 0)
+            convertedFrame->width = frame->width;
+            convertedFrame->height = frame->height;
+            if (av_image_alloc(convertedFrame->data, convertedFrame->linesize, convertedFrame->width, convertedFrame->height,
+                               (AVPixelFormat)convertedFrame->format, 32) < 0)
             {
                 fprintf(stderr, "Could not allocate raw picture buffer\n");
                 abort();
             }
         }
         
-        
-        if (!imageConvertCtx)
+        if (frame->format != format)
         {
-            // setup resizer for received frames
-            imageConvertCtx = sws_getContext(frame->width, frame->height, (AVPixelFormat)frame->format,
-                                             resizedFrame->width, resizedFrame->height, format,
-                                             SWS_BICUBIC, NULL, NULL, NULL);
+            // We have to convert the color format of this frame
+            
+            if (!imageConvertCtx)
+            {
+                // setup resizer for received frames
+                imageConvertCtx = sws_getContext(frame->width, frame->height, (AVPixelFormat)frame->format,
+                                                 convertedFrame->width, convertedFrame->height, format,
+                                                 SWS_BICUBIC, NULL, NULL, NULL);
+            }
+            
+            
+            
+            // resize frame
+            sws_scale(imageConvertCtx, frame->data, frame->linesize, 0, frame->height,
+                      convertedFrame->data, convertedFrame->linesize);
         }
+        else
+        {
+            // We only have to copy the frame since the color format is already the desired one
+            av_frame_copy(convertedFrame, frame);
+        }
+            
         
         
-        
-        // resize frame
-        sws_scale(imageConvertCtx, frame->data, frame->linesize, 0, frame->height,
-                  resizedFrame->data, resizedFrame->linesize);
-        
-        resizedFrame->pts = frame->pts;
-        resizedFrame->coded_picture_number = frame->coded_picture_number;
+        convertedFrame->pts = frame->pts;
+        convertedFrame->coded_picture_number = frame->coded_picture_number;
         
         if (onColorConvertedFrame) onColorConvertedFrame(this,
                                                          frame->key_frame,
@@ -646,15 +657,15 @@ void H264RawPixelsSink::convertFrameLoop()
         framePool.push(frame);
         
         // make frame available
-        resizedFrameBuffer.push(resizedFrame);
-		//resizedFramePool.push(resizedFrame);
+        convertedFrameBuffer.push(convertedFrame);
+		//convertedFramePool.push(convertedFrame);
     }
 }
 
 AVFrame* H264RawPixelsSink::getNextFrame()
 {
     AVFrame* frame;
-	if (resizedFrameBuffer.try_pop(frame))
+	if (convertedFrameBuffer.try_pop(frame))
 	{
         return frame;
 	}
@@ -668,6 +679,6 @@ void H264RawPixelsSink::returnFrame(AVFrame* frame)
 {
 	if (frame)
     {
-		resizedFramePool.push(frame);
+		convertedFramePool.push(frame);
 	}
 }

@@ -2,6 +2,12 @@
 #include <unordered_map>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/median.hpp>
+extern "C"
+{
+    #include <libavcodec/avcodec.h>
+}
+
+
 #include "H264CubemapSource.h"
 
 void H264CubemapSource::setOnReceivedNALU(const OnReceivedNALU& callback)
@@ -198,7 +204,9 @@ void H264CubemapSource::getNextCubemapLoop()
             {
                 count++;
                 leftFace->setNewFaceFlag(true);
-                memcpy(leftFace->getContent()->getPixels(), leftFrame->data[0], leftFrame->width * leftFrame->height * 4);
+                avpicture_layout((AVPicture*)leftFrame, (AVPixelFormat)leftFrame->format,
+                                 leftFrame->width, leftFrame->height,
+                                 (unsigned char*)leftFace->getContent()->getPixels(), leftFace->getContent()->getWidth() * leftFace->getContent()->getHeight() * 4);
                 sinks[i]->returnFrame(leftFrame);
                 if (onScheduledFrameInCubemap) onScheduledFrameInCubemap(this, i);
             }
@@ -211,7 +219,9 @@ void H264CubemapSource::getNextCubemapLoop()
             {
                 count++;
                 rightFace->setNewFaceFlag(true);
-                memcpy(rightFace->getContent()->getPixels(), rightFrame->data[0], rightFrame->width * rightFrame->height * 4);
+                avpicture_layout((AVPicture*)rightFrame, (AVPixelFormat)rightFrame->format,
+                                 rightFrame->width, rightFrame->height,
+                                 (unsigned char*)rightFace->getContent()->getPixels(), rightFace->getContent()->getWidth() * rightFace->getContent()->getHeight() * 4);
                 sinks[i + CUBEMAP_MAX_FACES_COUNT]->returnFrame(rightFrame);
                 if (onScheduledFrameInCubemap) onScheduledFrameInCubemap(this, i+CUBEMAP_MAX_FACES_COUNT);
             }
@@ -265,7 +275,7 @@ H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
                                      AVPixelFormat                    format,
                                      bool                             matchStereoPairs)
     :
-    sinks(sinks), format(format), oldCubemap(nullptr), /*lastDisplayPTS(0),*/ lastFrameSeqNum(0), matchStereoPairs(matchStereoPairs)
+    sinks(sinks), format(format), oldCubemap(nullptr), lastFrameSeqNum(0), matchStereoPairs(matchStereoPairs)
 {
     
     av_log_set_level(AV_LOG_WARNING);
