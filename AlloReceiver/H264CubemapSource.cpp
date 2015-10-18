@@ -42,8 +42,7 @@ void H264CubemapSource::setOnScheduledFrameInCubemap(const OnScheduledFrameInCub
 void H264CubemapSource::getNextFramesLoop()
 {
 	std::vector<AVFrame*> frames(sinks.size(), nullptr);
-	
-    int64_t lastPTS = 0;
+
     while (true)
     {
         // Get all the decoded frames
@@ -52,35 +51,9 @@ void H264CubemapSource::getNextFramesLoop()
             
 			frames[i] = sinks[i]->getNextFrame();
             
-            
-            
             if (frames[i])
             {
-                //std::cout << "PTS diff " << frames[i]->pts - lastPTS << std::endl;
-                lastPTS = frames[i]->pts;
-                
                 boost::mutex::scoped_lock lock(frameMapMutex);
-                
-//                //
-//                if (std::abs(lastDisplayPTS - frames[i]->pts) < 3000 || frames[i]->pts < lastDisplayPTS)
-//                {
-//                    std::cout << "frame comes too late" << std::endl;
-//                    sinks[i]->returnFrame(frames[i]);
-//                    continue;
-//                }
-//                
-//                // The pts get changed a little by live555.
-//                // Find a pts that is close enough so that we can put it in the container
-//                // with the right other faces
-//                uint64_t key = 0;
-//                for (auto it = frameMap.begin(); it != frameMap.end(); ++it)
-//                {
-//                    if (std::abs(it->first - frames[i]->pts) < 3000)
-//                    {
-//                        key = it->first;
-//                        break;
-//                    }
-//                }
                 
                 int key = frames[i]->coded_picture_number;
                 
@@ -107,12 +80,15 @@ void H264CubemapSource::getNextFramesLoop()
                 else
                 {
                     bucketFrames[i] = frames[i];
-                    //std::cout << "matched bucket " << frames[i] << " " << key << " " << frames[i]->pts << std::endl;
                     if (onAddedFrameToCubemap) onAddedFrameToCubemap(this, i);
+                }
+                
+                if (frameMap.size() >= 10)
+                {
+                    frameMapCondition.notify_all();
                 }
             }
         }
-        //std::cout << frameMap.size() << std::endl;
     }
 }
 
@@ -123,25 +99,22 @@ void H264CubemapSource::getNextCubemapLoop()
     
     while (true)
     {
-        //uint64_t pts;
         size_t pendingCubemaps;
         int frameSeqNum;
-        // Get frames with the oldest pts and remove the associated bucket
+        // Get frames with the oldest frame seq # and remove the associated bucket
         std::vector<AVFrame*> frames;
         {
             boost::mutex::scoped_lock lock(frameMapMutex);
             
             if (frameMap.size() < 10)
             {
-                continue;
+                frameMapCondition.wait(lock);
             }
             pendingCubemaps = frameMap.size();
             
             auto it = frameMap.begin();
             frameSeqNum = it->first;
             lastFrameSeqNum = frameSeqNum;
-            //pts = it->first;
-            //lastDisplayPTS = it->first;
             frames = it->second;
             frameMap.erase(it);
         }
@@ -247,8 +220,6 @@ void H264CubemapSource::getNextCubemapLoop()
                 rightFace->setNewFaceFlag(false);
             }
         }
-
-        //std::cout << count << " " << frameSeqNum << std::endl;
         
         // Give it to the user of this library (AlloPlayer etc.)
         if (onNextCubemap)
