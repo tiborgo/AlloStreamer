@@ -76,7 +76,7 @@ void onSentNALU(RawPixelSource*, uint8_t type, size_t size, int eye, int face)
 
 void onEncodedFrame(RawPixelSource*, int eye, int face)
 {
-	stats.store(StatsUtils::CubemapFace(eye * 6 + face));
+	stats.store(StatsUtils::CubemapFace(eye * 6 + face, StatsUtils::CubemapFace::DISPLAYED));
 }
 
 void addFaceSubstreams0(void*)
