@@ -9,6 +9,8 @@ find_path(OSCPack_INCLUDE_DIR
 	osc/OscTypes.h
 	PATHS
 	${OSCPack_ROOT}
+	PATH_SUFFIXES
+	oscpack
 )
 
 foreach (mode DEBUG RELEASE)
