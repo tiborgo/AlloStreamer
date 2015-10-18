@@ -21,10 +21,10 @@ public:
     typedef std::function<void (H264CubemapSource*, int)>                       OnScheduledFrameInCubemap;
     
     virtual void setOnReceivedNALU           (const OnReceivedNALU&            callback);
-    virtual void setOnReceivedFrame          (const OnReceivedFrame&           callback);
+    virtual void setOnReceivedFrame          (const OnReceivedFrame&           callback);
     virtual void setOnDecodedFrame           (const OnDecodedFrame&            callback);
     virtual void setOnColorConvertedFrame    (const OnColorConvertedFrame&     callback);
-	virtual void setOnNextCubemap            (const OnNextCubemap&             callback);
+    virtual void setOnNextCubemap            (const OnNextCubemap&             callback);
     virtual void setOnAddedFrameToCubemap    (const OnAddedFrameToCubemap&     callback);
     virtual void setOnScheduledFrameInCubemap(const OnScheduledFrameInCubemap& callback);
     
@@ -33,7 +33,7 @@ public:
                       bool                             matchStereoPairs);
 
 protected:
-    OnReceivedNALU            onReceivedNALU;
+    OnReceivedNALU            onReceivedNALU;
     OnReceivedFrame           onReceivedFrame;
     OnDecodedFrame            onDecodedFrame;
     OnColorConvertedFrame     onColorConvertedFrame;
@@ -59,7 +59,7 @@ private:
     HeapAllocator                             heapAllocator;
     boost::thread                             getNextCubemapThread;
     boost::thread                             getNextFramesThread;
-	StereoCubemap*                            oldCubemap;
+    StereoCubemap*                            oldCubemap;
     int                                       lastFrameSeqNum;
     bool                                      matchStereoPairs;
 };
