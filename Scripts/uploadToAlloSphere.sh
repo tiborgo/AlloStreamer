@@ -28,7 +28,7 @@ elif [ "${OSTYPE}" = "linux-gnu" ]; then
 	ssh -f -N -M -S /tmp/unity_upload -L 0.0.0.0:60001:gr01:22 nonce
 	ssh -p 60001 sphere@localhost "mkdir -p tibor/AlloUnity/${commit}" > /dev/null
 	scp -P 60001 -r ${dir}/../Bin/* sphere@localhost:tibor/AlloUnity/$commit/
-	ssh -p 60001 sphere@localhost "ln -fs $commit/ tibor/AlloUnity/latest" > /dev/null
+	ssh -p 60001 sphere@localhost "ln -fsn $commit/ tibor/AlloUnity/latest" > /dev/null
 	ssh -p 60001 sphere@localhost "tibor/tree_rsync.py tibor/AlloUnity" > /dev/null
 	ssh -S /tmp/unity_upload -O exit nonce > /dev/null
 	echo "Done!"
