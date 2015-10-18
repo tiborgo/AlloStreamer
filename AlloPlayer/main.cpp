@@ -47,7 +47,7 @@ void onDecodedFrame(CubemapSource* source, u_int8_t type, size_t size, int face)
 
 void onColorConvertedFrame(CubemapSource* source, u_int8_t type, size_t size, int face)
 {
-    //stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::COLOR_CONVERTED));
+    stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::COLOR_CONVERTED));
 }
 
 void onAddedFrameToCubemap(CubemapSource* source, int face)
@@ -162,7 +162,7 @@ int main(int argc, char* argv[])
     
     rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(),
                                                  bufferSize,
-                                                 AV_PIX_FMT_RGBA,
+                                                 AV_PIX_FMT_YUV420P,
                                                  matchStereoPairs,
                                                  interface);
     std::function<void (RTSPCubemapSourceClient*, CubemapSource*)> callback(boost::bind(&onDidConnect, _1, _2));

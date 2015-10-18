@@ -27,10 +27,18 @@ protected:
     std::function<void (Renderer*, int)> onDisplayedCubemapFace;
     
 private:
+    struct YUV420PTexture
+    {
+        al::Texture* yTexture;
+        al::Texture* uTexture;
+        al::Texture* vTexture;
+        YUV420PTexture() : yTexture(nullptr), uTexture(nullptr), vTexture(nullptr) {}
+    };
+    
     concurrent_queue<StereoCubemap*> cubemapBuffer;
     concurrent_queue<StereoCubemap*> cubemapPool;
-    std::vector<al::Texture*>        textures;
+    std::vector<YUV420PTexture>      textures;
     al_sec                           now;
     CubemapSource*                   cubemapSource;
-    al::ShaderProgram                gammaShader;
+    al::ShaderProgram                yuvGammaShader;
 };

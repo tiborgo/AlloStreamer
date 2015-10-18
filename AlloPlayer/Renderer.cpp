@@ -1,6 +1,6 @@
 #include "Renderer.hpp"
 
-static const char* gammaVertShader = AL_STRINGIFY
+static const char* defaultVertShader = AL_STRINGIFY
 (
     void main(void)
     {
@@ -9,19 +9,32 @@ static const char* gammaVertShader = AL_STRINGIFY
     }
 );
 
-static const char* gammaFragShader = AL_STRINGIFY
+static const char* yuvGammaFragShader = AL_STRINGIFY
 (
-    uniform sampler2D texture;
+    uniform sampler2D yTexture;
+    uniform sampler2D uTexture;
+    uniform sampler2D vTexture;
+ 
     uniform float pow;
     uniform float min;
     uniform float max;
  
     void main(void)
     {
-        vec4 color = texture2D(texture, gl_TexCoord[0].st);
-        color.x = pow(clamp(color.x, min, max), pow);
-        color.y = pow(clamp(color.y, min, max), pow);
-        color.z = pow(clamp(color.z, min, max), pow);
+        float y = texture2D(yTexture, gl_TexCoord[0].st).r;
+        float u = texture2D(uTexture, gl_TexCoord[0].st).r;
+        float v = texture2D(vTexture, gl_TexCoord[0].st).r;
+        
+        // YUV -> RGB
+        vec4 color;
+        color.r = 1.164 * (y - 16.0/255.0)                             + 2.018 * (v - 128.0/255.0);
+        color.g = 1.164 * (y - 16.0/255.0) - 0.813 * (u - 128.0/255.0) - 0.391 * (v - 128.0/255.0);
+        color.b = 1.164 * (y - 16.0/255.0) + 1.596 * (u - 128.0/255.0);
+        
+        // Gamma
+        color.r = pow(clamp(color.r, min, max), pow);
+        color.g = pow(clamp(color.g, min, max), pow);
+        color.b = pow(clamp(color.b, min, max), pow);
         gl_FragColor = color;
     }
 );
@@ -45,7 +58,7 @@ Renderer::Renderer(CubemapSource* cubemapSource)
     
     for (int i = 0; i < StereoCubemap::MAX_EYES_COUNT * Cubemap::MAX_FACES_COUNT; i++)
     {
-        textures.push_back(nullptr);
+        textures.push_back(YUV420PTexture());
     }
 }
 
@@ -59,17 +72,17 @@ bool Renderer::onCreate()
     
     
     al::Shader vert, frag;
-    vert.source(gammaVertShader, al::Shader::VERTEX).compile();
+    vert.source(defaultVertShader, al::Shader::VERTEX).compile();
     vert.printLog();
-    frag.source(gammaFragShader, al::Shader::FRAGMENT).compile();
+    frag.source(yuvGammaFragShader, al::Shader::FRAGMENT).compile();
     frag.printLog();
-    gammaShader.attach(vert).attach(frag).link();
-    gammaShader.printLog();
-    gammaShader.begin();
-    gammaShader.uniform("pow", 1.0f);
-    gammaShader.uniform("min", 0.0f);
-    gammaShader.uniform("max", 1.0f);
-    gammaShader.end();
+    yuvGammaShader.attach(vert).attach(frag).link();
+    yuvGammaShader.printLog();
+    yuvGammaShader.begin();
+    yuvGammaShader.uniform("pow", 1.0f);
+    yuvGammaShader.uniform("min", 0.0f);
+    yuvGammaShader.uniform("max", 1.0f);
+    yuvGammaShader.end();
     
     return OmniApp::onCreate();
 }
@@ -99,17 +112,25 @@ bool Renderer::onFrame()
                 {
                     texI = 0;
                 }
-                al::Texture* tex = textures[texI + j * Cubemap::MAX_FACES_COUNT];
+                YUV420PTexture& tex = textures[texI + j * Cubemap::MAX_FACES_COUNT];
                 
                 if (face)
                 {
                     // create texture if not already created
-                    if (!tex)
+                    if (!tex.yTexture)
                     {
-                        tex = new al::Texture(face->getContent()->getWidth(),
-                                              face->getContent()->getHeight(),
-                                              al::Graphics::RGBA,
-                                              al::Graphics::UBYTE);
+                        tex.yTexture = new al::Texture(face->getContent()->getWidth(),
+                                                       face->getContent()->getHeight(),
+                                                       al::Graphics::LUMINANCE,
+                                                       al::Graphics::UBYTE);
+                        tex.uTexture = new al::Texture(face->getContent()->getWidth()/2,
+                                                       face->getContent()->getHeight()/2,
+                                                       al::Graphics::LUMINANCE,
+                                                       al::Graphics::UBYTE);
+                        tex.vTexture = new al::Texture(face->getContent()->getWidth()/2,
+                                                       face->getContent()->getHeight()/2,
+                                                       al::Graphics::LUMINANCE,
+                                                       al::Graphics::UBYTE);
                         textures[texI + j * Cubemap::MAX_FACES_COUNT] = tex;
                         
                         // In case a face is mono use the same the texture for left and right.
@@ -119,11 +140,35 @@ bool Renderer::onFrame()
                             textures[texI + Cubemap::MAX_FACES_COUNT] = tex;
                         }
                     }
-                
-                    void* pixels = tex->data<void>();
-                    memcpy(pixels,
-                           face->getContent()->getPixels(),
-                           face->getContent()->getWidth() * face->getContent()->getHeight() * 4);
+                    
+                    tex.yTexture->bind();
+                    glTexSubImage2D(tex.yTexture->target(), 0,
+                                    0, 0,
+                                    tex.yTexture->width(),
+                                    tex.yTexture->height(),
+                                    tex.yTexture->format(),
+                                    tex.yTexture->type(),
+                                    face->getContent()->getPixels());
+                    tex.vTexture->bind();
+                    glTexSubImage2D(tex.vTexture->target(), 0,
+                                    0, 0,
+                                    tex.vTexture->width(),
+                                    tex.vTexture->height(),
+                                    tex.vTexture->format(),
+                                    tex.vTexture->type(),
+                                    (char*)face->getContent()->getPixels() +
+                                        face->getContent()->getWidth() * face->getContent()->getHeight());
+                    tex.uTexture->bind();
+                    glTexSubImage2D(tex.uTexture->target(), 0,
+                                    0, 0,
+                                    tex.uTexture->width(),
+                                    tex.uTexture->height(),
+                                    tex.uTexture->format(),
+                                    tex.uTexture->type(),
+                                    (char*)face->getContent()->getPixels() +
+                                        face->getContent()->getWidth() * face->getContent()->getHeight() +
+                                        (face->getContent()->getWidth()/2) * (face->getContent()->getHeight()/2));
+                    tex.uTexture->unbind();
                     
                     if (onDisplayedCubemapFace) onDisplayedCubemapFace(this, i + j * Cubemap::MAX_FACES_COUNT);
                 }
@@ -162,13 +207,13 @@ void Renderer::onDraw(al::Graphics& gl)
 {
     int faceIndex = mOmni.face();
     int eyeIndex = (mOmni.eye() <= 0.0f) ? 0 : 1;
-    al::Texture* tex = textures[faceIndex + eyeIndex * Cubemap::MAX_FACES_COUNT];
+    YUV420PTexture& tex = textures[faceIndex + eyeIndex * Cubemap::MAX_FACES_COUNT];
     
     // render cubemap
-    if (tex)
+    if (tex.yTexture)
     {
         // Configure gamma to make backdrop more visible in the AlloSphere
-        gammaShader.begin();
+        yuvGammaShader.begin();
         
         // Borrow a temporary Mesh from Graphics
         al::Mesh& m = gl.mesh();
@@ -189,11 +234,21 @@ void Renderer::onDraw(al::Graphics& gl)
         m.texCoord(0,0);
         
         // We must tell the GPU to use the texture when rendering primitives
-        tex->bind();
-        gl.draw(m);
-        tex->unbind();
+        tex.yTexture->bind(0);
+        tex.vTexture->bind(1);
+        tex.uTexture->bind(2);
         
-        gammaShader.end();
+        yuvGammaShader.uniform("yTexture", 0);
+        yuvGammaShader.uniform("uTexture", 1);
+        yuvGammaShader.uniform("vTexture", 2);
+        
+        gl.draw(m);
+        
+        tex.yTexture->unbind(0);
+        tex.vTexture->unbind(1);
+        tex.uTexture->unbind(2);
+        
+        yuvGammaShader.end();
     }
 }
 
