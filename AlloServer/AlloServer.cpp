@@ -94,7 +94,7 @@ void addFaceSubstreams0(void*)
 			state->content = eye->getFace(i)->getContent();
 
 			Port rtpPort(FACE0_RTP_PORT_NUM + portCounter);
-			portCounter++;
+			portCounter += 2;
 			Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, TTL);
 			//rtpGroupsock->multicastSendOnly(); // we're a SSM source
 
