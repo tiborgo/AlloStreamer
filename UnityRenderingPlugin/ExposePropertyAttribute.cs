@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿#if UNITY_EDITOR
+using UnityEngine;
 using System;
 using System.Collections;
 
@@ -7,3 +8,4 @@ public class ExposePropertyAttribute : Attribute
 {
 	
 }
+#endif

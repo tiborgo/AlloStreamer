@@ -26,7 +26,9 @@ public class RenderBinoculars : MonoBehaviour
     [HideInInspector]
     private float eyeSeparation = 0.128f;
 
+	#if UNITY_EDITOR
     [ExposeProperty]
+	#endif
     public float FieldOfView
     {
         get
@@ -47,7 +49,9 @@ public class RenderBinoculars : MonoBehaviour
         }
     }
 
+	#if UNITY_EDITOR
     [ExposeProperty]
+	#endif
     public float EyeSeparation
     {
         get
