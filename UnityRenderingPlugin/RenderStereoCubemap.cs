@@ -10,27 +10,25 @@ using System.Reflection;
 public class RenderStereoCubemap : MonoBehaviour
 {
     public int leftLayer = 15, rightLayer = 16;
-
-
-    public float eyeSep = 0.064f, near = 0.1f, far = 10000f, focal_length = 10f, aperture = 90f;
-
+    public int[] DoNotDisplayLayers = new int[1];
+    public float eyeSep = 0.064f *2, near = 0.1f, far = 10000f, focal_length = 10f, aperture = 90f;
     public int resolution =1920;
+    public int faceCount = 6;
 
     public float moveSpeed = 1;
-
-    public bool printFPS = false, adjustFOV = false;
-    public float fovAdjustValue = 0.5f;
-
-    public int faceCount = 6;
-    public bool extract = true, disablePlanes=false;
+    public bool printFPS = false;
     
+    public bool extract = true, disablePlanes=false;
     
     public enum Ceiling_Floor_StereoOption {None, PositiveZ, NegativeZ, PositiveX, NegativeX, All}
 
     public Ceiling_Floor_StereoOption CeilingFloorStereoOption;
-    
-    //private float preFOVAdjustValue = 0.5f;
 
+    private int DoNotDisplayCullingMask = 0;
+
+    //private float preFOVAdjustValue = 0.5f;
+    private bool adjustFOV = false;
+    private float fovAdjustValue = 0.5f;
 
     private GameObject[] CameraL;	//for left eye surround scene
     private GameObject[] CameraR;	//for right eye surround scene
@@ -46,7 +44,7 @@ public class RenderStereoCubemap : MonoBehaviour
     private Transform OVRCamRig, OVRPlayer;
 
     
-    public RenderTexture[] renderTextures,renderTexturesCeiling,renderTexturesFloor;
+    private RenderTexture[] renderTextures,renderTexturesCeiling,renderTexturesFloor;
     private RenderTexture[] inTextures;
     private RenderTexture[] outTextures;
     private ComputeShader shader;
@@ -392,18 +390,19 @@ public class RenderStereoCubemap : MonoBehaviour
     {
         //Init Camera Positions
         Vector3[] cubemapCamPositions = {
-            new Vector3(0, 0, eyeSep),
-            new Vector3(0, 0, -eyeSep),
+            new Vector3(0, 0, eyeSep/2),
+            new Vector3(0, 0, -eyeSep/2),
+            new Vector3(-eyeSep/2, 0, 0),
+            new Vector3(eyeSep/2, 0, 0),
             new Vector3(0, 0, 0),
             new Vector3(0, 0, 0),
-            new Vector3(-eyeSep, 0, 0),
-            new Vector3(eyeSep, 0, 0),
-            new Vector3(0, 0, -eyeSep),
-            new Vector3(0, 0, eyeSep),
+            
+            new Vector3(0, 0, -eyeSep/2),
+            new Vector3(0, 0, eyeSep/2),
+            new Vector3(eyeSep/2, 0, 0),
+            new Vector3(-eyeSep/2, 0, 0),
             new Vector3(0, 0, 0),
-            new Vector3(0, 0, 0),
-            new Vector3(eyeSep, 0, 0),
-            new Vector3(-eyeSep, 0, 0)                                                     
+            new Vector3(0, 0, 0)                                        
         };
 
         //Parent Object for Organization
@@ -429,6 +428,13 @@ public class RenderStereoCubemap : MonoBehaviour
         CameraCR = new GameObject[Math.Min(Math.Max(0, faceCount - 6), 4)];
         CameraFL = new GameObject[Math.Min(4, faceCount)];
         CameraFR = new GameObject[Math.Min(Math.Max(0, faceCount - 6), 4)];
+
+        //For DoNotDisplayLayers 
+        
+        for (int j = 0; j < DoNotDisplayLayers.Length; j++)
+        {
+            DoNotDisplayCullingMask = DoNotDisplayCullingMask | (1 << DoNotDisplayLayers[j]);
+        }
 
         //Init Cameras
         for (int i = 0; i < 6; i++)
@@ -468,7 +474,7 @@ public class RenderStereoCubemap : MonoBehaviour
             //Set Culling Mask so that camera do not see the planes
             if (i < 4 || i > 5)
             {
-                cL.cullingMask = ~((1 << leftLayer) | (1 << rightLayer));
+                cL.cullingMask = ~((1 << leftLayer) | (1 << rightLayer) | DoNotDisplayCullingMask);
             }
             else//exception for 4 directional stereo (cameras for +Y and -Y directions are used to capture textures for ceiling and floor)
             {
@@ -503,7 +509,7 @@ public class RenderStereoCubemap : MonoBehaviour
                 //Set Culling Mask so that camera do not see the planes
                 if (i < 4 || i > 5)
                 {
-                    cR.cullingMask = ~((1 << leftLayer) | (1 << rightLayer));
+                    cR.cullingMask = ~((1 << leftLayer) | (1 << rightLayer) | DoNotDisplayCullingMask);
                 }
                 else//exception for 4 directional stereo (cameras for +Y and -Y directions are used to capture textures for ceiling and floor)
                 {
@@ -561,7 +567,7 @@ public class RenderStereoCubemap : MonoBehaviour
                 
                 c[j].nearClipPlane = near;
                 c[j].farClipPlane = far;
-                c[j].cullingMask = ~((1 << leftLayer) | (1 << rightLayer));
+                c[j].cullingMask = ~((1 << leftLayer) | (1 << rightLayer) | DoNotDisplayCullingMask);
                 c[j].enabled = true;
             }
             c[0].targetTexture = renderTexturesCeiling[i];      
@@ -605,7 +611,7 @@ public class RenderStereoCubemap : MonoBehaviour
 
                     c[j].nearClipPlane = near;
                     c[j].farClipPlane = far;
-                    c[j].cullingMask = ~((1 << leftLayer) | (1 << rightLayer));
+                    c[j].cullingMask = ~((1 << leftLayer) | (1 << rightLayer) | DoNotDisplayCullingMask);
                     c[j].enabled = true;
                 }
 
@@ -718,24 +724,24 @@ public class RenderStereoCubemap : MonoBehaviour
     void CameraProjectionInit()
     {
 
-        Matrix4x4[] mat = CalculateProjectionMatrix(near, far, aperture, eyeSep, focal_length);
+        Matrix4x4[] mat = CalculateProjectionMatrix(near, far, aperture, eyeSep/2, focal_length);
         Matrix4x4[] matC, matF;
         if (CeilingFloorStereoOption == Ceiling_Floor_StereoOption.All)
         {
-            matC = CalculateProjectionMatrix(near, far, aperture/*/2*/, eyeSep, focal_length, 1);
-            matF = CalculateProjectionMatrix(near, far, aperture/*/2*/, eyeSep, focal_length, 2);
+            matC = CalculateProjectionMatrix(near, far, aperture/*/2*/, eyeSep/2, focal_length, 1);
+            matF = CalculateProjectionMatrix(near, far, aperture/*/2*/, eyeSep/2, focal_length, 2);
         }
 
         else {
-            matC = CalculateProjectionMatrix(near, far, aperture, eyeSep, focal_length);
-            matF = CalculateProjectionMatrix(near, far, aperture, eyeSep, focal_length);
+            matC = CalculateProjectionMatrix(near, far, aperture, eyeSep/2, focal_length);
+            matF = CalculateProjectionMatrix(near, far, aperture, eyeSep/2, focal_length);
         }
             
-        for (int i = 0; i < CameraL.Length; i++)
+        for (int i = 0; i < Math.Min(CameraL.Length, 4); i++)
         {
             CameraL[i].GetComponent<Camera>().projectionMatrix = mat[0];
-            if (i == 1)
-                i += 2;
+            //if (i == 1)
+            //    i += 2;
         }
 
         for (int i = 0; i < CameraCL.Length; i++) {
@@ -743,11 +749,11 @@ public class RenderStereoCubemap : MonoBehaviour
             CameraFL[i].GetComponent<Camera>().projectionMatrix = matF[0];
         }
 
-        for (int i = 0; i < CameraR.Length; i++)
+        for (int i = 0; i < Math.Min(CameraR.Length, 4); i++)
         {
             CameraR[i].GetComponent<Camera>().projectionMatrix = mat[1];
-            if (i == 1)
-                i += 2;
+            //if (i == 1)
+            //    i += 2;
         }
 
         for (int i = 0; i < CameraCR.Length; i++)
@@ -860,22 +866,22 @@ public class RenderStereoCubemap : MonoBehaviour
                 if (CameraL.Length > 4)
                 {
                     CameraL[4].SetActive(true);
-                    CameraL[4].GetComponent<Camera>().cullingMask = ~((1 << leftLayer) | (1 << rightLayer));
+                    CameraL[4].GetComponent<Camera>().cullingMask = ~((1 << leftLayer) | (1 << rightLayer) | DoNotDisplayCullingMask);
                 }
                 if (CameraR.Length > 4)
                 {
                     CameraR[4].SetActive(true);
-                    CameraR[4].GetComponent<Camera>().cullingMask = ~((1 << leftLayer) | (1 << rightLayer));
+                    CameraR[4].GetComponent<Camera>().cullingMask = ~((1 << leftLayer) | (1 << rightLayer) | DoNotDisplayCullingMask);
                 }
                 if (CameraL.Length > 5)
                 {
                     CameraL[5].SetActive(true);
-                    CameraL[5].GetComponent<Camera>().cullingMask = ~((1 << leftLayer) | (1 << rightLayer));
+                    CameraL[5].GetComponent<Camera>().cullingMask = ~((1 << leftLayer) | (1 << rightLayer) | DoNotDisplayCullingMask);
                 }
                 if (CameraR.Length > 5)
                 {
                     CameraR[5].SetActive(true);
-                    CameraR[5].GetComponent<Camera>().cullingMask = ~((1 << leftLayer) | (1 << rightLayer));
+                    CameraR[5].GetComponent<Camera>().cullingMask = ~((1 << leftLayer) | (1 << rightLayer) | DoNotDisplayCullingMask);
                 }
 
                 for (int i = 0; i < CameraCL.Length; i++)
