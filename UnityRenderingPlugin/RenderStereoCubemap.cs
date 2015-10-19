@@ -10,7 +10,7 @@ using System.Reflection;
 public class RenderStereoCubemap : MonoBehaviour
 {
     public int leftLayer = 15, rightLayer = 16;
-    public int[] DoNotDisplayLayers = new int[1];
+    public int[] DoNotDisplayLayers = new int[1]{8};
     public float eyeSep = 0.064f *2, near = 0.1f, far = 10000f, focal_length = 10f, aperture = 90f;
     public int resolution =1920;
     public int faceCount = 6;
@@ -209,10 +209,17 @@ public class RenderStereoCubemap : MonoBehaviour
         for (int i = 0; i < renderTextures.Length; i++)
         {
             renderTextures[i] = new RenderTexture(resolution, resolution, 1, RenderTextureFormat.ARGB32);
-            outTextures[i] = new RenderTexture(resolution, resolution, 1, RenderTextureFormat.ARGB32);
             renderTextures[i].Create();
-            outTextures[i].enableRandomWrite = true;
-            outTextures[i].Create();
+            if (SystemInfo.graphicsDeviceVersion.StartsWith("Direct3D"))
+            {
+                outTextures[i] = new RenderTexture(resolution, resolution, 1, RenderTextureFormat.ARGB32);
+                outTextures[i].enableRandomWrite = true;
+                outTextures[i].Create();
+            }
+            else
+            {
+                outTextures[i] = renderTextures[i];
+            }
         }
 
         renderTexturesCeiling = new RenderTexture[8];
@@ -1213,17 +1220,19 @@ public class RenderStereoCubemap : MonoBehaviour
 
             if (extract)
             {
-
-                for (int i = 0; i < faceCount; i++)
+                if (SystemInfo.graphicsDeviceVersion.StartsWith("Direct3D"))
                 {
-                    RenderTexture inTex = inTextures[i];
-                    RenderTexture outTex = outTextures[i];
-
-                    shader.SetInt("Width", resolution);
-                    shader.SetInt("Height", resolution);
-                    shader.SetTexture(shader.FindKernel("Convert"), "In", inTex);
-                    shader.SetTexture(shader.FindKernel("Convert"), "Out", outTex);
-                    shader.Dispatch(shader.FindKernel("Convert"), (resolution / 8) * (resolution / 2), 1, 1);
+                    for (int i = 0; i < faceCount; i++)
+                    {
+                        RenderTexture inTex = inTextures[i];
+                        RenderTexture outTex = outTextures[i];
+                        
+                        shader.SetInt("Width", resolution);
+                        shader.SetInt("Height", resolution);
+                        shader.SetTexture(shader.FindKernel("Convert"), "In", inTex);
+                        shader.SetTexture(shader.FindKernel("Convert"), "Out", outTex);
+                        shader.Dispatch(shader.FindKernel("Convert"), (resolution / 8) * (resolution / 2), 1, 1);
+                    }
                 }
 
                 GL.IssuePluginEvent(1);
