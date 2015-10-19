@@ -39,6 +39,12 @@ mark_as_advanced(UNITY_PROJECT_PLUGIN_DIR)
 # so that each project can include the other project's headers
 include_directories(${CMAKE_SOURCE_DIR})
 
+# configure scripts
+configure_file(${CMAKE_SOURCE_DIR}/Scripts/uploadToAlloSphere.sh.template
+	${CMAKE_SOURCE_DIR}/Scripts/uploadToAlloSphere.sh
+	@ONLY
+)
+
 # Enable C++11
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
 	CMAKE_COMPILER_IS_GNUCXX)
