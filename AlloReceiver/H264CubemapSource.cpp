@@ -89,7 +89,7 @@ void H264CubemapSource::getNextFramesLoop()
                     if (onAddedFrameToCubemap) onAddedFrameToCubemap(this, i);
                 }
                 
-                if (frameMap.size() >= 10)
+                if (frameMap.size() >= 30)
                 {
                     frameMapCondition.notify_all();
                 }
@@ -112,7 +112,7 @@ void H264CubemapSource::getNextCubemapLoop()
         {
             boost::mutex::scoped_lock lock(frameMapMutex);
             
-            if (frameMap.size() < 10)
+            if (frameMap.size() < 30)
             {
                 frameMapCondition.wait(lock);
             }
