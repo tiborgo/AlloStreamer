@@ -23,31 +23,31 @@ public class RenderCubemap : MonoBehaviour
     private static System.String[] cubemapFaceNames = {
         "LeftEye/PositiveX",
         "LeftEye/NegativeX",
-        "LeftEye/PositiveY",
-        "LeftEye/NegativeY",
         "LeftEye/PositiveZ",
         "LeftEye/NegativeZ",
+		"LeftEye/PositiveY",
+		"LeftEye/NegativeY",
         "RightEye/PositiveX",
         "RightEye/NegativeX",
-        "RightEye/PositiveY",
-        "RightEye/NegativeY",
         "RightEye/PositiveZ",
-        "RightEye/NegativeZ"
+        "RightEye/NegativeZ",
+		"RightEye/PositiveY",
+		"RightEye/NegativeY"
     };
     
     private static Vector3[] cubemapFaceRotations = {
         new Vector3(  0,  90, 0),
-        new Vector3(  0, 270, 0),
-        new Vector3(270,   0, 0),
-        new Vector3( 90,   0, 0),
+        new Vector3(  0, 270, 0),        
         new Vector3(  0,   0, 0),
         new Vector3(  0, 180, 0),
+		new Vector3(270,   0, 0),
+		new Vector3( 90,   0, 0),
         new Vector3(  0,  90, 0),
-        new Vector3(  0, 270, 0),
-        new Vector3(270,   0, 0),
-        new Vector3( 90,   0, 0),
+        new Vector3(  0, 270, 0),     
         new Vector3(  0,   0, 0),
-        new Vector3(  0, 180, 0)
+        new Vector3(  0, 180, 0),
+		new Vector3(270,   0, 0),
+		new Vector3( 90,   0, 0)
     };
     
     private ComputeShader shader;
