@@ -17,6 +17,7 @@ public class RenderStereoCubemap : MonoBehaviour
 
     public float moveSpeed = 1;
     public bool printFPS = false;
+    public int fps = -1;
     
     public bool extract = true, disablePlanes=false;
     
@@ -1078,6 +1079,12 @@ public class RenderStereoCubemap : MonoBehaviour
     }
     IEnumerator Start()
     {
+        if (fps != -1)
+        {
+            QualitySettings.vSyncCount = 0;  // VSync must be disabled
+            Application.targetFrameRate = fps;
+        }
+
         // Setup convert shader
         shader = Resources.Load("AlloUnity/ConvertRGBtoYUV420p") as ComputeShader;
         
