@@ -6,7 +6,14 @@ else
 	dir=$(dirname "$(readlink -f "$0")")
 fi
 
-commit=$(git log -n 1 --pretty=format:"%ci %H" | tr : - | tr \  _)
+
+if git diff --quiet HEAD; then
+    # there are no uncommited changes
+    commit=$(git log -n 1 --pretty=format:"%ci %H" | tr : - | tr \  _)
+else
+	# there are uncommited changes
+    commit="staging"
+fi
 
 # open tunnel
 if [ "${OSTYPE}" = "msys" ]; then
