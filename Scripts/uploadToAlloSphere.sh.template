@@ -13,14 +13,17 @@ if [ "${OSTYPE}" = "msys" ]; then
 	echo "Uploading AlloUnity to Unity rendering machine ..."
 	ssh -f -N -M -S /tmp/unity_upload -L 0.0.0.0:60001:192.168.10.250:22 nonce
 	user=$(whoami)
+	alloUnityPath="Desktop\\AlloUnity/"
 elif [ "${OSTYPE}" = "linux-gnu" ]; then
 	echo "Uploading AlloUnity to AlloSphere rendering machines ..."
 	ssh -f -N -M -S /tmp/unity_upload -L 0.0.0.0:60001:gr01:22 nonce
 	user=sphere
+	alloUnityPath="tibor/AlloUnity/"
 elif [[ "${OSTYPE}" = "darwin"* ]]; then
 	echo "Uploading AlloUnity to audio mac ..."
 	ssh -f -N -M -S /tmp/unity_upload -L 0.0.0.0:60001:audio:22 nonce
 	user=sphere
+	alloUnityPath="tibor/AlloUnity/"
 fi
 
 # setup folder structure on remote host
@@ -29,24 +32,26 @@ if [ "${OSTYPE}" = "msys" ]; then
 	ssh -p 60001 localhost "if exist Desktop\\AlloUnity\\latest rmdir Desktop\\AlloUnity\\latest" > /dev/null
 	ssh -p 60001 localhost "mklink /D Desktop\\AlloUnity\\latest $commit" > /dev/null
 	ssh -p 60001 localhost "if not exist Desktop\\AlloUnity\\latest\\Scripts mkdir Desktop\\AlloUnity\\latest\\Scripts" > /dev/null
+	ssh -p 60001 localhost "if not exist Desktop\\AlloUnity\\latest\\Scripts\\Editor mkdir Desktop\\AlloUnity\\latest\\Scripts\\Editor" > /dev/null
+	ssh -p 60001 localhost "if not exist Desktop\\AlloUnity\\latest\\Scripts\\Resources mkdir Desktop\\AlloUnity\\latest\\Scripts\\Resources" > /dev/null
 elif [ "${OSTYPE}" = "linux-gnu" ]; then
 	ssh -p 60001 sphere@localhost "mkdir -p tibor/AlloUnity/${commit}" > /dev/null
 	ssh -p 60001 sphere@localhost "ln -fsn $commit/ tibor/AlloUnity/latest" > /dev/null
 elif [[ "${OSTYPE}" = "darwin"* ]]; then
 	ssh -p 60001 sphere@localhost "mkdir -p tibor/AlloUnity/${commit}" > /dev/null
 	ssh -p 60001 sphere@localhost "ln -fsn $commit/ tibor/AlloUnity/latest" > /dev/null
-	ssh -p 60001 sphere@localhost "mkdir -p tibor/AlloUnity/latest/Scripts" > /dev/null
+	ssh -p 60001 sphere@localhost "mkdir -p tibor/AlloUnity/latest/Scripts && mkdir -p tibor/AlloUnity/latest/Scripts/Editor && mkdir -p tibor/AlloUnity/latest/Scripts/Resources" > /dev/null
 fi
 
 # copy AlloUnity
-scp -P 60001 -r ${dir}/../Bin/* ${user}@localhost:Desktop/AlloUnity/latest/
+scp -P 60001 -r ${dir}/../Bin/* ${user}@localhost:${alloUnityPath}/latest/
 
 # copy Unity plugins & dcripts
 if [ "${OSTYPE}" = "msys" ] || [[ "${OSTYPE}" = "darwin"* ]]; then
-	scp -P 60001 -r @UNITY_PROJECT_ASSETS_DIR_MSYS@/Plugins/*             ${user}@localhost:Desktop/AlloUnity/latest/
-	scp -P 60001 -r @UNITY_PROJECT_ASSETS_DIR_MSYS@/AlloUnity             ${user}@localhost:Desktop/AlloUnity/latest/Scripts/
-	scp -P 60001 -r @UNITY_PROJECT_ASSETS_DIR_MSYS@/Resources/AlloUnity   ${user}@localhost:Desktop/AlloUnity/latest/Scripts/Resources/AlloUnity
-	scp -P 60001 -r @UNITY_PROJECT_ASSETS_DIR_MSYS@/Editor/AlloUnity      ${user}@localhost:Desktop/AlloUnity/latest/Scripts/Editor/AlloUnity
+	scp -P 60001 -r @UNITY_PROJECT_ASSETS_DIR_MSYS@/Plugins/*             ${user}@localhost:${alloUnityPath}/latest/
+	scp -P 60001 -r @UNITY_PROJECT_ASSETS_DIR_MSYS@/AlloUnity             ${user}@localhost:${alloUnityPath}/latest/Scripts/
+	scp -P 60001 -r @UNITY_PROJECT_ASSETS_DIR_MSYS@/Resources/AlloUnity   ${user}@localhost:${alloUnityPath}/latest/Scripts/Resources/
+	scp -P 60001 -r @UNITY_PROJECT_ASSETS_DIR_MSYS@/Editor/AlloUnity      ${user}@localhost:${alloUnityPath}/latest/Scripts/Editor/
 fi
 
 # post processing
@@ -55,7 +60,7 @@ if [ "${OSTYPE}" = "msys" ]; then
 elif [ "${OSTYPE}" = "linux-gnu" ]; then
 	ssh -p 60001 sphere@localhost "tibor/tree_rsync.py tibor/AlloUnity" > /dev/null
 elif [[ "${OSTYPE}" = "darwin"* ]]; then
-	ssh -p 60001 sphere@localhost "cd tibor/AlloUnity/latest && rm -r *.meta" > /dev/null
+	ssh -p 60001 sphere@localhost "cd tibor/AlloUnity/latest && find . -name '*.meta' -type f -delete" > /dev/null
 fi
 
 # close tunnel
