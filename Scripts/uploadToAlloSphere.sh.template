@@ -18,17 +18,17 @@ fi
 # open tunnel
 if [ "${OSTYPE}" = "msys" ]; then
 	echo "Uploading AlloUnity to Unity rendering machine ..."
-	ssh -f -N -M -S /tmp/unity_upload -L 0.0.0.0:60001:192.168.10.250:22 nonce
+	ssh -f -N -M -S /tmp/unity_upload -L localhost:60001:192.168.10.250:22 nonce
 	user=$(whoami)
 	alloUnityPath="Desktop\\AlloUnity/"
 elif [ "${OSTYPE}" = "linux-gnu" ]; then
 	echo "Uploading AlloUnity to AlloSphere rendering machines ..."
-	ssh -f -N -M -S /tmp/unity_upload -L 0.0.0.0:60001:gr01:22 nonce
+	ssh -f -N -M -S /tmp/unity_upload -L localhost:60001:gr01:22 nonce
 	user=sphere
 	alloUnityPath="tibor/AlloUnity/"
 elif [[ "${OSTYPE}" = "darwin"* ]]; then
 	echo "Uploading AlloUnity to audio mac ..."
-	ssh -f -N -M -S /tmp/unity_upload -L 0.0.0.0:60001:audio:22 nonce
+	ssh -f -N -M -S /tmp/unity_upload -L localhost:60001:audio:22 nonce
 	user=sphere
 	alloUnityPath="tibor/AlloUnity/"
 fi
