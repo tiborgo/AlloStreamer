@@ -4,5 +4,6 @@
     <string name="app_name">FFTrajectoryMapper</string>
     <string name="action_settings">Settings</string>
     <string name="hello_world">Hello world!</string>
+    <string name="defaultClient">192.168.</string>
 
 </resources>

@@ -1,9 +1,17 @@
 package com.example.fftrajectorymapper;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
+
+import com.illposed.osc.OSCMessage;
+import com.illposed.osc.OSCPortOut;
+import java.net.InetAddress;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.BlurMaskFilter;
@@ -17,6 +25,7 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.os.Bundle;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -42,7 +51,13 @@ import android.view.Window;
 public class MainActivity extends Activity{
         //implements ColorPickerDialog.OnColorChangedListener {
 
-	ArrayList<ArrayList<PointF>> pathPoints;
+	//OSC start
+	String preferenceClient;
+	
+    OSCPortOut sender = null;
+    OSCMessage message;
+    Object args[];
+    //OSC end
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,9 +70,6 @@ public class MainActivity extends Activity{
 
         int uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN |View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN ;
         decorView.setSystemUiVisibility(uiOptions);
-
-        pathPoints = new ArrayList<ArrayList<PointF>>();
-        pathPoints.add(new ArrayList<PointF>());
         
         mPaint = new Paint();
         mPaint.setAntiAlias(true);
@@ -72,6 +84,18 @@ public class MainActivity extends Activity{
                                        0.4f, 6, 3.5f);
 
         mBlur = new BlurMaskFilter(8, BlurMaskFilter.Blur.NORMAL);
+        
+        //OSC start
+        String defaultClient = this.getResources().getString(R.string.defaultClient);
+
+       
+        try{
+        	//This expects a string w/ a url
+            sender = new OSCPortOut(InetAddress.getByName(preferenceClient), 6733);
+        }catch (Exception e){
+            Log.w("dbg", "oscoutport: " + e.toString());
+        }
+        //OSC end
     }
 
     private Paint       mPaint;
@@ -149,13 +173,22 @@ public class MainActivity extends Activity{
             sY = y;
             fX = x;
             fY = y;
+            
         }
         int pathListIndex = 0;
         private void touch_move(float x, float y) {
         	calcFinalPoints(x,y);
         }
         private void touch_up() {
-
+            //OSC start
+            
+        	message = new OSCMessage("/coords",Arrays.asList(args));
+            try{
+                sender.send(message);
+            }catch (Exception e){
+                Log.w("oscthread", "sender: " + e.toString());
+            }
+            //OSC end
         }
 
         @Override
