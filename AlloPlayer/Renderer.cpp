@@ -15,9 +15,9 @@ static const char* yuvGammaFragShader = AL_STRINGIFY
     uniform sampler2D uTexture;
     uniform sampler2D vTexture;
  
-    uniform float pow;
-    uniform float min;
-    uniform float max;
+    uniform float gamma_pow;
+    uniform float gamma_min;
+    uniform float gamma_max;
  
     void main(void)
     {
@@ -32,9 +32,9 @@ static const char* yuvGammaFragShader = AL_STRINGIFY
         color.b = 1.164 * (y - 16.0/255.0) + 1.596 * (u - 128.0/255.0);
         
         // Gamma
-        color.r = pow(clamp(color.r, min, max), pow);
-        color.g = pow(clamp(color.g, min, max), pow);
-        color.b = pow(clamp(color.b, min, max), pow);
+        color.r = pow(clamp(color.r, gamma_min, gamma_max), gamma_pow);
+        color.g = pow(clamp(color.g, gamma_min, gamma_max), gamma_pow);
+        color.b = pow(clamp(color.b, gamma_min, gamma_max), gamma_pow);
         gl_FragColor = color;
     }
 );
@@ -79,9 +79,9 @@ bool Renderer::onCreate()
     yuvGammaShader.attach(vert).attach(frag).link();
     yuvGammaShader.printLog();
     yuvGammaShader.begin();
-    yuvGammaShader.uniform("pow", 1.0f);
-    yuvGammaShader.uniform("min", 0.0f);
-    yuvGammaShader.uniform("max", 1.0f);
+    yuvGammaShader.uniform("gamma_pow", 1.0f);
+    yuvGammaShader.uniform("gamma_min", 0.0f);
+    yuvGammaShader.uniform("gamma_max", 1.0f);
     yuvGammaShader.end();
     
     return OmniApp::onCreate();
