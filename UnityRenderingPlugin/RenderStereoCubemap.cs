@@ -1066,7 +1066,7 @@ public class RenderStereoCubemap : MonoBehaviour
     IEnumerator Start()
     {
         // Setup convert shader
-        shader = Resources.Load("ConvertRGBtoYUV420p") as ComputeShader;
+        shader = Resources.Load("AlloUnity/ConvertRGBtoYUV420p") as ComputeShader;
         
 
         PlaneInit();

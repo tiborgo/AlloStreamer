@@ -66,7 +66,7 @@ public class RenderCubemap : MonoBehaviour
         }
         
         // Setup convert shader
-        shader = Resources.Load("ConvertRGBtoYUV420p") as ComputeShader;
+        shader = Resources.Load("AlloUnity/ConvertRGBtoYUV420p") as ComputeShader;
         
         
         // Setup the cameras for cubemap
