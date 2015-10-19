@@ -101,9 +101,8 @@ bool Renderer::onFrame()
             {
                 CubemapFace* face = eye->getFace(i);
                 
-                // The whole cubemap needs to be flipped in the AlloSphere
-                // Therefore swap left and right face
-                int texI = i;
+                // Reorder faces so that they are displayed correctly in the AlloSphere
+                int texI;
                 if (i == 0)
                 {
                     texI = 1;
@@ -111,6 +110,26 @@ bool Renderer::onFrame()
                 else if (i == 1)
                 {
                     texI = 0;
+                }
+                else if (i == 2)
+                {
+                    texI = 4;
+                }
+                else if (i == 3)
+                {
+                    texI = 5;
+                }
+                else if (i == 4)
+                {
+                    texI = 2;
+                }
+                else if (i == 5)
+                {
+                    texI = 3;
+                }
+                else
+                {
+                    texI = i;
                 }
                 YUV420PTexture& tex = textures[texI + j * Cubemap::MAX_FACES_COUNT];
                 
