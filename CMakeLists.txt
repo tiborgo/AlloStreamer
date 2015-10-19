@@ -17,6 +17,7 @@ set(ENABLE_TRAFFICMONITOR ON CACHE BOOL "")
 set(ENABLE_ALLOSERVER_BINOCULARS ON CACHE BOOL "")
 set(ENABLE_RENDERINGPLUGIN_BINOCULARS ON CACHE BOOL "")
 set(ENABLE_UNITYSCRIPTS_BINOCULARS ON CACHE BOOL "")
+set(ENABLE_UNITYPLAYER ON CACHE BOOL "")
 
 # Boost setup
 set(Boost_USE_STATIC_RUNTIME OFF)
@@ -32,10 +33,11 @@ endif()
 add_definitions(-DUNICODE -D_UNICODE)
 
 # In case the libraries have to be connected to Unity
-set(UNITY_PROJECT_ASSETS_DIR "${CMAKE_SOURCE_DIR}/AlloStreamer/Assets/" CACHE PATH "")
+set(UNITY_PROJECT_DIR "${CMAKE_SOURCE_DIR}/AlloStreamer/" CACHE PATH "")
+set(UNITY_PROJECT_ASSETS_DIR "${UNITY_PROJECT_DIR}/Assets/")
 set(UNITY_PROJECT_PLUGIN_DIR "${UNITY_PROJECT_ASSETS_DIR}/Plugins")
 string(REGEX REPLACE "C:" "/c" UNITY_PROJECT_ASSETS_DIR_MSYS ${UNITY_PROJECT_ASSETS_DIR})
-mark_as_advanced(UNITY_PROJECT_PLUGIN_DIR)
+mark_as_advanced(UNITY_PROJECT_ASSETS_DIR UNITY_PROJECT_PLUGIN_DIR UNITY_PROJECT_ASSETS_DIR_MSYS)
 
 # so that each project can include the other project's headers
 include_directories(${CMAKE_SOURCE_DIR})
@@ -114,4 +116,7 @@ if(ENABLE_RENDERINGPLUGIN_BINOCULARS)
 endif()
 if(ENABLE_UNITYSCRIPTS_BINOCULARS)
 	add_subdirectory(UnityScripts_Binoculars)
+endif()
+if(ENABLE_UNITYPLAYER)
+	add_subdirectory(UnityPlayer)
 endif()
