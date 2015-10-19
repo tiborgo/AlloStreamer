@@ -21,7 +21,7 @@ void onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
     for (int i = 0; i < cubemap->getEye(0)->getFacesCount(); i++)
     {
-		stats.store(StatsUtils::CubemapFace(i));
+		stats.store(StatsUtils::CubemapFace(i, StatsUtils::CubemapFace::DISPLAYED));
     }
 	stats.store(StatsUtils::Cubemap());
     StereoCubemap::destroy(cubemap);
@@ -49,7 +49,7 @@ void onColorConvertedFrame(CubemapSource* source, u_int8_t type, size_t size, in
 
 void onDisplayedCubemapFace(Renderer* renderer, int face)
 {
-	stats.store(StatsUtils::CubemapFace(face));
+	stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::DISPLAYED));
 }
 
 void onDisplayedFrame(Renderer* renderer)

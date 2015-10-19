@@ -1,23 +1,36 @@
-.DS_Store
-CMakeBuilds/
-Dependencies/
+# Compiled source #
+###################
 Lib/
 Bin/
-AlloStreamer/
-*~
-AlloPlayer/CMakeFiles/
-AlloPlayer/Makefile
-AlloPlayer/cmake_install.cmake
-AlloServer/CMakeFiles/
-AlloServer/Makefile
-AlloServer/cmake_install.cmake
-AlloShared/CMakeFiles/
-AlloShared/Makefile
-AlloShared/cmake_install.cmake
+AlloClientJavaDecoder/bin
+AlloClientJavaDecoder/obj
+AlloClientJavaDecoder/libs
+AlloClientJavaDecoder/gen
+
+# CMake generated files #
+########################
+CMakeBuilds/
+cmake_install.cmake
 CMakeCache.txt
 CMakeFiles/
-CubemapExtractionPlugin/CMakeFiles/
-CubemapExtractionPlugin/Makefile
-CubemapExtractionPlugin/cmake_install.cmake
 Makefile
-cmake_install.cmake
+Scripts/uploadToAlloSphere.sh
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# Unity #
+#########
+AlloStreamer/
+
+# Logs #
+########
+Logs/

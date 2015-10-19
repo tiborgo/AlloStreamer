@@ -23,36 +23,38 @@ public class RenderCubemap : MonoBehaviour
     private static System.String[] cubemapFaceNames = {
         "LeftEye/PositiveX",
         "LeftEye/NegativeX",
-        "LeftEye/PositiveY",
-        "LeftEye/NegativeY",
         "LeftEye/PositiveZ",
         "LeftEye/NegativeZ",
+		"LeftEye/PositiveY",
+		"LeftEye/NegativeY",
         "RightEye/PositiveX",
         "RightEye/NegativeX",
-        "RightEye/PositiveY",
-        "RightEye/NegativeY",
         "RightEye/PositiveZ",
-        "RightEye/NegativeZ"
+        "RightEye/NegativeZ",
+		"RightEye/PositiveY",
+		"RightEye/NegativeY"
     };
     
     private static Vector3[] cubemapFaceRotations = {
         new Vector3(  0,  90, 0),
-        new Vector3(  0, 270, 0),
-        new Vector3(270,   0, 0),
-        new Vector3( 90,   0, 0),
+        new Vector3(  0, 270, 0),        
         new Vector3(  0,   0, 0),
         new Vector3(  0, 180, 0),
+		new Vector3(270,   0, 0),
+		new Vector3( 90,   0, 0),
         new Vector3(  0,  90, 0),
-        new Vector3(  0, 270, 0),
-        new Vector3(270,   0, 0),
-        new Vector3( 90,   0, 0),
+        new Vector3(  0, 270, 0),     
         new Vector3(  0,   0, 0),
-        new Vector3(  0, 180, 0)
+        new Vector3(  0, 180, 0),
+		new Vector3(270,   0, 0),
+		new Vector3( 90,   0, 0)
     };
     
     private ComputeShader shader;
     private RenderTexture[] inTextures;
     private RenderTexture[] outTextures;
+
+    private bool didPlay = false;
     
     // Use this for initialization
     IEnumerator Start()
@@ -64,7 +66,7 @@ public class RenderCubemap : MonoBehaviour
         }
         
         // Setup convert shader
-        shader = Resources.Load("ConvertRGBtoYUV420p") as ComputeShader;
+        shader = Resources.Load("AlloUnity/ConvertRGBtoYUV420p") as ComputeShader;
         
         
         // Setup the cameras for cubemap
@@ -74,7 +76,8 @@ public class RenderCubemap : MonoBehaviour
         
         // Move the cubemap to the origin of the parent cam
         cubemap.transform.localPosition = Vector3.zero;
-        
+        cubemap.transform.localEulerAngles = Vector3.zero;
+
         System.IntPtr[] texturePtrs = new System.IntPtr[faceCount];
         inTextures = new RenderTexture[faceCount];
         outTextures = new RenderTexture[faceCount];
@@ -94,9 +97,9 @@ public class RenderCubemap : MonoBehaviour
             
             // Set orientation
             cam.fieldOfView = 90;
-            go.transform.eulerAngles = cubemapFaceRotations[i];
             go.transform.parent = cubemap.transform;
-            
+            go.transform.localEulerAngles = cubemapFaceRotations[i];
+
             // Move the cubemap to the origin of the parent cam
             cam.transform.localPosition = Vector3.zero;
             
@@ -120,13 +123,18 @@ public class RenderCubemap : MonoBehaviour
         
         // Tell native plugin that rendering has started
         ConfigureCubemapFromUnity(texturePtrs, faceCount, width, height);
+        didPlay = true;
         
         yield return StartCoroutine("CallPluginAtEndOfFrames");
     }
     
     void OnDestroy()
     {
-        StopFromUnity();
+        if (didPlay)
+        {
+            StopFromUnity();
+            didPlay = false;
+        }
     }
     
     private IEnumerator CallPluginAtEndOfFrames()

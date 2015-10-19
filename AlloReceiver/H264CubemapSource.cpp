@@ -1,5 +1,13 @@
 #include <vector>
 #include <unordered_map>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/median.hpp>
+extern "C"
+{
+    #include <libavcodec/avcodec.h>
+}
+
+
 #include "H264CubemapSource.h"
 
 void H264CubemapSource::setOnReceivedNALU(const OnReceivedNALU& callback)
@@ -27,11 +35,20 @@ void H264CubemapSource::setOnNextCubemap(const OnNextCubemap& callback)
     onNextCubemap = callback;
 }
 
+void H264CubemapSource::setOnAddedFrameToCubemap(const OnAddedFrameToCubemap& callback)
+{
+    onAddedFrameToCubemap = callback;
+}
+
+void H264CubemapSource::setOnScheduledFrameInCubemap(const OnScheduledFrameInCubemap& callback)
+{
+    onScheduledFrameInCubemap = callback;
+}
+
 void H264CubemapSource::getNextFramesLoop()
 {
 	std::vector<AVFrame*> frames(sinks.size(), nullptr);
-	
-    int64_t lastPTS = 0;
+
     while (true)
     {
         // Get all the decoded frames
@@ -40,39 +57,21 @@ void H264CubemapSource::getNextFramesLoop()
             
 			frames[i] = sinks[i]->getNextFrame();
             
-            
-            
             if (frames[i])
             {
-                //std::cout << "PTS diff " << frames[i]->pts - lastPTS << std::endl;
-                lastPTS = frames[i]->pts;
-                
                 boost::mutex::scoped_lock lock(frameMapMutex);
                 
-                //
-                if (std::abs(lastDisplayPTS - frames[i]->pts) < 3000 || frames[i]->pts < lastDisplayPTS)
+                int key = frames[i]->coded_picture_number;
+                
+                if (key <= lastFrameSeqNum)
                 {
                     std::cout << "frame comes too late" << std::endl;
                     sinks[i]->returnFrame(frames[i]);
                     continue;
                 }
                 
-                // The pts get changed a little by live555.
-                // Find a pts that is close enough so that we can put it in the container
-                // with the right other faces
-                uint64_t key = 0;
-                for (auto it = frameMap.begin(); it != frameMap.end(); ++it)
+                if (frameMap.find(key) == frameMap.end())
                 {
-                    if (std::abs(it->first - frames[i]->pts) < 3000)
-                    {
-                        key = it->first;
-                        break;
-                    }
-                }
-                
-                if (key == 0)
-                {
-                    key = frames[i]->pts;
                     frameMap[key].resize(sinks.size());
                 }
                 
@@ -81,17 +80,21 @@ void H264CubemapSource::getNextFramesLoop()
                 {
                     // Matches should not happen here.
                     // If it happens give back frame immediately
-                    //std::cout << "match!? (" << i << ")" << bucketFrames[i]->pts << " " << frames[i]->pts << std::endl;
+                    std::cout << "match!? (" << i << ", " << key << ")" << std::endl;
                     sinks[i]->returnFrame(frames[i]);
                 }
                 else
                 {
                     bucketFrames[i] = frames[i];
-                    //std::cout << "matched bucket " << frames[i] << " " << key << " " << frames[i]->pts << std::endl;
+                    if (onAddedFrameToCubemap) onAddedFrameToCubemap(this, i);
+                }
+                
+                if (frameMap.size() >= 30)
+                {
+                    frameMapCondition.notify_all();
                 }
             }
         }
-        //std::cout << frameMap.size() << std::endl;
     }
 }
 
@@ -102,22 +105,22 @@ void H264CubemapSource::getNextCubemapLoop()
     
     while (true)
     {
-        uint64_t pts;
         size_t pendingCubemaps;
-        // Get frames with the oldest pts and remove the associated bucket
+        int frameSeqNum;
+        // Get frames with the oldest frame seq # and remove the associated bucket
         std::vector<AVFrame*> frames;
         {
             boost::mutex::scoped_lock lock(frameMapMutex);
             
-            if (frameMap.size() < 10)
+            if (frameMap.size() < 30)
             {
-                continue;
+                frameMapCondition.wait(lock);
             }
             pendingCubemaps = frameMap.size();
             
-            std::map<int64_t, std::vector<AVFrame*>>::iterator it = frameMap.begin();
-            pts = it->first;
-            lastDisplayPTS = it->first;
+            auto it = frameMap.begin();
+            frameSeqNum = it->first;
+            lastFrameSeqNum = frameSeqNum;
             frames = it->second;
             frameMap.erase(it);
         }
@@ -201,8 +204,11 @@ void H264CubemapSource::getNextCubemapLoop()
             {
                 count++;
                 leftFace->setNewFaceFlag(true);
-                memcpy(leftFace->getContent()->getPixels(), leftFrame->data[0], leftFrame->width * leftFrame->height * 4);
+                avpicture_layout((AVPicture*)leftFrame, (AVPixelFormat)leftFrame->format,
+                                 leftFrame->width, leftFrame->height,
+                                 (unsigned char*)leftFace->getContent()->getPixels(), leftFace->getContent()->getWidth() * leftFace->getContent()->getHeight() * 4);
                 sinks[i]->returnFrame(leftFrame);
+                if (onScheduledFrameInCubemap) onScheduledFrameInCubemap(this, i);
             }
             else
             {
@@ -213,20 +219,33 @@ void H264CubemapSource::getNextCubemapLoop()
             {
                 count++;
                 rightFace->setNewFaceFlag(true);
-                memcpy(rightFace->getContent()->getPixels(), rightFrame->data[0], rightFrame->width * rightFrame->height * 4);
+                avpicture_layout((AVPicture*)rightFrame, (AVPixelFormat)rightFrame->format,
+                                 rightFrame->width, rightFrame->height,
+                                 (unsigned char*)rightFace->getContent()->getPixels(), rightFace->getContent()->getWidth() * rightFace->getContent()->getHeight() * 4);
                 sinks[i + CUBEMAP_MAX_FACES_COUNT]->returnFrame(rightFrame);
+                if (onScheduledFrameInCubemap) onScheduledFrameInCubemap(this, i+CUBEMAP_MAX_FACES_COUNT);
             }
             else if (rightFace)
             {
                 rightFace->setNewFaceFlag(false);
             }
         }
-
-        //std::cout << count << std::endl;
         
         // Give it to the user of this library (AlloPlayer etc.)
         if (onNextCubemap)
         {
+            // calculate PTS for the cubemap (median of the individual faces' PTS)
+            boost::accumulators::accumulator_set<int64_t, boost::accumulators::features<boost::accumulators::tag::median> > acc;
+            for (AVFrame* frame : frames)
+            {
+                if (frame)
+                {
+                    acc(frame->pts);
+                }
+            }
+            int64_t pts = boost::accumulators::median(acc);
+            
+            // Calculate time interval from until this cubemap should be displayed
             if (lastPTS == 0)
             {
                 lastPTS = pts;
@@ -237,31 +256,16 @@ void H264CubemapSource::getNextCubemapLoop()
                 lastDisplayTime = boost::chrono::system_clock::now();
                 lastDisplayTime += boost::chrono::seconds(5);
             }
-            
-            // Wait until frame should be displayed
-            if (lastPTS == 0)
-            {
-                lastPTS = pts;
-            }
-            
             uint64_t ptsDiff = pts - lastPTS;
             lastDisplayTime += boost::chrono::microseconds(ptsDiff);
             lastPTS = pts;
             
             boost::chrono::milliseconds sleepDuration = boost::chrono::duration_cast<boost::chrono::milliseconds>(lastDisplayTime - boost::chrono::system_clock::now());
             
-//            if (sleepDuration.count() < 80)
-//            {
-//                lastDisplayTime += (boost::chrono::milliseconds(80) - sleepDuration);
-//            }
-//            
-//            sleepDuration = boost::chrono::duration_cast<boost::chrono::milliseconds>(lastDisplayTime - boost::chrono::system_clock::now());
+            // Wait until frame should be displayed
+            //boost::this_thread::sleep_for(sleepDuration);
             
-            //std::cout << "sleep duration " << sleepDuration.count() << "ms" << ", faces " << count << ", pending cubemaps " << pendingCubemaps << std::endl;
-            //std::cout << "pts diff " << ptsDiff << std::endl;
-            
-            //boost::this_thread::sleep_until(lastDisplayTime);
-            
+            // Display frame
             oldCubemap = onNextCubemap(this, cubemap);
 		}
     }
@@ -271,7 +275,7 @@ H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
                                      AVPixelFormat                    format,
                                      bool                             matchStereoPairs)
     :
-    sinks(sinks), format(format), oldCubemap(nullptr), lastDisplayPTS(0), matchStereoPairs(matchStereoPairs)
+    sinks(sinks), format(format), oldCubemap(nullptr), lastFrameSeqNum(0), matchStereoPairs(matchStereoPairs)
 {
     
     av_log_set_level(AV_LOG_WARNING);

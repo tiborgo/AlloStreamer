@@ -108,7 +108,39 @@ namespace AlloReceiver
                                                 return 0.0;
                                             },
                                             boost::accumulators::tag::count(),
-                                            "colorConvertedFrames" + faceStr)
+                                            "colorConvertedFrames" + faceStr),
+                Stats::StatVal::makeStatVal(StatsUtils::andFilter(
+                    {
+                        [window, now, face](Stats::TimeValueDatum datum)
+                        {
+                            return (now - datum.time) < window && // time filter
+                                datum.value.type() == typeid(StatsUtils::CubemapFace) && // type filter
+                                boost::any_cast<StatsUtils::CubemapFace>(datum.value).status == StatsUtils::CubemapFace::ADDED && // status filter
+                                (face == -1 || boost::any_cast<StatsUtils::CubemapFace>(datum.value).face == face); // face filter
+                        }
+                    }),
+                    [](Stats::TimeValueDatum datum)
+                    {
+                        return 0.0;
+                    },
+                    boost::accumulators::tag::count(),
+                    "addedFacesCount" + faceStr),
+                Stats::StatVal::makeStatVal(StatsUtils::andFilter(
+                    {
+                        [window, now, face](Stats::TimeValueDatum datum)
+                        {
+                          return (now - datum.time) < window && // time filter
+                            datum.value.type() == typeid(StatsUtils::CubemapFace) && // type filter
+                            boost::any_cast<StatsUtils::CubemapFace>(datum.value).status == StatsUtils::CubemapFace::SCHEDULED && // status filter
+                            (face == -1 || boost::any_cast<StatsUtils::CubemapFace>(datum.value).face == face); // face filter
+                        }
+                    }),
+                    [](Stats::TimeValueDatum datum)
+                    {
+                        return 0.0;
+                    },
+                    boost::accumulators::tag::count(),
+                    "scheduledFacesCount" + faceStr)
 				/*StatsUtils::nalusCount("droppedNALUsCount" + std::to_string(face),
 				face,
 				StatsUtils::NALU::DROPPED,
@@ -199,6 +231,14 @@ namespace AlloReceiver
                         "colorConvertedFrames" + faceStr + "PS",
                         results["colorConvertedFrames" + faceStr] / seconds
                     },
+                    {
+                        "addedFaces" + faceStr + "PS",
+                        results["addedFacesCount" + faceStr] / seconds
+                    },
+                    {
+                        "scheduledFaces" + faceStr + "PS",
+                        results["scheduledFacesCount" + faceStr] / seconds
+                    }
 				});
 			}
 		};
@@ -288,22 +328,46 @@ namespace AlloReceiver
             stream << "{receivedFrames" << faceStr << "PS:0.1f}\t";
         }
         stream << ";" << std::endl;*/
-
+        
 		stream << "-------------------------------------------------------------------------------" << std::endl;
-		stream << "cubemap face 0-5 (left ) fps:";
-		for (int i = 0; i < 6; i++)
-		{
-			stream << "\t{facesPS" << i << ":0.1f}";
-		}
-		stream << ";" << std::endl;
-
-		stream << "cubemap face 0-5 (right) fps:";
-		for (int i = 6; i < 12; i++)
-		{
-			stream << "\t{facesPS" << i << ":0.1f}";
-		}
-		stream << ";" << std::endl;
-		stream << "fps: {fps:0.1f}" << std::endl;
+		stream << "Added faces/s:" << std::endl;
+        for (int j = 0; j < (std::min) (2, FACE_COUNT); j++)
+        {
+            stream << ((j == 0) ? "left" : "right") << ":";
+            for (int i = 0; i < (std::min) (6, FACE_COUNT - j * 6); i++)
+            {
+                stream << "\t{addedFaces" << j * 6 + i << "PS:0.1f}";
+            }
+            stream << ";" << std::endl;
+        }
+        
+        stream << "-------------------------------------------------------------------------------" << std::endl;
+        stream << "Scheduled faces/s:" << std::endl;
+        for (int j = 0; j < (std::min) (2, FACE_COUNT); j++)
+        {
+            stream << ((j == 0) ? "left" : "right") << ":";
+            for (int i = 0; i < (std::min) (6, FACE_COUNT - j * 6); i++)
+            {
+                stream << "\t{scheduledFaces" << j * 6 + i << "PS:0.1f}";
+            }
+            stream << ";" << std::endl;
+        }
+        
+        stream << "-------------------------------------------------------------------------------" << std::endl;
+        stream << "cubemap face 0-5 (left ) fps:";
+        for (int i = 0; i < 6; i++)
+        {
+            stream << "\t{facesPS" << i << ":0.1f}";
+        }
+        stream << ";" << std::endl;
+        
+        stream << "cubemap face 0-5 (right) fps:";
+        for (int i = 6; i < 12; i++)
+        {
+            stream << "\t{facesPS" << i << ":0.1f}";
+        }
+        stream << ";" << std::endl;
+        stream << "fps: {fps:0.1f}" << std::endl;
 
 		return stream.str();
 	};

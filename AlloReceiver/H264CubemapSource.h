@@ -17,23 +17,29 @@ public:
     typedef std::function<void (H264CubemapSource*, u_int8_t, size_t, int)>     OnReceivedFrame;
     typedef std::function<void (H264CubemapSource*, u_int8_t, size_t, int)>     OnDecodedFrame;
     typedef std::function<void (H264CubemapSource*, u_int8_t, size_t, int)>     OnColorConvertedFrame;
+    typedef std::function<void (H264CubemapSource*, int)>                       OnAddedFrameToCubemap;
+    typedef std::function<void (H264CubemapSource*, int)>                       OnScheduledFrameInCubemap;
     
-    virtual void setOnReceivedNALU       (const OnReceivedNALU&        callback);
-    virtual void setOnReceivedFrame      (const OnReceivedFrame&       callback);
-    virtual void setOnDecodedFrame       (const OnDecodedFrame&        callback);
-    virtual void setOnColorConvertedFrame(const OnColorConvertedFrame& callback);
-	virtual void setOnNextCubemap        (const OnNextCubemap&         callback);
+    virtual void setOnReceivedNALU           (const OnReceivedNALU&            callback);
+    virtual void setOnReceivedFrame          (const OnReceivedFrame&           callback);
+    virtual void setOnDecodedFrame           (const OnDecodedFrame&            callback);
+    virtual void setOnColorConvertedFrame    (const OnColorConvertedFrame&     callback);
+    virtual void setOnNextCubemap            (const OnNextCubemap&             callback);
+    virtual void setOnAddedFrameToCubemap    (const OnAddedFrameToCubemap&     callback);
+    virtual void setOnScheduledFrameInCubemap(const OnScheduledFrameInCubemap& callback);
     
     H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
                       AVPixelFormat                    format,
                       bool                             matchStereoPairs);
 
 protected:
-    OnReceivedNALU        onReceivedNALU;
-    OnReceivedFrame       onReceivedFrame;
-    OnDecodedFrame        onDecodedFrame;
-    OnColorConvertedFrame onColorConvertedFrame;
-    OnNextCubemap         onNextCubemap;
+    OnReceivedNALU            onReceivedNALU;
+    OnReceivedFrame           onReceivedFrame;
+    OnDecodedFrame            onDecodedFrame;
+    OnColorConvertedFrame     onColorConvertedFrame;
+    OnNextCubemap             onNextCubemap;
+    OnAddedFrameToCubemap     onAddedFrameToCubemap;
+    OnScheduledFrameInCubemap onScheduledFrameInCubemap;
     
 private:
     void getNextFramesLoop();
@@ -44,15 +50,16 @@ private:
     void sinkOnDecodedFrame       (H264RawPixelsSink* sink, u_int8_t type, size_t size);
     void sinkOnColorConvertedFrame(H264RawPixelsSink* sink, u_int8_t type, size_t size);
   
-    boost::mutex frameMapMutex;
-    std::map<int64_t, std::vector<AVFrame*> > frameMap;
+    boost::mutex                              frameMapMutex;
+    boost::condition_variable                 frameMapCondition;
+    std::map<int, std::vector<AVFrame*> >     frameMap;
     std::vector<H264RawPixelsSink*>           sinks;
     std::map<H264RawPixelsSink*, int>         sinksFaceMap;
     AVPixelFormat                             format;
     HeapAllocator                             heapAllocator;
     boost::thread                             getNextCubemapThread;
     boost::thread                             getNextFramesThread;
-	StereoCubemap*                            oldCubemap;
-    int64_t                                   lastDisplayPTS;
+    StereoCubemap*                            oldCubemap;
+    int                                       lastFrameSeqNum;
     bool                                      matchStereoPairs;
 };

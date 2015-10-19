@@ -24,7 +24,7 @@ StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
     for (int i = 0; i < cubemap->getEye(0)->getFacesCount(); i++)
     {
-        stats.store(StatsUtils::CubemapFace(i));
+        stats.store(StatsUtils::CubemapFace(i, StatsUtils::CubemapFace::DISPLAYED));
     }
     stats.store(StatsUtils::Cubemap());
     return cubemap;
@@ -50,9 +50,19 @@ void onColorConvertedFrame(CubemapSource* source, u_int8_t type, size_t size, in
     stats.store(StatsUtils::Frame(type, size, face, StatsUtils::Frame::COLOR_CONVERTED));
 }
 
+void onAddedFrameToCubemap(CubemapSource* source, int face)
+{
+    //stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::ADDED));
+}
+
+void setOnScheduledFrameInCubemap(CubemapSource* source, int face)
+{
+    stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::SCHEDULED));
+}
+
 void onDisplayedCubemapFace(Renderer* renderer, int face)
 {
-    stats.store(StatsUtils::CubemapFace(face));
+    stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::DISPLAYED));
 }
 
 void onDisplayedFrame(Renderer* renderer)
@@ -65,10 +75,12 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
     H264CubemapSource* h264CubemapSource = dynamic_cast<H264CubemapSource*>(cubemapSource);
     if (h264CubemapSource)
     {
-        h264CubemapSource->setOnReceivedNALU       (boost::bind(&onReceivedNALU,        _1, _2, _3, _4));
-        h264CubemapSource->setOnReceivedFrame      (boost::bind(&onReceivedFrame,       _1, _2, _3, _4));
-        h264CubemapSource->setOnDecodedFrame       (boost::bind(&onDecodedFrame,        _1, _2, _3, _4));
-        h264CubemapSource->setOnColorConvertedFrame(boost::bind(&onColorConvertedFrame, _1, _2, _3, _4));
+        h264CubemapSource->setOnReceivedNALU           (boost::bind(&onReceivedNALU,               _1, _2, _3, _4));
+        h264CubemapSource->setOnReceivedFrame          (boost::bind(&onReceivedFrame,              _1, _2, _3, _4));
+        h264CubemapSource->setOnDecodedFrame           (boost::bind(&onDecodedFrame,               _1, _2, _3, _4));
+        h264CubemapSource->setOnColorConvertedFrame    (boost::bind(&onColorConvertedFrame,        _1, _2, _3, _4));
+        h264CubemapSource->setOnAddedFrameToCubemap    (boost::bind(&onAddedFrameToCubemap,        _1, _2));
+        h264CubemapSource->setOnScheduledFrameInCubemap(boost::bind(&setOnScheduledFrameInCubemap, _1, _2));
     }
     
     
@@ -150,7 +162,7 @@ int main(int argc, char* argv[])
     
     rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(),
                                                  bufferSize,
-                                                 AV_PIX_FMT_RGBA,
+                                                 AV_PIX_FMT_YUV420P,
                                                  matchStereoPairs,
                                                  interface);
     std::function<void (RTSPCubemapSourceClient*, CubemapSource*)> callback(boost::bind(&onDidConnect, _1, _2));

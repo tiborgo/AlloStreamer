@@ -401,16 +401,11 @@ void copyFromGPUtoCPU (std::vector<Frame*>& frames)
 
 extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 {
-    // When we use the RenderCubemap.cs and RenderBinoculars.cs scripts
+    // When we use the RenderCubemap.cs and USeRenderingPlugin.cs scripts
     // This function will get called twice (with different eventIDs).
-    // We have to make sure that the extraction only happens once!
-    static int extractionEventID = -1;
-    if (extractionEventID == -1)
-    {
-        extractionEventID = eventID;
-    }
-    
-    if (extractionEventID == eventID)
+    // We have to make sure that the extraction only happens once for the cubemap
+	// and binoculars respectively!
+    if (eventID == 1)
     {
         // Allocate cubemap the first time we render a frame.
         // By doing so, we can make sure that both

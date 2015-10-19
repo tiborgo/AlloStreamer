@@ -76,7 +76,7 @@ void onSentNALU(RawPixelSource*, uint8_t type, size_t size, int eye, int face)
 
 void onEncodedFrame(RawPixelSource*, int eye, int face)
 {
-	stats.store(StatsUtils::CubemapFace(eye * 6 + face));
+	stats.store(StatsUtils::CubemapFace(eye * 6 + face, StatsUtils::CubemapFace::DISPLAYED));
 }
 
 void addFaceSubstreams0(void*)
@@ -94,7 +94,7 @@ void addFaceSubstreams0(void*)
 			state->content = eye->getFace(i)->getContent();
 
 			Port rtpPort(FACE0_RTP_PORT_NUM + portCounter);
-			portCounter++;
+			portCounter += 2;
 			Groupsock* rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, TTL);
 			//rtpGroupsock->multicastSendOnly(); // we're a SSM source
 

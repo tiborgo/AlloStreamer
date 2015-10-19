@@ -81,8 +81,8 @@ private:
     concurrent_queue<AVPacket*> pktPool;
 	concurrent_queue<AVFrame*> frameBuffer;
 	concurrent_queue<AVFrame*> framePool;
-    concurrent_queue<AVFrame*> resizedFrameBuffer;
-    concurrent_queue<AVFrame*> resizedFramePool;
+    concurrent_queue<AVFrame*> convertedFrameBuffer;
+    concurrent_queue<AVFrame*> convertedFramePool;
     
     AVPacket* currentPkt;
     int64_t pts;

@@ -553,7 +553,7 @@ struct Model
 struct Scene  
 {
     int     num_models, Width,Height;
-    Model * Models[10];
+    Model * Models[12];
 
     void    Add(Model * n)
     {    Models[num_models++] = n; }    
@@ -580,7 +580,7 @@ struct Scene
 	int getHeight(){
 		return Height;
 	}
-	Scene(UINT width = 256, UINT height = 256, float focal_length = 100.0f) : num_models(0), Width(width), Height(height)
+	Scene(UINT width = 256, UINT height = 256, float focal_length = 10.0f) : num_models(0), Width(width), Height(height)
 	{ 
 		
 
@@ -612,18 +612,17 @@ struct Scene
 		
 		Add(new Model(&right, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 		Add(new Model(&left, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
-		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
-		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 		Add(new Model(&front, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 		Add(new Model(&back, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
-		
+		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+
 		Add(new Model(&right, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 		Add(new Model(&left, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
-		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
-		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 		Add(new Model(&front, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 		Add(new Model(&back, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
-
+		Add(new Model(&ceiling, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
+		Add(new Model(&floor, Vector3f(0, 0, 0), new Material(new Texture(false, Sizei(width, height)))));
 	}
 };
 

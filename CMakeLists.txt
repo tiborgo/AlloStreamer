@@ -14,12 +14,16 @@ set(ENABLE_ALLOPLAYER ON CACHE BOOL "")
 set(ENABLE_WINDOWEDPLAYER ON CACHE BOOL "")
 set(ENABLE_OCULUSPLAYER ON CACHE BOOL "")
 set(ENABLE_TRAFFICMONITOR ON CACHE BOOL "")
+set(ENABLE_ALLOSERVER_BINOCULARS ON CACHE BOOL "")
+set(ENABLE_RENDERINGPLUGIN_BINOCULARS ON CACHE BOOL "")
+set(ENABLE_UNITYSCRIPTS_BINOCULARS ON CACHE BOOL "")
+set(ENABLE_ALLOUNITYPLAYER ON CACHE BOOL "")
 
 # Boost setup
 set(Boost_USE_STATIC_RUNTIME OFF)
 set(Boost_USE_STATIC_LIBS OFF)
 add_definitions(-DBOOST_ALL_DYN_LINK)
-
+add_definitions(-DROOT_DIR="${CMAKE_SOURCE_DIR}")
 if(WIN32)
     add_definitions(-DBOOST_INTERPROCESS_BOOTSTAMP_IS_LASTBOOTUPTIME) # prevents error when startup time is not in Windows sys log
 	add_definitions(-DBOOST_INTERPROCESS_WINDOWS)
@@ -29,11 +33,20 @@ endif()
 add_definitions(-DUNICODE -D_UNICODE)
 
 # In case the libraries have to be connected to Unity
-set(UNITY_PROJECT_ASSETS_DIR "${CMAKE_SOURCE_DIR}/AlloStreamer/Assets/" CACHE STRING "")
-set(UNITY_PROJECT_PLUGIN_DIR "${UNITY_PROJECT_ASSETS_DIR}/Plugins" CACHE STRING "")
+set(UNITY_PROJECT_DIR "${CMAKE_SOURCE_DIR}/AlloStreamer/" CACHE PATH "")
+set(UNITY_PROJECT_ASSETS_DIR "${UNITY_PROJECT_DIR}/Assets/")
+set(UNITY_PROJECT_PLUGIN_DIR "${UNITY_PROJECT_ASSETS_DIR}/Plugins")
+string(REGEX REPLACE "C:" "/c" UNITY_PROJECT_ASSETS_DIR_MSYS ${UNITY_PROJECT_ASSETS_DIR})
+mark_as_advanced(UNITY_PROJECT_ASSETS_DIR UNITY_PROJECT_PLUGIN_DIR UNITY_PROJECT_ASSETS_DIR_MSYS)
 
 # so that each project can include the other project's headers
 include_directories(${CMAKE_SOURCE_DIR})
+
+# configure scripts
+configure_file(${CMAKE_SOURCE_DIR}/Scripts/uploadToAlloSphere.sh.template
+	${CMAKE_SOURCE_DIR}/Scripts/uploadToAlloSphere.sh
+	@ONLY
+)
 
 # Enable C++11
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
@@ -94,4 +107,16 @@ if(ENABLE_OCULUSPLAYER)
 endif()
 if(ENABLE_TRAFFICMONITOR)
 	add_subdirectory(TrafficMonitor)
+endif()
+if(ENABLE_ALLOSERVER_BINOCULARS)
+	add_subdirectory(AlloServer_Binoculars)
+endif()
+if(ENABLE_RENDERINGPLUGIN_BINOCULARS)
+	add_subdirectory(RenderingPlugin_Binoculars)
+endif()
+if(ENABLE_UNITYSCRIPTS_BINOCULARS)
+	add_subdirectory(UnityScripts_Binoculars)
+endif()
+if(ENABLE_ALLOUNITYPLAYER)
+	add_subdirectory(AlloUnityPlayer)
 endif()

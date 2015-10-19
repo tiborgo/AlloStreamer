@@ -76,7 +76,12 @@ Stats::StatVal StatsUtils::facesCount   (const std::string&                     
     {
         timeFilter(window,
                    now),
-        typeFilter(typeid(CubemapFace)),
+        //typeFilter(typeid(CubemapFace)),
+        [](Stats::TimeValueDatum datum)
+        {
+            return datum.value.type() == typeid(CubemapFace) &&
+                boost::any_cast<CubemapFace>(datum.value).status == StatsUtils::CubemapFace::DISPLAYED;
+        },
 		[face](Stats::TimeValueDatum datum)
         {
             return (face == -1) ? true : boost::any_cast<CubemapFace>(datum.value).face == face;
