@@ -7,7 +7,7 @@ endif()
 add_custom_target(UnityPlayer
 	COMMAND ${UNITY_EXE} -quit -batchmode
 	-projectPath ${UNITY_PROJECT_DIR}
-	-buildOSX64Player ${PROJECT_SOURCE_DIR}/Bin/$<CONFIGURATION>/StandaloneUnityPlayer.app
+	-buildOSX64Player ${PROJECT_SOURCE_DIR}/Bin/$<CONFIGURATION>/AlloUnityPlayer.app
 )
 
 add_dependencies(UnityPlayer
