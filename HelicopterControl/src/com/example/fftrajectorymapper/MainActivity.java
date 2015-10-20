@@ -86,9 +86,13 @@ public class MainActivity extends Activity{
         mBlur = new BlurMaskFilter(8, BlurMaskFilter.Blur.NORMAL);
         
         //OSC start
+        SharedPreferences p = PreferenceManager.getDefaultSharedPreferences(this);
         String defaultClient = this.getResources().getString(R.string.defaultClient);
-
+        defaultClient = p.getString("defaultClient", defaultClient);
        
+		startActivity(new Intent(this, SettingsActivity.class));
+
+        
         try{
         	//This expects a string w/ a url
             sender = new OSCPortOut(InetAddress.getByName(preferenceClient), 6733);
@@ -182,12 +186,12 @@ public class MainActivity extends Activity{
         private void touch_up() {
             //OSC start
             
-        	message = new OSCMessage("/coords",Arrays.asList(args));
-            try{
-                sender.send(message);
-            }catch (Exception e){
-                Log.w("oscthread", "sender: " + e.toString());
-            }
+        	//message = new OSCMessage("/coords",Arrays.asList(args));
+            //try{
+            //    sender.send(message);
+            //}catch (Exception e){
+             //   Log.w("oscthread", "sender: " + e.toString());
+            //}
             //OSC end
         }
 

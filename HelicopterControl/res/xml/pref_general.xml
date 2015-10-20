@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+ <PreferenceCategory
+   android:summary="Stream Information"
+   android:title="Network Stream" >
+     <EditTextPreference android:key="@string/defaultClient" android:defaultValue="@string/defaultClient" android:title="@string/defaultClient"/>
+ </PreferenceCategory>
+
+</PreferenceScreen>
