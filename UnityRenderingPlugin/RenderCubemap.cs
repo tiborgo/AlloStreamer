@@ -61,7 +61,12 @@ public class RenderCubemap : MonoBehaviour
     {
         if (fps != -1)
         {
-            QualitySettings.vSyncCount = 0;  // VSync must be disabled
+            // VSync must be disabled. However QualitySettings.vSyncCount = 0; crashes app in player mode.
+            // So, make sure Edit > Project Settings > Quality > V Sync Count is set to "Do't Sync"
+            if (QualitySettings.vSyncCount != 0)
+            {
+                Debug.LogError("Set Edit > Project Settings > Quality > V Sync Count to \"Do't Sync\". Otherwise, FPS limit will no have any effect.");
+            }
             Application.targetFrameRate = fps;
         }
         
