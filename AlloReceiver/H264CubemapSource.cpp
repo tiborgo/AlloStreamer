@@ -65,7 +65,7 @@ void H264CubemapSource::getNextFramesLoop()
                 
                 if (key <= lastFrameSeqNum)
                 {
-                    std::cout << "frame comes too late" << std::endl;
+                    std::cout << "frame comes too late (" << lastFrameSeqNum-key+1 << " frame/s)" << std::endl;
                     sinks[i]->returnFrame(frames[i]);
                     continue;
                 }
