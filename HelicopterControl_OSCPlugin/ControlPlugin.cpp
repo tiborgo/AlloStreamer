@@ -493,31 +493,17 @@ static void DoRendering (const float* worldMatrix, const float* identityMatrix, 
 #define PORT 7000
 #define QPORT 8008
 #define SEND_PORT 7001
-float a1 = 0;
-float a2 = 0;
-float a3 = 0;
-float a4 = 0;
-float a5 = 0;
-float a6 = 0;
-float a7 = 0;
-float q1 = 0;
-float q2 = 0;
-float q3 = 0;
-float q4 = 0;
+float startX = 0;
+float startY = 0;
+float endX = 0;
+float endY = 0;
 extern "C" {
 	int EXPORT_API startStream();
 	int EXPORT_API initInterprocessMemory();
-	float EXPORT_API getRoll();
-	float EXPORT_API getPitch();
-	float EXPORT_API getYaw();
-	float EXPORT_API getTouchX();
-	float EXPORT_API getTouchY();
-	float EXPORT_API getDragX();
-	float EXPORT_API getDragY();
-	float EXPORT_API getPSQuatX();
-	float EXPORT_API getPSQuatY();
-	float EXPORT_API getPSQuatZ();
-	float EXPORT_API getPSQuatW();
+	float EXPORT_API getStartX();
+	float EXPORT_API getStartY();
+	float EXPORT_API getEndX();
+	float EXPORT_API getEndY();
 	void EXPORT_API setDistance(float distance);
 	void EXPORT_API endServer();
 	void EXPORT_API oscStart();
@@ -530,51 +516,25 @@ extern "C" void EXPORT_API endServer()
     fflush(pluginFile);
 }
 
-extern "C" float EXPORT_API getRoll()
+extern "C" float EXPORT_API getStartX()
 {
-	return a3;
+	DebugLog("Well there's this\n");
+	return startX;
 }
 
-extern "C" float EXPORT_API getPitch()
+extern "C" float EXPORT_API getStartY()
 {
-	return a2;
+	return startY;
 }
 
-extern "C" float EXPORT_API getYaw()
+extern "C" float EXPORT_API getEndX()
 {
-	return a1;
+	return endX;
 }
-extern "C" float EXPORT_API getTouchX()
+
+extern "C" float EXPORT_API getEndY()
 {
-	return a4;
-}
-extern "C" float EXPORT_API getTouchY()
-{
-	return a5;
-}
-extern "C" float EXPORT_API getDragX()
-{
-	return a6;
-}
-extern "C" float EXPORT_API getDragY()
-{
-	return a7;
-}
-extern "C" float EXPORT_API getPSQuatX()
-{
-	return q1;
-}
-extern "C" float EXPORT_API getPSQuatY()
-{
-	return q2;
-}
-extern "C" float EXPORT_API getPSQuatZ()
-{
-	return q3;
-}
-extern "C" float EXPORT_API getPSQuatW()
-{
-	return q4;
+	return endY;
 }
 
 UdpTransmitSocket* transmitSocket = nullptr;
@@ -597,6 +557,7 @@ extern "C" void EXPORT_API setDistance(float distance)
 	transmitSocket->Send(p.Data(), p.Size());
 }
 
+//OSC START
 class QuaternionPacketListener : public osc::OscPacketListener {
 protected:
     
@@ -613,10 +574,10 @@ protected:
             // reflection for overloaded messages (eg you can call
             // (*arg)->IsBool() to check if a bool was passed etc).
             osc::ReceivedMessage::const_iterator arg = m.ArgumentsBegin();
-            q1 = (arg++)->AsFloat();
-            q2 = (arg++)->AsFloat();
-            q3 = (arg++)->AsFloat();
-            q4 = (arg++)->AsFloat();
+            startX = (arg++)->AsFloat();
+            startY = (arg++)->AsFloat();
+            endX = (arg++)->AsFloat();
+            endY = (arg++)->AsFloat();
             
             if( arg != m.ArgumentsEnd() )
                 throw osc::ExcessArgumentException();
@@ -629,45 +590,7 @@ protected:
         }
     }
 };
-
-class OrientationPacketListener : public osc::OscPacketListener {
-protected:
-    
-    virtual void ProcessMessage( const osc::ReceivedMessage& m,
-                                const IpEndpointName& remoteEndpoint )
-    {
-        (void) remoteEndpoint; // suppress unused parameter warning
-        
-        try{
-            // example of parsing single messages. osc::OsckPacketListener
-            // handles the bundle traversal.
-            
-            // example #2 -- argument iterator interface, supports
-            // reflection for overloaded messages (eg you can call
-            // (*arg)->IsBool() to check if a bool was passed etc).
-            osc::ReceivedMessage::const_iterator arg = m.ArgumentsBegin();
-            a1 = (arg++)->AsFloat();
-            a2 = (arg++)->AsFloat();
-            a3 = (arg++)->AsFloat();
-            a4 = (arg++)->AsFloat();
-            a5 = (arg++)->AsFloat();
-            a6 = (arg++)->AsFloat();
-            a7 = (arg++)->AsFloat();
-            
-            if( arg != m.ArgumentsEnd() )
-                throw osc::ExcessArgumentException();
-            
-			//fprintf(pluginFile, "Yaw: %f, Pitch: %f, Roll: %f \n", a1, a2, a3);
-			//fflush(pluginFile);
-            
-        }catch( osc::Exception& e ){
-            // any parsing errors such as unexpected argument types, or
-            // missing arguments get thrown as exceptions.
-            std::cout << "error while parsing message: "
-            << m.AddressPattern() << ": " << e.what() << "\n";
-        }
-    }
-};
+//OSC END
 
 UdpListeningReceiveSocket* s = NULL;
 UdpListeningReceiveSocket* qs = NULL;
@@ -676,6 +599,7 @@ UdpListeningReceiveSocket* qs = NULL;
 boost::barrier sBreakBarrier(2);
 boost::barrier qsBreakBarrier(2);
 
+//OSC START
 extern "C" void EXPORT_API oscStart()
 {
 	/*
@@ -687,6 +611,7 @@ extern "C" void EXPORT_API oscStart()
     s->Run();
 	sBreakBarrier.wait();
 }
+//OSC END
 
 extern "C" void EXPORT_API oscPhaseSpaceStart()
 {
@@ -721,7 +646,7 @@ extern "C" int EXPORT_API initInterprocessMemory()
     
     //Set size
     shm.truncate(sizeof(FrameData));
-    
+   
     //Map the whole shared memory in this process
     region = mapped_region(shm, read_write);
     
@@ -752,6 +677,7 @@ extern "C" int EXPORT_API initInterprocessMemory()
 	if (0 != std::system(ROOT_DIR "/Bin/" CMAKE_INTDIR "/AlloServer_Binoculars"))
         return 1;
     
+    //OSC START
     //AlloServer is finished, so shutdown OSC
     if(s != NULL)
     {
@@ -760,6 +686,8 @@ extern "C" int EXPORT_API initInterprocessMemory()
         delete s;
         s = NULL;
     }
+    //OSC END
+
     if(qs != NULL)
     {
         qs->AsynchronousBreak();
