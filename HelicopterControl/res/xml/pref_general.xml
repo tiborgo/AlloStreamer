@@ -3,7 +3,7 @@
  <PreferenceCategory
    android:summary="Stream Information"
    android:title="Network Stream" >
-     <EditTextPreference android:key="@string/defaultClient" android:defaultValue="@string/defaultClient" android:title="@string/defaultClient"/>
+     <EditTextPreference android:key="OSCClient" android:defaultValue="@string/defaultClient" android:title="OSCClient URL" android:summary=" Please enter the URL to connect to"/>
  </PreferenceCategory>
 
 </PreferenceScreen>

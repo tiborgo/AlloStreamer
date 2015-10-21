@@ -52,8 +52,6 @@ public class MainActivity extends Activity{
         //implements ColorPickerDialog.OnColorChangedListener {
 
 	//OSC start
-	String preferenceClient;
-	
     OSCPortOut sender = null;
     OSCMessage message;
     Object args[];
@@ -87,17 +85,17 @@ public class MainActivity extends Activity{
         
         //OSC start
         SharedPreferences p = PreferenceManager.getDefaultSharedPreferences(this);
+        startActivity(new Intent(this, SettingsActivity.class));
+        
         String defaultClient = this.getResources().getString(R.string.defaultClient);
-        defaultClient = p.getString("defaultClient", defaultClient);
-       
-		startActivity(new Intent(this, SettingsActivity.class));
-
+		String prefClient = "192.168.0.17";//p.getString("Client", defaultClient);
         
         try{
         	//This expects a string w/ a url
-            sender = new OSCPortOut(InetAddress.getByName(preferenceClient), 6733);
+        	
+            sender = new OSCPortOut(InetAddress.getByName(prefClient), 6733);
         }catch (Exception e){
-            Log.w("dbg", "oscoutport: " + e.toString());
+            Log.w("dbg", "oscoutport: " + e.toString() + ": " + prefClient);
         }
         //OSC end
     }
@@ -185,13 +183,17 @@ public class MainActivity extends Activity{
         }
         private void touch_up() {
             //OSC start
-            
-        	//message = new OSCMessage("/coords",Arrays.asList(args));
-            //try{
-            //    sender.send(message);
-            //}catch (Exception e){
-             //   Log.w("oscthread", "sender: " + e.toString());
-            //}
+            args = new Object[4];
+            args[0] = sX;
+            args[1] = sY;
+            args[2] = fX;
+            args[3] = fY;
+        	message = new OSCMessage("/coords",Arrays.asList(args));
+            try{
+                sender.send(message);
+            }catch (Exception e){
+                Log.w("oscthread", "sender: " + e.toString());
+            }
             //OSC end
         }
 
