@@ -39,9 +39,9 @@ static const char* yuvGammaFragShader = AL_STRINGIFY
     }
 );
 
-Renderer::Renderer(CubemapSource* cubemapSource)
+Renderer::Renderer()
     :
-    al::OmniApp("AlloPlayer", false, 2048), cubemapSource(cubemapSource)
+    al::OmniApp("AlloPlayer", false, 2048)
 {
     nav().smooth(0.8);
     
@@ -49,12 +49,6 @@ Renderer::Renderer(CubemapSource* cubemapSource)
     {
         cubemapPool.push(nullptr);
     }
-    
-    std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)> callback = boost::bind(&Renderer::onNextCubemap,
-                                                                                          this,
-                                                                                          _1,
-                                                                                          _2);
-    cubemapSource->setOnNextCubemap(callback);
     
     for (int i = 0; i < StereoCubemap::MAX_EYES_COUNT * Cubemap::MAX_FACES_COUNT; i++)
     {
@@ -281,12 +275,35 @@ bool Renderer::onKeyDown(const al::Keyboard& k)
     return true;
 }
 
-void Renderer::setOnDisplayedFrame(std::function<void (Renderer*)>& callback)
+void Renderer::setOnDisplayedFrame(const std::function<void (Renderer*)>& callback)
 {
     onDisplayedFrame = callback;
 }
 
-void Renderer::setOnDisplayedCubemapFace(std::function<void (Renderer*, int)>& callback)
+void Renderer::setOnDisplayedCubemapFace(const std::function<void (Renderer*, int)>& callback)
 {
     onDisplayedCubemapFace = callback;
+}
+
+void Renderer::setGammaMin(float gammaMin)
+{
+    yuvGammaShader.uniform("gamma_min", gammaMin);
+}
+
+void Renderer::setGammaMax(float gammaMax)
+{
+    yuvGammaShader.uniform("gamma_max", gammaMax);
+}
+
+void Renderer::setGammaPow(float gammaPow)
+{
+    yuvGammaShader.uniform("gamma_pow", gammaPow);
+}
+
+void Renderer::setCubemapSource(CubemapSource* cubemapSource)
+{
+    cubemapSource->setOnNextCubemap(boost::bind(&Renderer::onNextCubemap,
+                                                this,
+                                                _1,
+                                                _2));
 }

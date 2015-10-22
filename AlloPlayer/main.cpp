@@ -14,11 +14,9 @@
 
 const unsigned int DEFAULT_SINK_BUFFER_SIZE = 2000000000;
 
-static Stats stats;
-static bool noDisplay;
-static boost::barrier barrier(2);
-static CubemapSource* cubemapSource;
-static RTSPCubemapSourceClient* rtspClient;
+static Stats    stats;
+static bool     noDisplay;
+static Renderer renderer;
 
 StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
@@ -83,15 +81,14 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
         h264CubemapSource->setOnScheduledFrameInCubemap(boost::bind(&setOnScheduledFrameInCubemap, _1, _2));
     }
     
-    
-    /*stats.autoSummary(boost::chrono::seconds(10),
-                      AlloReceiver::statValsMaker,
-                      AlloReceiver::postProcessorMaker,
-                      AlloReceiver::formatStringMaker);*/
-    
-    ::cubemapSource = cubemapSource;
-    
-    barrier.wait();
+    if (noDisplay)
+    {
+        cubemapSource->setOnNextCubemap(boost::bind(&onNextCubemap, _1, _2));
+    }
+    else
+    {
+        renderer.setCubemapSource(cubemapSource);
+    }
 }
 
 void inLoop()
@@ -215,25 +212,19 @@ int main(int argc, char* argv[])
         matchStereoPairs = false;
     }
     
-    rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(),
-                                                 bufferSize,
-                                                 AV_PIX_FMT_YUV420P,
-                                                 matchStereoPairs,
-                                                 interface);
-    std::function<void (RTSPCubemapSourceClient*, CubemapSource*)> callback(boost::bind(&onDidConnect, _1, _2));
-    rtspClient->setOnDidConnect(callback);
+    RTSPCubemapSourceClient* rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(),
+                                                                          bufferSize,
+                                                                          AV_PIX_FMT_YUV420P,
+                                                                          matchStereoPairs,
+                                                                          interface);
+    rtspClient->setOnDidConnect(boost::bind(&onDidConnect, _1, _2));
     rtspClient->connect();
-    
-    barrier.wait();
     
     boost::thread inThread(boost::bind(&inLoop));
     
     if (noDisplay)
     {
         std::cout << "network only" << std::endl;
-        std::function<StereoCubemap* (CubemapSource*, StereoCubemap*)> callback = boost::bind(&onNextCubemap, _1, _2);
-        cubemapSource->setOnNextCubemap(callback);
-        
         while(true)
         {
             boost::this_thread::yield();
@@ -241,13 +232,8 @@ int main(int argc, char* argv[])
     }
     else
     {
-        Renderer renderer(cubemapSource);
-        std::function<void (Renderer*, int)> onDisplayedCubemapFaceCallback = boost::bind(&onDisplayedCubemapFace, _1, _2);
-        renderer.setOnDisplayedCubemapFace(onDisplayedCubemapFaceCallback);
-        std::function<void (Renderer*)> onDisplayedFrameCallback = boost::bind(&onDisplayedFrame, _1);
-        renderer.setOnDisplayedFrame(onDisplayedFrameCallback);
-        renderer.start();
+        renderer.setOnDisplayedCubemapFace(boost::bind(&onDisplayedCubemapFace, _1, _2));
+        renderer.setOnDisplayedFrame(boost::bind(&onDisplayedFrame, _1));
+        renderer.start(); // does not return
     }
-
-    CubemapSource::destroy(cubemapSource);
 }

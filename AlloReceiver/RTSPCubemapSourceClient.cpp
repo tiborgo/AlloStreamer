@@ -5,7 +5,7 @@
 #include "H264CubemapSource.h"
 #include "RTSPCubemapSourceClient.hpp"
 
-void RTSPCubemapSourceClient::setOnDidConnect(std::function<void (RTSPCubemapSourceClient*, CubemapSource*)>& onDidConnect)
+void RTSPCubemapSourceClient::setOnDidConnect(const std::function<void (RTSPCubemapSourceClient*, CubemapSource*)>& onDidConnect)
 {
     this->onDidConnect = onDidConnect;
 }

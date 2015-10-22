@@ -22,7 +22,7 @@ public:
                                            portNumBits tunnelOverHTTPPortNum = 0,
                                            int socketNumToServer = -1);
     
-    void setOnDidConnect(std::function<void (RTSPCubemapSourceClient*, CubemapSource*)>& onDidConnect);
+    void setOnDidConnect(const std::function<void (RTSPCubemapSourceClient*, CubemapSource*)>& onDidConnect);
     
 protected:
     RTSPCubemapSourceClient(UsageEnvironment& env,

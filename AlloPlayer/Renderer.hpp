@@ -8,7 +8,7 @@
 class Renderer : public al::OmniApp
 {
 public:
-    Renderer(CubemapSource* cubemapSource);
+    Renderer();
     
     virtual ~Renderer();
     
@@ -19,8 +19,13 @@ public:
     virtual bool onKeyDown(const al::Keyboard& k);
     StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
     
-    void setOnDisplayedFrame(std::function<void (Renderer*)>& callback);
-    void setOnDisplayedCubemapFace(std::function<void (Renderer*, int)>& callback);
+    void setOnDisplayedFrame(const std::function<void (Renderer*)>& callback);
+    void setOnDisplayedCubemapFace(const std::function<void (Renderer*, int)>& callback);
+    
+    void setGammaMin(float gammaMin);
+    void setGammaMax(float gammaMax);
+    void setGammaPow(float gammaPow);
+    void setCubemapSource(CubemapSource* source);
     
 protected:
     std::function<void (Renderer*)> onDisplayedFrame;
@@ -39,6 +44,5 @@ private:
     concurrent_queue<StereoCubemap*> cubemapPool;
     std::vector<YUV420PTexture>      textures;
     al_sec                           now;
-    CubemapSource*                   cubemapSource;
     al::ShaderProgram                yuvGammaShader;
 };
