@@ -41,7 +41,7 @@ static const char* yuvGammaFragShader = AL_STRINGIFY
 
 Renderer::Renderer()
     :
-    al::OmniApp("AlloPlayer", false, 2048)
+    al::OmniApp("AlloPlayer", false, 2048), gammaMin(0.0f), gammaMax(1.0f), gammaPow(1.0f)
 {
     nav().smooth(0.8);
     
@@ -72,11 +72,6 @@ bool Renderer::onCreate()
     frag.printLog();
     yuvGammaShader.attach(vert).attach(frag).link();
     yuvGammaShader.printLog();
-    yuvGammaShader.begin();
-    yuvGammaShader.uniform("gamma_pow", 1.0f);
-    yuvGammaShader.uniform("gamma_min", 0.0f);
-    yuvGammaShader.uniform("gamma_max", 1.0f);
-    yuvGammaShader.end();
     
     return OmniApp::onCreate();
 }
@@ -191,6 +186,16 @@ bool Renderer::onFrame()
         cubemapPool.push(cubemap);
     }
     
+    // Set gamma
+    {
+        boost::mutex::scoped_lock(gammaMutex);
+        yuvGammaShader.begin();
+        yuvGammaShader.uniform("gamma_min", gammaMin);
+        yuvGammaShader.uniform("gamma_max", gammaMax);
+        yuvGammaShader.uniform("gamma_pow", gammaPow);
+        yuvGammaShader.end();
+    }
+    
     bool result = OmniApp::onFrame();
     
     if (onDisplayedFrame) onDisplayedFrame(this);
@@ -287,17 +292,20 @@ void Renderer::setOnDisplayedCubemapFace(const std::function<void (Renderer*, in
 
 void Renderer::setGammaMin(float gammaMin)
 {
-    yuvGammaShader.uniform("gamma_min", gammaMin);
+    boost::mutex::scoped_lock(gammaMutex);
+    this->gammaMin = gammaMin;
 }
 
 void Renderer::setGammaMax(float gammaMax)
 {
-    yuvGammaShader.uniform("gamma_max", gammaMax);
+    boost::mutex::scoped_lock(gammaMutex);
+    this->gammaMax = gammaMax;
 }
 
 void Renderer::setGammaPow(float gammaPow)
 {
-    yuvGammaShader.uniform("gamma_pow", gammaPow);
+    boost::mutex::scoped_lock(gammaMutex);
+    this->gammaPow = gammaPow;
 }
 
 void Renderer::setCubemapSource(CubemapSource* cubemapSource)

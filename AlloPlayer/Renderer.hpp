@@ -45,4 +45,8 @@ private:
     std::vector<YUV420PTexture>      textures;
     al_sec                           now;
     al::ShaderProgram                yuvGammaShader;
+    boost::mutex                     gammaMutex;
+    float                            gammaMin;
+    float                            gammaMax;
+    float                            gammaPow;
 };

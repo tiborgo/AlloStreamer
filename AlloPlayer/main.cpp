@@ -1,10 +1,10 @@
-
-#include "Renderer.hpp"
-
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <boost/ref.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string.hpp>
 
+#include "Renderer.hpp"
 #include "AlloShared/StatsUtils.hpp"
 #include "AlloShared/to_human_readable_byte_count.hpp"
 #include "AlloReceiver/RTSPCubemapSourceClient.hpp"
@@ -95,13 +95,12 @@ void inLoop()
 {
     boost::program_options::options_description desc("hadkhaksjhakshkjh");
     desc.add_options()
-    ("no-display", "")
-    ("url", boost::program_options::value<std::string>(), "url")
-    ("interface", boost::program_options::value<std::string>(), "interface")
-    ("buffer-size", boost::program_options::value<unsigned long>(), "buffer-size")
     ("match-stereo-pairs", "")
     ("help", "")
-    ("stats", "");
+    ("stats", "")
+    ("gamma-min", boost::program_options::value<float>(), "")
+    ("gamma-max", boost::program_options::value<float>(), "")
+    ("gamma-pow", boost::program_options::value<float>(), "");
     
     //boost::program_options::positional_options_description p;
     //p.add("url", -1);
@@ -119,21 +118,28 @@ void inLoop()
         std::cout << ">";
         std::getline(std::cin, input);
         
-        input = "--" + input;
+        //input = "--" + input;
+        
+        std::vector<std::string> arguments;
+        boost::split(arguments, input, boost::is_any_of(" "));
+        
+        const char** argumentsArr = new const char*[arguments.size()+1];
+        argumentsArr[0] = "AlloPlayer";
+        for (int i = 0; i < arguments.size(); i++)
+        {
+            argumentsArr[i+1] = arguments[i].c_str();
+        }
         
         boost::program_options::variables_map vm;
-        
-        //std::istringstream ifs(input);
-        const char* inputStr[] = {"bla", input.c_str()};
-        boost::program_options::store(boost::program_options::parse_command_line(2, inputStr, desc), vm);
+        boost::program_options::store(boost::program_options::parse_command_line(arguments.size()+1, argumentsArr, desc), vm);
         notify(vm);
+        
+        delete[] argumentsArr;
         
         if (vm.count("help"))
         {
-            std::cout << vm["help"].as<std::string>() << " yes ";
             std::cout << desc << std::endl;
         }
-        
         if (vm.count("stats"))
         {
             boost::chrono::steady_clock::time_point now = boost::chrono::steady_clock::now();
@@ -142,6 +148,18 @@ void inLoop()
                                        AlloReceiver::postProcessorMaker,
                                        AlloReceiver::formatStringMaker);
             lastStatsTime = now;
+        }
+        if (vm.count("gamma-min"))
+        {
+            renderer.setGammaMin(vm["gamma-min"].as<float>());
+        }
+        if (vm.count("gamma-max"))
+        {
+            renderer.setGammaMax(vm["gamma-max"].as<float>());
+        }
+        if (vm.count("gamma-pow"))
+        {
+            renderer.setGammaPow(vm["gamma-pow"].as<float>());
         }
     }
 }
