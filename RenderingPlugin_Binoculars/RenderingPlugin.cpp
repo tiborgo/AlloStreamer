@@ -518,7 +518,6 @@ extern "C" {
 	float EXPORT_API getPSQuatY();
 	float EXPORT_API getPSQuatZ();
 	float EXPORT_API getPSQuatW();
-	void EXPORT_API setDistance(float distance);
 	void EXPORT_API endServer();
 	void EXPORT_API oscStart();
 	void EXPORT_API oscPhaseSpaceStart();
@@ -579,7 +578,12 @@ extern "C" float EXPORT_API getPSQuatW()
 
 UdpTransmitSocket* transmitSocket = nullptr;
 
-extern "C" void EXPORT_API setDistance(float distance)
+extern "C" void EXPORT_API setBinocularsAddress(const char* address)
+{
+	transmitSocket = new UdpTransmitSocket(IpEndpointName(address, SEND_PORT));
+}
+
+extern "C" void EXPORT_API sendDistance(float distance)
 {
 	if (!transmitSocket)
 	{

@@ -7,6 +7,8 @@ using System.Reflection;
 
 public class RenderBinoculars : MonoBehaviour
 {
+    [DllImport("UnityServerPlugin")]
+    private static extern void setBinocularsAddress(string address);
 
     private RenderTexture stereoTexture;
     private RenderTexture leftEyeTexture;
@@ -26,9 +28,13 @@ public class RenderBinoculars : MonoBehaviour
     [HideInInspector]
     private float eyeSeparation = 0.128f;
 
-	#if UNITY_EDITOR
+    [SerializeField]
+    [HideInInspector]
+    private string binocularsAddress = "192.168.1.183";
+
+#if UNITY_EDITOR
     [ExposeProperty]
-	#endif
+#endif
     public float FieldOfView
     {
         get
@@ -49,9 +55,9 @@ public class RenderBinoculars : MonoBehaviour
         }
     }
 
-	#if UNITY_EDITOR
+#if UNITY_EDITOR
     [ExposeProperty]
-	#endif
+#endif
     public float EyeSeparation
     {
         get
@@ -69,6 +75,22 @@ public class RenderBinoculars : MonoBehaviour
                 }
                 eyeSeparation = value;
             }
+        }
+    }
+
+#if UNITY_EDITOR
+	[ExposeProperty]
+#endif
+    public string BinocularsAddress
+    {
+        get
+        {
+            return binocularsAddress;
+        }
+        set
+        {
+            binocularsAddress = value;
+            setBinocularsAddress(value);
         }
     }
 

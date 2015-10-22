@@ -72,7 +72,7 @@ public class MouseLook : MonoBehaviour
     private static extern float getPSQuatZ();
 
     [DllImport("UnityServerPlugin")]
-    private static extern void setDistance(float distance);
+    private static extern void sendDistance(float distance);
 
     Quaternion mobileDeviceRotation;
     Quaternion phaseSpaceRotation;
@@ -141,14 +141,14 @@ public class MouseLook : MonoBehaviour
         {
             lineRenderer.SetPosition(0, transform.position + new Vector3(0f, -0.5f, 0f));
             lineRenderer.SetPosition(1, hit.point);
-            setDistance(hit.distance);
+            sendDistance(hit.distance);
             distanceSphere.transform.position = hit.point;
         }
         else
         {
             lineRenderer.SetPosition(0, transform.position);
             lineRenderer.SetPosition(1, transform.position);
-            setDistance(-1);
+            sendDistance(-1);
             distanceSphere.transform.position = transform.position;
         }
 
