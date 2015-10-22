@@ -84,14 +84,69 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
     }
     
     
-    stats.autoSummary(boost::chrono::seconds(10),
+    /*stats.autoSummary(boost::chrono::seconds(10),
                       AlloReceiver::statValsMaker,
                       AlloReceiver::postProcessorMaker,
-                      AlloReceiver::formatStringMaker);
+                      AlloReceiver::formatStringMaker);*/
     
     ::cubemapSource = cubemapSource;
     
     barrier.wait();
+}
+
+void inLoop()
+{
+    boost::program_options::options_description desc("hadkhaksjhakshkjh");
+    desc.add_options()
+    ("no-display", "")
+    ("url", boost::program_options::value<std::string>(), "url")
+    ("interface", boost::program_options::value<std::string>(), "interface")
+    ("buffer-size", boost::program_options::value<unsigned long>(), "buffer-size")
+    ("match-stereo-pairs", "")
+    ("help", "")
+    ("stats", "");
+    
+    //boost::program_options::positional_options_description p;
+    //p.add("url", -1);
+    
+    
+    /*boost::program_options::store(boost::program_options::command_line_parser(argc, argv).
+                                  options(desc).positional(p).run(), vm);
+    boost::program_options::notify(vm);*/
+    
+    boost::chrono::steady_clock::time_point lastStatsTime = boost::chrono::steady_clock::now();
+    
+    while (true)
+    {
+        std::string input;
+        std::cout << ">";
+        std::getline(std::cin, input);
+        
+        input = "--" + input;
+        
+        boost::program_options::variables_map vm;
+        
+        //std::istringstream ifs(input);
+        const char* inputStr[] = {"bla", input.c_str()};
+        boost::program_options::store(boost::program_options::parse_command_line(2, inputStr, desc), vm);
+        notify(vm);
+        
+        if (vm.count("help"))
+        {
+            std::cout << vm["help"].as<std::string>() << " yes ";
+            std::cout << desc << std::endl;
+        }
+        
+        if (vm.count("stats"))
+        {
+            boost::chrono::steady_clock::time_point now = boost::chrono::steady_clock::now();
+            std::cout << stats.summary(boost::chrono::duration_cast<boost::chrono::microseconds>(now - lastStatsTime),
+                                       AlloReceiver::statValsMaker,
+                                       AlloReceiver::postProcessorMaker,
+                                       AlloReceiver::formatStringMaker);
+            lastStatsTime = now;
+        }
+    }
 }
 
 int main(int argc, char* argv[])
@@ -170,6 +225,8 @@ int main(int argc, char* argv[])
     rtspClient->connect();
     
     barrier.wait();
+    
+    boost::thread inThread(boost::bind(&inLoop));
     
     if (noDisplay)
     {
