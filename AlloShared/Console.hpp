@@ -28,9 +28,14 @@ private:
         std::streambuf& outStream;
     };
     
+    static char* generator(const char* text, int state);
+    static char** completion(const char * text , int start, int end);
+    
     void runLoop();
     boost::thread runThread;
     ReadlineStreambuf readlineStreambuf;
     OnEnteredCommand onEnteredCommand;
     std::vector<std::string> commands;
+    
+    static std::vector<std::string>* currentCommands;
 };

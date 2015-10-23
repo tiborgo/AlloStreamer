@@ -6,59 +6,47 @@
 
 #include "Console.hpp"
 
-void * xmalloc (int size)
-{
-    void *buf;
-    
-    buf = malloc (size);
-    if (!buf) {
-        fprintf (stderr, "Error: Out of memory. Exiting.'n");
-        exit (1);
-    }
-    
-    return buf;
-}
+std::vector<std::string>* Console::currentCommands = nullptr;
 
-char * dupstr (char* s) {
-    char *r;
-    
-    r = (char*) xmalloc ((strlen (s) + 1));
-    strcpy (r, s);
-    return (r);
-}
-
-char* my_generator(const char* text, int state)
+char* Console::generator(const char* text, int state)
 {
-    /*static int list_index, len;
-    char *name;
+    static std::vector<std::string>::iterator iter;
     
     if (!state)
     {
-        list_index = 0;
-        len = strlen (text);
+        iter = currentCommands->begin();
     }
     
+    iter = std::find_if(iter, currentCommands->end(),
+              [text](const std::string& val)
+              {
+                  std::string prefix(text);
+                  std::string comp = val.substr(0, prefix.size());
+                  bool d = comp == prefix;
+                  return d;
+              });
     
-    while (name = commands[list_index].c_str()) {
-        list_index++;
-        
-        if (strncmp (name, text, len) == 0)
-            return (dupstr(name));
-    }*/
-    
-    /* If no names matched, then return NULL. */
-    return ((char *)NULL);
-    
+    if (iter != currentCommands->end())
+    {
+        char* result = (char*)malloc(iter->size() + 1);
+        strcpy(result, iter->c_str());
+        iter++;
+        return result;
+    }
+    else
+    {
+        return NULL;
+    }
 }
 
-static char** my_completion( const char * text , int start,  int end)
+char** Console::completion(const char * text , int start, int end)
 {
     char **matches;
     
     matches = (char **)NULL;
     
     if (start == 0)
-        matches = rl_completion_matches ((char*)text, &my_generator);
+        matches = rl_completion_matches ((char*)text, &Console::generator);
     else
         rl_bind_key('\t',rl_abort);
     
@@ -136,7 +124,8 @@ void Console::runLoop()
 {
     char *buf;
     
-    rl_attempted_completion_function = my_completion;
+    currentCommands = &commands;
+    rl_attempted_completion_function = completion;
     
     std::regex commandRegex("([a-zA-z0-9-]+)(?: ([a-zA-z0-9\\.]+))?");
     
