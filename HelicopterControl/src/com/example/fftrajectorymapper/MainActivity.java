@@ -88,7 +88,7 @@ public class MainActivity extends Activity{
         startActivity(new Intent(this, SettingsActivity.class));
         
         String defaultClient = this.getResources().getString(R.string.defaultClient);
-		String prefClient = "192.168.0.17";//p.getString("Client", defaultClient);
+		String prefClient = "169.231.116.230";//p.getString("Client", defaultClient);
         
         try{
         	//This expects a string w/ a url

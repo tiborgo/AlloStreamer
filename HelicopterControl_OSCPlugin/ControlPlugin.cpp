@@ -504,6 +504,7 @@ extern "C" {
 	float EXPORT_API getStartY();
 	float EXPORT_API getEndX();
 	float EXPORT_API getEndY();
+	float EXPORT_API testFunc();
 	void EXPORT_API setDistance(float distance);
 	void EXPORT_API endServer();
 	void EXPORT_API oscStart();
@@ -518,13 +519,15 @@ extern "C" void EXPORT_API endServer()
 
 extern "C" float EXPORT_API getStartX()
 {
-	DebugLog("Well there's this\n");
-	return startX;
+	//DebugLog("Well there's this\n");
+	return 56.2;
+	//return startX;
 }
 
 extern "C" float EXPORT_API getStartY()
 {
-	return startY;
+	return 45;
+	//return startY;
 }
 
 extern "C" float EXPORT_API getEndX()
@@ -535,6 +538,11 @@ extern "C" float EXPORT_API getEndX()
 extern "C" float EXPORT_API getEndY()
 {
 	return endY;
+}
+
+extern "C" float EXPORT_API testFunc()
+{
+	return 199;
 }
 
 UdpTransmitSocket* transmitSocket = nullptr;
@@ -605,11 +613,11 @@ extern "C" void EXPORT_API oscStart()
 	/*
      * Start OSC client to receive phone sensor orientation
      */
-	OrientationPacketListener listener;
+	/*OrientationPacketListener listener;
     s = new UdpListeningReceiveSocket(IpEndpointName( IpEndpointName::ANY_ADDRESS, PORT ), &listener );
     
     s->Run();
-	sBreakBarrier.wait();
+	sBreakBarrier.wait();*/
 }
 //OSC END
 

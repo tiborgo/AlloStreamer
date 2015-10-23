@@ -6,16 +6,19 @@ using System.Runtime.InteropServices;
 
 public class GuideHelicopter : MonoBehaviour
 {
-
-    
-    void Update()
-    {
+	
+	[DllImport("HelicopterControlPlugin")]
+	private static extern float getStartX();
+	
+	void Update()
+	{
 		float test = getStartX ();
-    }
-
-    void Start()
-    {
+		Debug.Log (test);
+	}
+	
+	void Start()
+	{
 		
-
-    }
+		
+	}
 }
