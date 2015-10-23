@@ -55,6 +55,10 @@ public class MainActivity extends Activity{
     OSCPortOut sender = null;
     OSCMessage message;
     Object args[];
+    float playerX = 200;
+    float playerY = 200;
+    float mapWidth = 400;
+    float mapHeight = 400;
     
     //OSC end
 
@@ -89,6 +93,10 @@ public class MainActivity extends Activity{
         startActivity(new Intent(this, SettingsActivity.class));
         
         String defaultClient = this.getResources().getString(R.string.defaultClient);
+        playerX = Float.parseFloat(this.getResources().getString(R.string.playerX));
+        playerY = Float.parseFloat(this.getResources().getString(R.string.playerY));
+        mapWidth = Float.parseFloat(this.getResources().getString(R.string.mapWidth));
+        mapHeight = Float.parseFloat(this.getResources().getString(R.string.mapHeight));
 		String prefClient = "192.168.0.17";//p.getString("Client", defaultClient);
         
         try{
@@ -168,12 +176,15 @@ public class MainActivity extends Activity{
             canvas.drawBitmap(mBitmap, picX, picY, mBitmapPaint);
 
             canvas.drawLine(sX,sY,fX,fY,mPaint);
+            
+            //Draw a circle at the player location
+            canvas.drawCircle(mBitmap.getWidth() * (playerX/mapWidth) + picX, mBitmap.getHeight() * (playerY/mapHeight) + picY, 8, mPaint);
         }
 
         private static final float TOUCH_TOLERANCE = 4;
 
         private void touch_start(float x, float y) {
-        	if(!mapMove){
+        	if(!mapMove && x > 80 && y > 40){
         		sX = x;
             	sY = y;
             	fX = x;
@@ -185,8 +196,14 @@ public class MainActivity extends Activity{
         int pathListIndex = 0;
         private void touch_move(float x, float y) {
         	if(mapMove){
-        		picX += x - prevX;
-        		picY += y - prevY;
+        		float deltX = x - prevX;
+        		float deltY = y - prevY;
+        		picX += deltX;
+        		picY += deltY;
+        		sX += deltX;
+        		sY += deltY;
+        		fX += deltX;
+        		fY += deltY;
         		prevX = x;
         		prevY = y;
         	} else {
@@ -195,24 +212,29 @@ public class MainActivity extends Activity{
         }
         private void touch_up(float x, float y) {
         	if(mapMove){
-        		if(x < 40 && y < 40){
+        		if(x < 80 && y < 80){
         			mapMove = false;
         		}
         	} else {
-        		if(x < 40 && y < 40){
+        		if(x < 80 && y < 80){
         			mapMove = true;
+        		} else {
+        			float unityStartX = ((sX + picX)/mBitmap.getWidth())*mapWidth;
+        			float unityStartY = ((sY + picY)/mBitmap.getWidth())*mapHeight;
+        			float unityEndX = ((fX + picX)/mBitmap.getWidth())*mapWidth;
+        			float unityEndY = ((fY + picY)/mBitmap.getWidth())*mapHeight;
+		            args = new Object[4];
+		            args[0] = sX;
+		            args[1] = sY;
+		            args[2] = fX;
+		            args[3] = fY;
+		        	message = new OSCMessage("/coords",Arrays.asList(args));
+		            try{
+		                sender.send(message);
+		            }catch (Exception e){
+		                Log.w("oscthread", "sender: " + e.toString());
+		            }
         		}
-	            args = new Object[4];
-	            args[0] = sX;
-	            args[1] = sY;
-	            args[2] = fX;
-	            args[3] = fY;
-	        	message = new OSCMessage("/coords",Arrays.asList(args));
-	            try{
-	                sender.send(message);
-	            }catch (Exception e){
-	                Log.w("oscthread", "sender: " + e.toString());
-	            }
         	}
         }
 
