@@ -55,6 +55,7 @@ public class MainActivity extends Activity{
     OSCPortOut sender = null;
     OSCMessage message;
     Object args[];
+    
     //OSC end
 
     @Override
@@ -88,7 +89,7 @@ public class MainActivity extends Activity{
         startActivity(new Intent(this, SettingsActivity.class));
         
         String defaultClient = this.getResources().getString(R.string.defaultClient);
-		String prefClient = "169.231.116.230";//p.getString("Client", defaultClient);
+		String prefClient = "192.168.0.17";//p.getString("Client", defaultClient);
         
         try{
         	//This expects a string w/ a url
@@ -116,8 +117,9 @@ public class MainActivity extends Activity{
         private Bitmap  mBitmap;
         private Canvas  mCanvas;
         private Paint   mBitmapPaint;
-        private float sX, sY, fX, fY;
+        private float sX, sY, fX, fY, prevX, prevY, picX, picY;
         private float maxLength = 200;
+        private boolean mapMove = false;
 
         public MyView(Context c) {
             super(c);
@@ -163,7 +165,7 @@ public class MainActivity extends Activity{
         protected void onDraw(Canvas canvas) {
             canvas.drawColor(0xFFAAAAAA);
 
-            canvas.drawBitmap(mBitmap, 0, 0, mBitmapPaint);
+            canvas.drawBitmap(mBitmap, picX, picY, mBitmapPaint);
 
             canvas.drawLine(sX,sY,fX,fY,mPaint);
         }
@@ -171,30 +173,47 @@ public class MainActivity extends Activity{
         private static final float TOUCH_TOLERANCE = 4;
 
         private void touch_start(float x, float y) {
-            sX = x;
-            sY = y;
-            fX = x;
-            fY = y;
-            
+        	if(!mapMove){
+        		sX = x;
+            	sY = y;
+            	fX = x;
+            	fY = y;
+        	}
+            prevX = x;
+            prevY = y;
         }
         int pathListIndex = 0;
         private void touch_move(float x, float y) {
-        	calcFinalPoints(x,y);
+        	if(mapMove){
+        		picX += x - prevX;
+        		picY += y - prevY;
+        		prevX = x;
+        		prevY = y;
+        	} else {
+        		calcFinalPoints(x,y);
+        	}
         }
-        private void touch_up() {
-            //OSC start
-            args = new Object[4];
-            args[0] = sX;
-            args[1] = sY;
-            args[2] = fX;
-            args[3] = fY;
-        	message = new OSCMessage("/coords",Arrays.asList(args));
-            try{
-                sender.send(message);
-            }catch (Exception e){
-                Log.w("oscthread", "sender: " + e.toString());
-            }
-            //OSC end
+        private void touch_up(float x, float y) {
+        	if(mapMove){
+        		if(x < 40 && y < 40){
+        			mapMove = false;
+        		}
+        	} else {
+        		if(x < 40 && y < 40){
+        			mapMove = true;
+        		}
+	            args = new Object[4];
+	            args[0] = sX;
+	            args[1] = sY;
+	            args[2] = fX;
+	            args[3] = fY;
+	        	message = new OSCMessage("/coords",Arrays.asList(args));
+	            try{
+	                sender.send(message);
+	            }catch (Exception e){
+	                Log.w("oscthread", "sender: " + e.toString());
+	            }
+        	}
         }
 
         @Override
@@ -212,7 +231,7 @@ public class MainActivity extends Activity{
                     invalidate();
                     break;
                 case MotionEvent.ACTION_UP:
-                    touch_up();
+                    touch_up(x, y);
                     invalidate();
                     break;
             }
