@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <regex>
+#include <boost/algorithm/string/join.hpp>
 
 #include "Console.hpp"
-
-char* cmd [] ={ "hello", "world", "hell" ,"word", "quit", " " };
 
 void * xmalloc (int size)
 {
@@ -29,20 +29,22 @@ char * dupstr (char* s) {
 
 char* my_generator(const char* text, int state)
 {
-    static int list_index, len;
+    /*static int list_index, len;
     char *name;
     
-    if (!state) {
+    if (!state)
+    {
         list_index = 0;
         len = strlen (text);
     }
     
-    while (name = cmd[list_index]) {
+    
+    while (name = commands[list_index].c_str()) {
         list_index++;
         
         if (strncmp (name, text, len) == 0)
             return (dupstr(name));
-    }
+    }*/
     
     /* If no names matched, then return NULL. */
     return ((char *)NULL);
@@ -64,20 +66,24 @@ static char** my_completion( const char * text , int start,  int end)
     
 }
 
-Console::Console() : readlineStreambuf(*std::cout.rdbuf())
+Console::Console(const std::vector<std::string>& commands)
+    :
+    readlineStreambuf(*std::cout.rdbuf()),
+    commands(commands)
 {
     
 }
 
 void Console::start()
 {
-    //std::cout << "before" << std::endl;
-    //auto coutBuf = std::cout.rdbuf();
-    //readlineStreambuf = new ReadlineStreambuf(*coutBuf);
-    std::cout.rdbuf(&readlineStreambuf);
-    //std::cout << "after" << std::endl;
+    //std::cout.rdbuf(&readlineStreambuf);
     
     runThread = boost::thread(boost::bind(&Console::runLoop, this));
+}
+
+void Console::setOnEnteredCommand(const OnEnteredCommand& callback)
+{
+    onEnteredCommand = callback;
 }
 
 Console::ReadlineStreambuf::ReadlineStreambuf(std::streambuf& outStream)
@@ -132,16 +138,42 @@ void Console::runLoop()
     
     rl_attempted_completion_function = my_completion;
     
-    while((buf = readline("\n >> "))!=NULL) {
+    std::regex commandRegex("([a-zA-z0-9-]+)(?: ([a-zA-z0-9\\.]+))?");
+    
+    while ((buf = readline(" >> ")) != NULL)
+    {
         //enable auto-complete
-        rl_bind_key('\t',rl_complete);
+        rl_bind_key('\t', rl_complete);
         
-        std::cout << "cmd " << buf << std::endl;
-        //printf("cmd [%s]\n",buf);
-        if (strcmp(buf,"quit")==0)
-            break;
-        if (buf[0]!=0)
+        std::smatch commandMatch;
+        std::string command(buf);
+        if (std::regex_match(command, commandMatch, commandRegex))
+        {
+            if (std::find(commands.begin(), commands.end(), commandMatch.str(1)) != commands.end())
+            {
+                if (onEnteredCommand)
+                {
+                    auto result = onEnteredCommand(commandMatch.str(1), commandMatch.str(2));
+                    if (!result.first)
+                    {
+                        std::cout << "Wrong value. " << result.second << "." << std::endl;
+                    }
+                }
+            }
+            else
+            {
+                std::cout << "Unknown command. Known commands are " <<  boost::algorithm::join(commands, ", ") << "." << std::endl;
+            }
+        }
+        else if (command != "")
+        {
+            std::cout << "Wrong syntax. Syntax is command [value]." << std::endl;
+        }
+        
+        if (command != "")
+        {
             add_history(buf);
+        }
     }
     
     free(buf);

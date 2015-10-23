@@ -18,6 +18,7 @@ const unsigned int DEFAULT_SINK_BUFFER_SIZE = 2000000000;
 static Stats    stats;
 static bool     noDisplay;
 static Renderer renderer;
+static auto     lastStatsTime = boost::chrono::steady_clock::now();
 
 StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
@@ -92,56 +93,21 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
     }
 }
 
-void inLoop()
+std::pair<bool, std::string> onEnteredCommand(std::string command, std::string value)
 {
-    boost::program_options::options_description desc("hadkhaksjhakshkjh");
-    desc.add_options()
-    ("match-stereo-pairs", "")
-    ("help", "")
-    ("stats", "")
-    ("gamma-min", boost::program_options::value<float>(), "")
-    ("gamma-max", boost::program_options::value<float>(), "")
-    ("gamma-pow", boost::program_options::value<float>(), "");
-    
-    //boost::program_options::positional_options_description p;
-    //p.add("url", -1);
-    
-    
-    /*boost::program_options::store(boost::program_options::command_line_parser(argc, argv).
-                                  options(desc).positional(p).run(), vm);
-    boost::program_options::notify(vm);*/
-    
-    boost::chrono::steady_clock::time_point lastStatsTime = boost::chrono::steady_clock::now();
-    
-    while (true)
+    try
     {
-        std::string input;
-        std::cout << ">";
-        std::getline(std::cin, input);
-        
-        //input = "--" + input;
-        
-        std::vector<std::string> arguments;
-        boost::split(arguments, input, boost::is_any_of(" "));
-        
-        const char** argumentsArr = new const char*[arguments.size()+1];
-        argumentsArr[0] = "AlloPlayer";
-        for (int i = 0; i < arguments.size(); i++)
+        if (command == "help")
         {
-            argumentsArr[i+1] = arguments[i].c_str();
+            std::cout << "Valid coammnds:" << std::endl;
+            std::cout << "\thelp" << std::endl;
+            std::cout << "\tstats" << std::endl;
+            std::cout << "\tquit" << std::endl;
+            std::cout << "\tgamma-min <float>" << std::endl;
+            std::cout << "\tgamma-max <float>" << std::endl;
+            std::cout << "\tgamma-pow <float>" << std::endl;
         }
-        
-        boost::program_options::variables_map vm;
-        boost::program_options::store(boost::program_options::parse_command_line(arguments.size()+1, argumentsArr, desc), vm);
-        notify(vm);
-        
-        delete[] argumentsArr;
-        
-        if (vm.count("help"))
-        {
-            std::cout << desc << std::endl;
-        }
-        if (vm.count("stats"))
+        else if (command == "stats")
         {
             boost::chrono::steady_clock::time_point now = boost::chrono::steady_clock::now();
             std::cout << stats.summary(boost::chrono::duration_cast<boost::chrono::microseconds>(now - lastStatsTime),
@@ -150,18 +116,28 @@ void inLoop()
                                        AlloReceiver::formatStringMaker);
             lastStatsTime = now;
         }
-        if (vm.count("gamma-min"))
+        else if (command == "quit")
         {
-            renderer.setGammaMin(vm["gamma-min"].as<float>());
+            exit(0);
         }
-        if (vm.count("gamma-max"))
+        else if (command == "gamma-min")
         {
-            renderer.setGammaMax(vm["gamma-max"].as<float>());
+            renderer.setGammaMin(boost::lexical_cast<float>(value));
         }
-        if (vm.count("gamma-pow"))
+        else if (command == "gamma-max")
         {
-            renderer.setGammaPow(vm["gamma-pow"].as<float>());
+            renderer.setGammaMax(boost::lexical_cast<float>(value));
         }
+        else if (command == "gamma-pow")
+        {
+            renderer.setGammaPow(boost::lexical_cast<float>(value));
+        }
+        
+        return std::make_pair(true, "");
+    }
+    catch (boost::bad_lexical_cast& e)
+    {
+        return std::make_pair(false, e.what());
     }
 }
 
@@ -239,9 +215,9 @@ int main(int argc, char* argv[])
     rtspClient->setOnDidConnect(boost::bind(&onDidConnect, _1, _2));
     rtspClient->connect();
     
-    //boost::thread inThread(boost::bind(&inLoop));
-    
-    Console console;
+    std::vector<std::string> commands({"help", "stats", "quit", "gamma-min", "gamma-max", "gamma-pow"});
+    Console console(commands);
+    console.setOnEnteredCommand(boost::bind(&onEnteredCommand, _1, _2));
     console.start();
     
     if (noDisplay)

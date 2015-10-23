@@ -2,13 +2,17 @@
 
 #include <iostream>
 #include <boost/thread.hpp>
+#include <boost/any.hpp>
 
 class Console
 {
 public:
-    Console();
+    typedef boost::function<std::pair<bool, std::string> (std::string, std::string value)> OnEnteredCommand;
+    
+    Console(const std::vector<std::string>& commands);
     
     void start();
+    void setOnEnteredCommand(const OnEnteredCommand& callback);
     
 private:
     class ReadlineStreambuf : public std::streambuf
@@ -27,4 +31,6 @@ private:
     void runLoop();
     boost::thread runThread;
     ReadlineStreambuf readlineStreambuf;
+    OnEnteredCommand onEnteredCommand;
+    std::vector<std::string> commands;
 };
