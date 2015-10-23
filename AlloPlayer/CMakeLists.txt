@@ -23,6 +23,7 @@ find_package(X264 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Allocore REQUIRED)
 find_package(Alloutil REQUIRED)
+find_package(Readline REQUIRED)
 
 # packages for allocore
 find_package(GLUT REQUIRED)
@@ -46,6 +47,7 @@ target_include_directories(AlloPlayer
 	${Live555_INCLUDE_DIRS}
 	${FFMPEG_INCLUDE_DIRS}
 	${X264_INCLUDE_DIRS}
+    ${Readline_INCLUDE_DIRS}
 	${SOIL_INCLUDE_DIR}
     ${ALLOCORE_INCLUDE_DIR}
     ${ALLOUTIL_INCLUDE_DIR}
@@ -57,6 +59,7 @@ target_link_libraries(AlloPlayer
 	${Live555_LIBRARIES}
 	${X264_LIBRARIES}
 	${OPENGL_gl_LIBRARY}
+    ${Readline_LIBRARIES}
     ${ALLOUTIL_LIBRARY}
     ${ALLOCORE_LIBRARY}
     ${GLUT_glut_LIBRARY}

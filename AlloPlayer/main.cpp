@@ -7,6 +7,7 @@
 #include "Renderer.hpp"
 #include "AlloShared/StatsUtils.hpp"
 #include "AlloShared/to_human_readable_byte_count.hpp"
+#include "AlloShared/Console.hpp"
 #include "AlloReceiver/RTSPCubemapSourceClient.hpp"
 #include "AlloReceiver/AlloReceiver.h"
 #include "AlloReceiver/Stats.hpp"
@@ -238,7 +239,10 @@ int main(int argc, char* argv[])
     rtspClient->setOnDidConnect(boost::bind(&onDidConnect, _1, _2));
     rtspClient->connect();
     
-    boost::thread inThread(boost::bind(&inLoop));
+    //boost::thread inThread(boost::bind(&inLoop));
+    
+    Console console;
+    console.start();
     
     if (noDisplay)
     {

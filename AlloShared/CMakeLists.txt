@@ -8,6 +8,7 @@ set(SOURCES
 	StatsUtils.cpp
 	to_human_readable_byte_count.cpp
 	Barrier.cpp
+	Console.cpp
 )
 	
 set(HEADERS
@@ -23,6 +24,7 @@ set(HEADERS
 	to_human_readable_byte_count.hpp
 	Barrier.hpp
 	format.hpp
+	Console.hpp
 )
 
 find_package(Boost
@@ -35,6 +37,7 @@ find_package(Boost
   filesystem
 )
 find_package(FFmpeg REQUIRED)
+find_package(Readline REQUIRED)
 
 add_library(AlloShared
 	STATIC
@@ -42,11 +45,13 @@ add_library(AlloShared
 )
 target_link_libraries(AlloShared
 	${Boost_LIBRARIES}
+	${Readline_LIBRARIES}
 )
 target_include_directories(AlloShared
 	PRIVATE
 	${Boost_INCLUDE_DIRS}
 	${FFMPEG_INCLUDE_DIRS}
+	${Readline_INCLUDE_DIRS}
 )
 set_target_properties(AlloShared
     PROPERTIES
