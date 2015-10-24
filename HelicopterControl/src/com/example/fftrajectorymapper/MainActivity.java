@@ -23,6 +23,7 @@ import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
@@ -59,6 +60,9 @@ public class MainActivity extends Activity{
     float playerY = 200;
     float mapWidth = 400;
     float mapHeight = 400;
+    float sX, sY, fX, fY, prevX, prevY, picX, picY;
+    Bitmap  mBitmap;
+    int OSCPort = 7244;
     
     //OSC end
 
@@ -102,7 +106,7 @@ public class MainActivity extends Activity{
         try{
         	//This expects a string w/ a url
         	
-            sender = new OSCPortOut(InetAddress.getByName(prefClient), 6733);
+            sender = new OSCPortOut(InetAddress.getByName(prefClient), OSCPort);
         }catch (Exception e){
             Log.w("dbg", "oscoutport: " + e.toString() + ": " + prefClient);
         }
@@ -116,16 +120,44 @@ public class MainActivity extends Activity{
     public void colorChanged(int color) {
         mPaint.setColor(color);
     }
+    
+    public void sendMessage(float sX,float sY,float fX,float fY,float picX,float picY,Bitmap mBitmap){
+    	Log.w("oscthread", "it works");
+    	float unityStartX = ((sX + picX)/mBitmap.getWidth())*mapWidth;
+		float unityStartY = ((sY + picY)/mBitmap.getWidth())*mapHeight;
+		float unityEndX = ((fX + picX)/mBitmap.getWidth())*mapWidth;
+		float unityEndY = ((fY + picY)/mBitmap.getWidth())*mapHeight;
+        args = new Object[4];
+        args[0] = unityStartX;
+        args[1] = unityStartY;
+        args[2] = unityEndX;
+        args[3] = unityEndY;
+    	message = new OSCMessage("/coords",Arrays.asList(args));
+        try{
+            sender.send(message);
+        }catch (Exception e){
+            Log.w("oscthread", "sender: " + e.toString());
+        }
+    }
 
+    private class oscthread extends AsyncTask<String, Integer, String> {
+
+		@Override
+		protected String doInBackground(String... params) {
+			sendMessage(sX,sY,fX,fY,picX,picY,mBitmap);
+			return null;
+		}
+    	
+    }
+    
     public class MyView extends View {
 
         private static final float MINP = 0.25f;
         private static final float MAXP = 0.75f;
 
-        private Bitmap  mBitmap;
         private Canvas  mCanvas;
         private Paint   mBitmapPaint;
-        private float sX, sY, fX, fY, prevX, prevY, picX, picY;
+        private float prevX, prevY;
         private float maxLength = 200;
         private boolean mapMove = false;
 
@@ -219,21 +251,7 @@ public class MainActivity extends Activity{
         		if(x < 80 && y < 80){
         			mapMove = true;
         		} else {
-        			float unityStartX = ((sX + picX)/mBitmap.getWidth())*mapWidth;
-        			float unityStartY = ((sY + picY)/mBitmap.getWidth())*mapHeight;
-        			float unityEndX = ((fX + picX)/mBitmap.getWidth())*mapWidth;
-        			float unityEndY = ((fY + picY)/mBitmap.getWidth())*mapHeight;
-		            args = new Object[4];
-		            args[0] = sX;
-		            args[1] = sY;
-		            args[2] = fX;
-		            args[3] = fY;
-		        	message = new OSCMessage("/coords",Arrays.asList(args));
-		            try{
-		                sender.send(message);
-		            }catch (Exception e){
-		                Log.w("oscthread", "sender: " + e.toString());
-		            }
+        			new oscthread().execute("test");
         		}
         	}
         }

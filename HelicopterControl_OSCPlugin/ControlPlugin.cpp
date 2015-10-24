@@ -490,8 +490,8 @@ static void DoRendering (const float* worldMatrix, const float* identityMatrix, 
 }
 
 
-#define PORT 7000
-#define QPORT 8008
+#define PORT 7245
+#define QPORT 7244
 #define SEND_PORT 7001
 float startX = 0;
 float startY = 0;
@@ -608,20 +608,20 @@ boost::barrier sBreakBarrier(2);
 boost::barrier qsBreakBarrier(2);
 
 //OSC START
-extern "C" void EXPORT_API oscStart()
+extern "C" void EXPORT_API oscStartHelicopterControl()
 {
 	/*
      * Start OSC client to receive phone sensor orientation
      */
-	/*OrientationPacketListener listener;
+	QuaternionPacketListener listener;
     s = new UdpListeningReceiveSocket(IpEndpointName( IpEndpointName::ANY_ADDRESS, PORT ), &listener );
     
     s->Run();
-	sBreakBarrier.wait();*/
+	sBreakBarrier.wait();
 }
 //OSC END
 
-extern "C" void EXPORT_API oscPhaseSpaceStart()
+extern "C" void EXPORT_API oscPhaseSpaceStartHelicopterControl()
 {
 	/*
      * Start OSC client to receive Phase Space sensor orientation
