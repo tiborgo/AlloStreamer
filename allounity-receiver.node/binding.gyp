@@ -7,12 +7,12 @@
         "<!(node -e \"require('nan')\")"
       ],
       "libraries": [
-        "-L ../../build/AlloReceiver", "-lAlloReceiver"
+        "-L ../../Bin", "-lAlloReceiver"
       ],
       "cflags!": [ "-fno-exceptions", "-fno-rtti" ],
       "cflags_cc!": [ "-fno-exceptions", "-fno-rtti" ],
       "cflags_cc": [
-        "-std=c++11"
+        "-std=c++11",
       ],
       'conditions': [
         [ 'OS=="mac"', {
