@@ -1,0 +1,14 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+ <PreferenceCategory
+   android:summary="Stream Information"
+   android:title="Network Stream" >
+      <EditTextPreference android:key="OSCClient" android:defaultValue="@string/defaultClient" android:title="OSCClient URL" android:summary=" Please enter the URL to connect to"/>
+     <EditTextPreference android:key="mapWidth" android:title="Width of map in Unity units" android:summary="How wide is this map in Unity units?" android:defaultValue="@string/mapWidth"/>
+     <EditTextPreference android:key="mapHeight" android:title="Height of map in Unity units" android:summary="How tall is this map in Unity units?" android:defaultValue="@string/mapWidth"/>
+     <EditTextPreference android:defaultValue="@string/playerX" android:title="Player X" android:key="playerX" android:summary="What X is the player at in Unity units? "/>
+ 	 <EditTextPreference android:defaultValue="@string/playerY" android:title="Player Y" android:key="playerY" android:summary="What Y is the player at in Unity units? "/>
+ 	 <EditTextPreference android:defaultValue="@string/originX" android:key="originX" android:title="Unity Origin X" android:summary="The X of unity's origin on the picture (in pixels)"/>
+ 	 <EditTextPreference android:key="originY" android:title="Unity Origin Y" android:defaultValue="@string/originY" android:summary="The Y of Unity's origin on the image (in pixels)"/>
+ </PreferenceCategory>
+
+</PreferenceScreen>

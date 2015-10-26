@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">FFTrajectoryMapper</string>
+    <string name="action_settings">Settings</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="defaultClient">192.168.</string>
+    <string name="mapWidth">400</string>
+    <string name="mapHeight">400</string>
+    <string name="playerX">200</string>
+    <string name="playerY">200</string>
+    <string name="originX">0</string>
+    <string name="originY">0</string>
+
+</resources>
