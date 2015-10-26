@@ -101,7 +101,7 @@ public class MainActivity extends Activity{
         playerY = Float.parseFloat(this.getResources().getString(R.string.playerY));
         mapWidth = Float.parseFloat(this.getResources().getString(R.string.mapWidth));
         mapHeight = Float.parseFloat(this.getResources().getString(R.string.mapHeight));
-		String prefClient = "192.168.0.17";//p.getString("Client", defaultClient);
+		String prefClient = "169.231.116.127";//p.getString("Client", defaultClient);
         
         try{
         	//This expects a string w/ a url
@@ -123,10 +123,10 @@ public class MainActivity extends Activity{
     
     public void sendMessage(float sX,float sY,float fX,float fY,float picX,float picY,Bitmap mBitmap){
     	Log.w("oscthread", "it works");
-    	float unityStartX = ((sX + picX)/mBitmap.getWidth())*mapWidth;
-		float unityStartY = ((sY + picY)/mBitmap.getWidth())*mapHeight;
-		float unityEndX = ((fX + picX)/mBitmap.getWidth())*mapWidth;
-		float unityEndY = ((fY + picY)/mBitmap.getWidth())*mapHeight;
+    	float unityStartX = ((sX - picX)/mBitmap.getWidth())*mapWidth;
+		float unityStartY = ((sY - picY)/mBitmap.getHeight())*mapHeight;
+		float unityEndX = ((fX - picX)/mBitmap.getWidth())*mapWidth;
+		float unityEndY = ((fY - picY)/mBitmap.getHeight())*mapHeight;
         args = new Object[4];
         args[0] = unityStartX;
         args[1] = unityStartY;

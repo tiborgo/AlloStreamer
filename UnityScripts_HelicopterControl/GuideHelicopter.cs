@@ -13,13 +13,21 @@ public class GuideHelicopter : MonoBehaviour
 	private static extern float getStartX();
 
 	[DllImport("HelicopterControlPlugin")]
+	private static extern float getStartY();
+
+	[DllImport("HelicopterControlPlugin")]
 	private static extern float getEndX();
+	
+	[DllImport("HelicopterControlPlugin")]
+	private static extern float getEndY();
 	
 	void Update()
 	{
-		float test = getStartX ();
-		float test2 = getEndX ();
-		Debug.Log (test + " - " + test2);
+		float startX = getStartX();
+		float startY = getStartY();
+		float endX = getEndX();
+		float endY = getEndY();
+		Debug.Log ("(" + startX + "," + startY + ") -> (" + endX + "," + endY + ")");
 	}
 	
 	void Start()

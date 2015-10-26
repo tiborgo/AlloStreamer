@@ -504,7 +504,6 @@ extern "C" {
 	float EXPORT_API getStartY();
 	float EXPORT_API getEndX();
 	float EXPORT_API getEndY();
-	float EXPORT_API testFunc();
 	void EXPORT_API setDistance(float distance);
 	void EXPORT_API endServer();
 	void EXPORT_API oscStart();
@@ -519,15 +518,12 @@ extern "C" void EXPORT_API endServer()
 
 extern "C" float EXPORT_API getStartX()
 {
-	//DebugLog("Well there's this\n");
-	return 56.2;
-	//return startX;
+	return startX;
 }
 
 extern "C" float EXPORT_API getStartY()
 {
-	return 45;
-	//return startY;
+	return startY;
 }
 
 extern "C" float EXPORT_API getEndX()
@@ -538,11 +534,6 @@ extern "C" float EXPORT_API getEndX()
 extern "C" float EXPORT_API getEndY()
 {
 	return endY;
-}
-
-extern "C" float EXPORT_API testFunc()
-{
-	return 199;
 }
 
 UdpTransmitSocket* transmitSocket = nullptr;
