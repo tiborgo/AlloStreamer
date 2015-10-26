@@ -9,5 +9,7 @@
     <string name="mapHeight">400</string>
     <string name="playerX">200</string>
     <string name="playerY">200</string>
+    <string name="originX">0</string>
+    <string name="originY">0</string>
 
 </resources>

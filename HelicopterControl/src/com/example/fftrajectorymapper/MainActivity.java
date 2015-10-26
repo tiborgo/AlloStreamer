@@ -58,6 +58,8 @@ public class MainActivity extends Activity{
     Object args[];
     float playerX = 200;
     float playerY = 200;
+    float originX = 0;
+    float originY = 0;
     float mapWidth = 400;
     float mapHeight = 400;
     float sX, sY, fX, fY, prevX, prevY, picX, picY;
@@ -99,6 +101,8 @@ public class MainActivity extends Activity{
         String defaultClient = this.getResources().getString(R.string.defaultClient);
         playerX = Float.parseFloat(this.getResources().getString(R.string.playerX));
         playerY = Float.parseFloat(this.getResources().getString(R.string.playerY));
+        originX = Float.parseFloat(this.getResources().getString(R.string.originX));
+        originY = Float.parseFloat(this.getResources().getString(R.string.originY));
         mapWidth = Float.parseFloat(this.getResources().getString(R.string.mapWidth));
         mapHeight = Float.parseFloat(this.getResources().getString(R.string.mapHeight));
 		String prefClient = "169.231.116.127";//p.getString("Client", defaultClient);
@@ -123,6 +127,7 @@ public class MainActivity extends Activity{
     
     public void sendMessage(float sX,float sY,float fX,float fY,float picX,float picY,Bitmap mBitmap){
     	Log.w("oscthread", "it works");
+    	//Need to account for changing the origin!
     	float unityStartX = ((sX - picX)/mBitmap.getWidth())*mapWidth;
 		float unityStartY = ((sY - picY)/mBitmap.getHeight())*mapHeight;
 		float unityEndX = ((fX - picX)/mBitmap.getWidth())*mapWidth;
