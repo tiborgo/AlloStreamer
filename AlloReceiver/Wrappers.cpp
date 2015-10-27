@@ -17,34 +17,37 @@ public:
 
         switch(pixel_format_) {
             case kRGBA32_PixelFormat: {
-                std::cout << "Starting RTSPCubemapSourceClient with RGBA32 on " << address << std::endl;
-                rtsp_client_ = RTSPCubemapSourceClient::create(address, options.sink_buffer_size > 0 ? options.sink_buffer_size : DEFAULT_SINK_BUFFER_SIZE, AV_PIX_FMT_RGBA, false, interface);
+                // std::cout << "Starting RTSPCubemapSourceClient with RGBA32 on " << address << std::endl;
+                rtsp_client_ = RTSPCubemapSourceClient::create(address,
+                    options.sink_buffer_size > 0 ? options.sink_buffer_size : DEFAULT_SINK_BUFFER_SIZE,
+                    AV_PIX_FMT_RGBA, false, interface
+                );
             } break;
             case kYUV420P_PixelFormat: {
-                std::cout << "Starting RTSPCubemapSourceClient with YUV420P on " << address << std::endl;
-                rtsp_client_ = RTSPCubemapSourceClient::create(address, options.sink_buffer_size > 0 ? options.sink_buffer_size : DEFAULT_SINK_BUFFER_SIZE, AV_PIX_FMT_YUV420P, false, interface);
+                // std::cout << "Starting RTSPCubemapSourceClient with YUV420P on " << address << std::endl;
+                rtsp_client_ = RTSPCubemapSourceClient::create(address,
+                    options.sink_buffer_size > 0 ? options.sink_buffer_size : DEFAULT_SINK_BUFFER_SIZE,
+                    AV_PIX_FMT_YUV420P, false, interface
+                );
             } break;
         }
 
-        rtsp_client_->setOnDidConnect([&](RTSPCubemapSourceClient* client, CubemapSource* cubemap_source) {
-            std::cout << "RTSPCubemapSourceClient connected." << std::endl;
-            cubemap_source_ = cubemap_source;
-            cubemap_source_->setOnNextCubemap([&](CubemapSource* source, StereoCubemap* cubemap) -> StereoCubemap* {
-
-                resolution_ = cubemap->getEye(0)->getFace(0)->getContent()->getWidth();
-                is_stereo_ = true;
-
-                std::cout << "RTSPCubemapSourceClient got frame." << std::endl;
-                StereoCubemap* old_cubemap;
-                boost::interprocess::scoped_lock<boost::mutex> lock(mutex);
-                old_cubemap = new_cubemap_;
-                new_cubemap_ = cubemap;
-                new_cubemap_available_ = true;
-                return old_cubemap;
-            });
-        });
-
+        rtsp_client_->setOnDidConnect(boost::bind(&RTSPCubemapSourceWrapper_Impl::onDidConnect, this, _1, _2));
         rtsp_client_->connect();
+    }
+
+    void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemap_source) {
+        cubemap_source_ = cubemap_source;
+        cubemap_source_->setOnNextCubemap(boost::bind(&RTSPCubemapSourceWrapper_Impl::onNextCubemap, this, _1, _2));
+    }
+
+    StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap) {
+        StereoCubemap* old_cubemap;
+        boost::interprocess::scoped_lock<boost::mutex> lock(mutex);
+        old_cubemap = new_cubemap_;
+        new_cubemap_ = cubemap;
+        new_cubemap_available_ = true;
+        return old_cubemap;
     }
 
     // All functions in this class is non-blocking.
@@ -55,7 +58,7 @@ public:
         if(new_cubemap_available_) {
             StereoCubemap* tmp = new_cubemap_;
             new_cubemap_ = current_cubemap_;
-            current_cubemap_ = new_cubemap_;
+            current_cubemap_ = tmp;
             new_cubemap_available_ = false;
             return true;
         } else {
@@ -66,7 +69,39 @@ public:
     // Get pixels for a cubemap face at an eye.
     virtual void* getCurrentCubemapPixels(CubemapFace face, Eye eye) {
         if(!current_cubemap_) return nullptr;
-        return current_cubemap_->getEye(eye)->getFace(face)->getContent()->getPixels();
+
+        if(eye >= current_cubemap_->getEyesCount()) return nullptr;
+        auto cubemap_eye = current_cubemap_->getEye(eye);
+
+        if(face >= cubemap_eye->getFacesCount()) return nullptr;
+        auto cubemap_face = cubemap_eye->getFace(face);
+
+        if(cubemap_face) return cubemap_face->getContent()->getPixels();
+        return nullptr;
+    }
+
+    virtual int getCurrentCubemapByteSize(CubemapFace face, Eye eye) {
+        if(!current_cubemap_) return 0;
+
+        if(eye >= current_cubemap_->getEyesCount()) return 0;
+        auto cubemap_eye = current_cubemap_->getEye(eye);
+
+        if(face >= cubemap_eye->getFacesCount()) return 0;
+        auto cubemap_face = cubemap_eye->getFace(face);
+
+        if(cubemap_face) {
+            int w = cubemap_face->getContent()->getWidth();
+            int h = cubemap_face->getContent()->getHeight();
+            int bit_per_pixel;
+            if(cubemap_face->getContent()->getFormat() == AV_PIX_FMT_RGBA) {
+                bit_per_pixel = 32;
+            }
+            if(cubemap_face->getContent()->getFormat() == AV_PIX_FMT_YUV420P) {
+                bit_per_pixel = 12;
+            }
+            return w * h * bit_per_pixel / 8;
+        }
+        return 0;
     }
 
     // Get the resolution of the cubemap.
@@ -91,6 +126,7 @@ public:
             StereoCubemap::destroy(new_cubemap_);
         }
         delete rtsp_client_;
+        printf("Streamer stopped.\n");
     }
 
     int resolution_;

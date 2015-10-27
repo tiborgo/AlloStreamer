@@ -19,8 +19,6 @@ public:
 
         Nan::SetPrototypeMethod(tpl, "pollNextCubemap", NODE_pollNextCubemap);
         Nan::SetPrototypeMethod(tpl, "getCurrentCubemapPixels", NODE_getCurrentCubemapPixels);
-        Nan::SetPrototypeMethod(tpl, "getCubemapResolution", NODE_getCubemapResolution);
-        Nan::SetPrototypeMethod(tpl, "isStereo", NODE_isStereo);
         Nan::SetPrototypeMethod(tpl, "getPixelFormat", NODE_getPixelFormat);
 
         constructor.Reset(tpl->GetFunction());
@@ -42,8 +40,6 @@ private:
     static NAN_METHOD(New);
     static NAN_METHOD(NODE_pollNextCubemap);
     static NAN_METHOD(NODE_getCurrentCubemapPixels);
-    static NAN_METHOD(NODE_getCubemapResolution);
-    static NAN_METHOD(NODE_isStereo);
     static NAN_METHOD(NODE_getPixelFormat);
 
     static Nan::Persistent<v8::Function> constructor;
@@ -100,22 +96,10 @@ NAN_METHOD(NODE_VideoSource::NODE_getCurrentCubemapPixels) {
     int face = info[0]->IntegerValue();
     int eye = info[1]->IsUndefined() ? 0 : info[1]->IntegerValue();
     void* pixels = obj->client->getCurrentCubemapPixels(face, eye);
+    size_t byte_size = obj->client->getCurrentCubemapByteSize(face, eye);
     if(!pixels) return;
 
-    int resolution = obj->client->getCubemapResolution();
-    int pixel_size = 0;
-    if(obj->client->getPixelFormat() == RTSPCubemapSourceWrapper::kRGBA32_PixelFormat) pixel_size = 4;
-    if(obj->client->getPixelFormat() == RTSPCubemapSourceWrapper::kYUV420P_PixelFormat) pixel_size = 3;
-
-    info.GetReturnValue().Set(Nan::NewBuffer((char*)pixels, resolution * resolution * pixel_size, do_nothing_callback2, NULL).ToLocalChecked());
-}
-NAN_METHOD(NODE_VideoSource::NODE_getCubemapResolution) {
-    NODE_VideoSource* obj = ObjectWrap::Unwrap<NODE_VideoSource>(info.This());
-    info.GetReturnValue().Set(Nan::New<v8::Integer>(obj->client->getCubemapResolution()));
-}
-NAN_METHOD(NODE_VideoSource::NODE_isStereo) {
-    NODE_VideoSource* obj = ObjectWrap::Unwrap<NODE_VideoSource>(info.This());
-    info.GetReturnValue().Set(Nan::New<v8::Boolean>(obj->client->isStereo()));
+    info.GetReturnValue().Set(Nan::NewBuffer((char*)pixels, byte_size, do_nothing_callback2, NULL).ToLocalChecked());
 }
 NAN_METHOD(NODE_VideoSource::NODE_getPixelFormat) {
     NODE_VideoSource* obj = ObjectWrap::Unwrap<NODE_VideoSource>(info.This());

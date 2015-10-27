@@ -30,11 +30,8 @@ public:
 
     // Get pixels for a cubemap face at an eye.
     virtual void* getCurrentCubemapPixels(CubemapFace face, Eye eye) = 0;
+    virtual int getCurrentCubemapByteSize(CubemapFace face, Eye eye) = 0;
 
-    // Get the resolution of the cubemap.
-    virtual int getCubemapResolution() = 0;
-    // Return true if the cubemap is stereo.
-    virtual bool isStereo() = 0;
     // Return the cubemap pixel format.
     virtual PixelFormat getPixelFormat() = 0;
 
