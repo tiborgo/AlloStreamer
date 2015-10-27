@@ -42,7 +42,7 @@ static const char* yuvGammaFragShader = AL_STRINGIFY
 Renderer::Renderer()
     :
     al::OmniApp("AlloPlayer", false, 2048), gammaMin(0.0f), gammaMax(1.0f), gammaPow(1.0f),
-    forCenter(0, 0, 0)
+    forRotation(0, 0, 0), forAngle(M_PI*2.0), rotation(0, 0, 0)
 {
     nav().smooth(0.8);
     
@@ -195,7 +195,9 @@ bool Renderer::onFrame()
         yuvGammaShader.uniform("gamma_max", gammaMax);
         yuvGammaShader.uniform("gamma_pow", gammaPow);
         yuvGammaShader.end();
-        mOmni.forCenter(forCenter);
+        mOmni.forRotation(forRotation);
+        mOmni.forAngle(forAngle);
+        mOmni.rotation(rotation);
     }
     
     bool result = OmniApp::onFrame();
@@ -309,10 +311,23 @@ void Renderer::setGammaPow(float gammaPow)
     boost::mutex::scoped_lock(uniformsMutex);
     this->gammaPow = gammaPow;
 }
-void Renderer::setFORCenter(const al::Vec<3, float>& forCenter)
+
+void Renderer::setFORRotation(const al::Vec3f& forRotation)
 {
     boost::mutex::scoped_lock(uniformsMutex);
-    this->forCenter = forCenter;
+    this->forRotation = forRotation;
+}
+
+void Renderer::setFORAngle(float forAngle)
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    this->forAngle = forAngle;
+}
+
+void Renderer::setRotation(const al::Vec3f& rotation)
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    this->rotation = rotation;
 }
 
 void Renderer::setCubemapSource(CubemapSource* cubemapSource)

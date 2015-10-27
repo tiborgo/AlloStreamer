@@ -133,13 +133,17 @@ std::pair<bool, std::string> onEnteredCommand(std::string command, std::string v
         {
             renderer.setGammaPow(boost::lexical_cast<float>(value));
         }
-        else if (command == "for-center")
+        else if (command == "for-rotation")
         {
-            al::Quatf quat;
-            quat.fromAxisAngle(boost::lexical_cast<float>(value), 0, 1, 0);
-            al::Mat3f mat;
-            quat.toMatrix(mat.elems());
-            renderer.setFORCenter(mat * al::Vec3f(1, 0, 0));
+            renderer.setFORRotation(al::Vec3f(0, boost::lexical_cast<float>(value), 0));
+        }
+        else if (command == "for-angle")
+        {
+            renderer.setFORAngle(boost::lexical_cast<float>(value));
+        }
+        else if (command == "rotation")
+        {
+            renderer.setRotation(al::Vec3f(0, boost::lexical_cast<float>(value), 0));
         }
         
         return std::make_pair(true, "");
@@ -224,7 +228,7 @@ int main(int argc, char* argv[])
     rtspClient->setOnDidConnect(boost::bind(&onDidConnect, _1, _2));
     rtspClient->connect();
     
-    std::vector<std::string> commands({"help", "stats", "quit", "gamma-min", "gamma-max", "gamma-pow", "for-center"});
+    std::vector<std::string> commands({"help", "stats", "quit", "gamma-min", "gamma-max", "gamma-pow", "for-rotation", "for-angle", "rotation"});
     Console console(commands);
     console.setOnEnteredCommand(boost::bind(&onEnteredCommand, _1, _2));
     console.start();

@@ -25,7 +25,9 @@ public:
     void setGammaMin(float gammaMin);
     void setGammaMax(float gammaMax);
     void setGammaPow(float gammaPow);
-    void setFORCenter(const al::Vec<3, float>& forCenter);
+    void setFORRotation(const al::Vec3f& forRotation);
+    void setFORAngle(float forAngle);
+    void setRotation(const al::Vec3f& rotation);
     void setCubemapSource(CubemapSource* source);
     
 protected:
@@ -50,5 +52,7 @@ private:
     float                            gammaMin;
     float                            gammaMax;
     float                            gammaPow;
-    al::Vec<3, float>                forCenter;
+    al::Vec3f                        forRotation;
+    float                            forAngle;
+    al::Vec3f                        rotation;
 };
