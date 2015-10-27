@@ -6,6 +6,10 @@ AlloClientJavaDecoder/bin
 AlloClientJavaDecoder/obj
 AlloClientJavaDecoder/libs
 AlloClientJavaDecoder/gen
+HelicopterControl/bin
+HelicopterControl/obj
+HelicopterControl/libs
+HelicopterControl/gen
 
 # CMake generated files #
 ########################

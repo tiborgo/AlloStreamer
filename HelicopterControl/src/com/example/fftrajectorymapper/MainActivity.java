@@ -99,13 +99,14 @@ public class MainActivity extends Activity{
         startActivity(new Intent(this, SettingsActivity.class));
         
         String defaultClient = this.getResources().getString(R.string.defaultClient);
-        playerX = Float.parseFloat(this.getResources().getString(R.string.playerX));
+        //playerX = Float.parseFloat(this.getResources().getString(R.string.playerX));
+        playerX = Float.parseFloat(p.getString("playerX","0"));
         playerY = Float.parseFloat(this.getResources().getString(R.string.playerY));
         originX = Float.parseFloat(this.getResources().getString(R.string.originX));
         originY = Float.parseFloat(this.getResources().getString(R.string.originY));
         mapWidth = Float.parseFloat(this.getResources().getString(R.string.mapWidth));
         mapHeight = Float.parseFloat(this.getResources().getString(R.string.mapHeight));
-		String prefClient = "169.231.116.127";//p.getString("Client", defaultClient);
+		String prefClient = "192.168.1.157";//p.getString("Client", defaultClient);
         
         try{
         	//This expects a string w/ a url
@@ -128,10 +129,10 @@ public class MainActivity extends Activity{
     public void sendMessage(float sX,float sY,float fX,float fY,float picX,float picY,Bitmap mBitmap){
     	Log.w("oscthread", "it works");
     	//Need to account for changing the origin!
-    	float unityStartX = ((sX - picX)/mBitmap.getWidth())*mapWidth;
-		float unityStartY = ((sY - picY)/mBitmap.getHeight())*mapHeight;
-		float unityEndX = ((fX - picX)/mBitmap.getWidth())*mapWidth;
-		float unityEndY = ((fY - picY)/mBitmap.getHeight())*mapHeight;
+    	float unityStartX = ((sX - picX - originX)/mBitmap.getWidth())*mapWidth;
+		float unityStartY = ((sY - picY - originY)/mBitmap.getHeight())*mapHeight;
+		float unityEndX = ((fX - picX - originX)/mBitmap.getWidth())*mapWidth;
+		float unityEndY = ((fY - picY - originY)/mBitmap.getHeight())*mapHeight;
         args = new Object[4];
         args[0] = unityStartX;
         args[1] = unityStartY;
