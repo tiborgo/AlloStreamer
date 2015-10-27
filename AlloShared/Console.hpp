@@ -7,12 +7,18 @@
 class Console
 {
 public:
-    typedef boost::function<std::pair<bool, std::string> (std::string, std::string value)> OnEnteredCommand;
+    typedef boost::function<void (const std::vector<std::string>& values)> OnEnteredCommand;
     
-    Console(const std::vector<std::string>& commands);
+    struct ConsoleCommand
+    {
+        std::string      name;
+        size_t           argsCount;
+        OnEnteredCommand callback;
+    };
+    
+    Console(std::initializer_list<ConsoleCommand> commands);
     
     void start();
-    void setOnEnteredCommand(const OnEnteredCommand& callback);
     
 private:
     class ReadlineStreambuf : public std::streambuf
@@ -34,8 +40,7 @@ private:
     void runLoop();
     boost::thread runThread;
     ReadlineStreambuf readlineStreambuf;
-    OnEnteredCommand onEnteredCommand;
-    std::vector<std::string> commands;
+    std::vector<ConsoleCommand> commands;
     
-    static std::vector<std::string>* currentCommands;
+    static std::vector<ConsoleCommand>* currentCommands;
 };

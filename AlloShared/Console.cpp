@@ -6,11 +6,11 @@
 
 #include "Console.hpp"
 
-std::vector<std::string>* Console::currentCommands = nullptr;
+std::vector<Console::ConsoleCommand>* Console::currentCommands = nullptr;
 
 char* Console::generator(const char* text, int state)
 {
-    static std::vector<std::string>::iterator iter;
+    static std::vector<ConsoleCommand>::iterator iter;
     
     if (!state)
     {
@@ -18,18 +18,18 @@ char* Console::generator(const char* text, int state)
     }
     
     iter = std::find_if(iter, currentCommands->end(),
-              [text](const std::string& val)
+              [text](const ConsoleCommand& val)
               {
                   std::string prefix(text);
-                  std::string comp = val.substr(0, prefix.size());
+                  std::string comp = val.name.substr(0, prefix.size());
                   bool d = comp == prefix;
                   return d;
               });
     
     if (iter != currentCommands->end())
     {
-        char* result = (char*)malloc(iter->size() + 1);
-        strcpy(result, iter->c_str());
+        char* result = (char*)malloc(iter->name.size() + 1);
+        strcpy(result, iter->name.c_str());
         iter++;
         return result;
     }
@@ -54,12 +54,26 @@ char** Console::completion(const char * text , int start, int end)
     
 }
 
-Console::Console(const std::vector<std::string>& commands)
+Console::Console(std::initializer_list<ConsoleCommand> commands)
     :
     readlineStreambuf(*std::cout.rdbuf()),
     commands(commands)
 {
-    
+    this->commands.push_back(
+    {
+        "help",
+        0,
+        [this](const std::vector<std::string>& values)
+        {
+            std::cout << "Valid commands:" << std::endl;
+            for (auto command : this->commands)
+            {
+                std::vector<std::string> argVec(command.argsCount, "<arg>");
+                argVec.insert(argVec.begin(), command.name);
+                std::cout << "\t" << boost::algorithm::join(argVec, "\t") << std::endl;
+            }
+        }
+    });
 }
 
 void Console::start()
@@ -69,16 +83,11 @@ void Console::start()
     runThread = boost::thread(boost::bind(&Console::runLoop, this));
 }
 
-void Console::setOnEnteredCommand(const OnEnteredCommand& callback)
-{
-    onEnteredCommand = callback;
-}
-
 Console::ReadlineStreambuf::ReadlineStreambuf(std::streambuf& outStream)
     :
     outStream(outStream)
 {
-        
+    
 }
 
 std::streamsize Console::ReadlineStreambuf::xsputn(const char* s, std::streamsize count)
@@ -127,7 +136,8 @@ void Console::runLoop()
     currentCommands = &commands;
     rl_attempted_completion_function = completion;
     
-    std::regex commandRegex("([a-zA-z0-9-]+)(?: ([a-zA-z0-9\\.]+))?");
+    std::regex commandRegex("([a-zA-z0-9-]+)((?: [^\\s]+)*)");
+    std::regex argsRegex("([^\\s]+)");
     
     while ((buf = readline(" >> ")) != NULL)
     {
@@ -138,25 +148,43 @@ void Console::runLoop()
         std::string command(buf);
         if (std::regex_match(command, commandMatch, commandRegex))
         {
-            if (std::find(commands.begin(), commands.end(), commandMatch.str(1)) != commands.end())
+            auto commandIter = std::find_if(commands.begin(), commands.end(),
+                                         [&commandMatch](const ConsoleCommand& command){
+                                            return commandMatch.str(1) == command.name;
+                                         });
+                                         
+            if (commandIter != commands.end())
             {
-                if (onEnteredCommand)
+                std::string argsStr = commandMatch.str(2);
+                std::vector<std::string> args(std::sregex_token_iterator(argsStr.begin(), argsStr.end(), argsRegex, 1),
+                                              std::sregex_token_iterator());
+                
+                if (commandIter->argsCount == args.size())
                 {
-                    auto result = onEnteredCommand(commandMatch.str(1), commandMatch.str(2));
-                    if (!result.first)
+                    try
                     {
-                        std::cout << "Wrong value. " << result.second << "." << std::endl;
+                        commandIter->callback(args);
+                    }
+                    catch (const std::exception& e)
+                    {
+                        std::cout << "Wrong value. " << e.what() << "." << std::endl;
                     }
                 }
+                else
+                {
+                    std::cout << "Input " << args.size() << " args. Expected " << commandIter->argsCount
+                        << " number of args for '" << commandIter->name << "'" << std::endl;
+                }
+                
             }
             else
             {
-                std::cout << "Unknown command. Known commands are " <<  boost::algorithm::join(commands, ", ") << "." << std::endl;
+                std::cout << "Unknown command. Type 'help' for more info." << std::endl;
             }
         }
         else if (command != "")
         {
-            std::cout << "Wrong syntax. Syntax is command [value]." << std::endl;
+            std::cout << "Wrong syntax. Syntax is command <value>*." << std::endl;
         }
         
         if (command != "")

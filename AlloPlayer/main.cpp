@@ -94,65 +94,7 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
     }
 }
 
-std::pair<bool, std::string> onEnteredCommand(std::string command, std::string value)
-{
-    try
-    {
-        if (command == "help")
-        {
-            std::cout << "Valid coammnds:" << std::endl;
-            std::cout << "\thelp" << std::endl;
-            std::cout << "\tstats" << std::endl;
-            std::cout << "\tquit" << std::endl;
-            std::cout << "\tgamma-min <float>" << std::endl;
-            std::cout << "\tgamma-max <float>" << std::endl;
-            std::cout << "\tgamma-pow <float>" << std::endl;
-        }
-        else if (command == "stats")
-        {
-            boost::chrono::steady_clock::time_point now = boost::chrono::steady_clock::now();
-            std::cout << stats.summary(boost::chrono::duration_cast<boost::chrono::microseconds>(now - lastStatsTime),
-                                       AlloReceiver::statValsMaker,
-                                       AlloReceiver::postProcessorMaker,
-                                       statsFormat);
-            lastStatsTime = now;
-        }
-        else if (command == "quit")
-        {
-            exit(0);
-        }
-        else if (command == "gamma-min")
-        {
-            renderer.setGammaMin(boost::lexical_cast<float>(value));
-        }
-        else if (command == "gamma-max")
-        {
-            renderer.setGammaMax(boost::lexical_cast<float>(value));
-        }
-        else if (command == "gamma-pow")
-        {
-            renderer.setGammaPow(boost::lexical_cast<float>(value));
-        }
-        else if (command == "for-rotation")
-        {
-            renderer.setFORRotation(al::Vec3f(0, boost::lexical_cast<float>(value), 0));
-        }
-        else if (command == "for-angle")
-        {
-            renderer.setFORAngle(boost::lexical_cast<float>(value));
-        }
-        else if (command == "rotation")
-        {
-            renderer.setRotation(al::Vec3f(0, boost::lexical_cast<float>(value), 0));
-        }
-        
-        return std::make_pair(true, "");
-    }
-    catch (boost::bad_lexical_cast& e)
-    {
-        return std::make_pair(false, e.what());
-    }
-}
+
 
 int main(int argc, char* argv[])
 {
@@ -228,9 +170,82 @@ int main(int argc, char* argv[])
     rtspClient->setOnDidConnect(boost::bind(&onDidConnect, _1, _2));
     rtspClient->connect();
     
-    std::vector<std::string> commands({"help", "stats", "quit", "gamma-min", "gamma-max", "gamma-pow", "for-rotation", "for-angle", "rotation"});
-    Console console(commands);
-    console.setOnEnteredCommand(boost::bind(&onEnteredCommand, _1, _2));
+    Console console(
+    {
+        {
+            "stats",
+            0,
+            [](const std::vector<std::string>& values)
+            {
+                boost::chrono::steady_clock::time_point now = boost::chrono::steady_clock::now();
+                std::cout << stats.summary(boost::chrono::duration_cast<boost::chrono::microseconds>(now - lastStatsTime),
+                                           AlloReceiver::statValsMaker,
+                                           AlloReceiver::postProcessorMaker,
+                                           statsFormat);
+                lastStatsTime = now;
+            }
+        },
+        {
+            "quit",
+            0,
+            [](const std::vector<std::string>& values)
+            {
+                exit(0);
+            }
+        },
+        {
+            "gamma-min",
+            1,
+            [](const std::vector<std::string>& values)
+            {
+                renderer.setGammaMin(boost::lexical_cast<float>(values[0]));
+            }
+        },
+        {
+            "gamma-max",
+            1,
+            [](const std::vector<std::string>& values)
+            {
+                renderer.setGammaMax(boost::lexical_cast<float>(values[0]));
+            }
+        },
+        {
+            "gamma-pow",
+            1,
+            [](const std::vector<std::string>& values)
+            {
+                renderer.setGammaPow(boost::lexical_cast<float>(values[0]));
+            }
+        },
+        {
+            "for-rotation",
+            3,
+            [](const std::vector<std::string>& values)
+            {
+                renderer.setFORRotation(al::Vec3f(boost::lexical_cast<float>(values[0]),
+                                                  boost::lexical_cast<float>(values[1]),
+                                                  boost::lexical_cast<float>(values[2])));
+            }
+        },
+        {
+            "for-angle",
+            1,
+            [](const std::vector<std::string>& values)
+            {
+                renderer.setFORAngle(boost::lexical_cast<float>(values[0]));
+            }
+        },
+        {
+            "rotation",
+            3,
+            [](const std::vector<std::string>& values)
+            {
+                renderer.setRotation(al::Vec3f(boost::lexical_cast<float>(values[0]),
+                                               boost::lexical_cast<float>(values[1]),
+                                               boost::lexical_cast<float>(values[2])));
+            }
+        }
+    });
     console.start();
     
     if (noDisplay)
