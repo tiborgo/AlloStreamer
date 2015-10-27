@@ -25,6 +25,7 @@ public:
     void setGammaMin(float gammaMin);
     void setGammaMax(float gammaMax);
     void setGammaPow(float gammaPow);
+    void setFORCenter(const al::Vec<3, float>& forCenter);
     void setCubemapSource(CubemapSource* source);
     
 protected:
@@ -45,8 +46,9 @@ private:
     std::vector<YUV420PTexture>      textures;
     al_sec                           now;
     al::ShaderProgram                yuvGammaShader;
-    boost::mutex                     gammaMutex;
+    boost::mutex                     uniformsMutex;
     float                            gammaMin;
     float                            gammaMax;
     float                            gammaPow;
+    al::Vec<3, float>                forCenter;
 };

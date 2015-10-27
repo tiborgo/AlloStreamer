@@ -41,7 +41,8 @@ static const char* yuvGammaFragShader = AL_STRINGIFY
 
 Renderer::Renderer()
     :
-    al::OmniApp("AlloPlayer", false, 2048), gammaMin(0.0f), gammaMax(1.0f), gammaPow(1.0f)
+    al::OmniApp("AlloPlayer", false, 2048), gammaMin(0.0f), gammaMax(1.0f), gammaPow(1.0f),
+    forCenter(0, 0, 0)
 {
     nav().smooth(0.8);
     
@@ -186,14 +187,15 @@ bool Renderer::onFrame()
         cubemapPool.push(cubemap);
     }
     
-    // Set gamma
+    // Set uniforms
     {
-        boost::mutex::scoped_lock(gammaMutex);
+        boost::mutex::scoped_lock(uniformsMutex);
         yuvGammaShader.begin();
         yuvGammaShader.uniform("gamma_min", gammaMin);
         yuvGammaShader.uniform("gamma_max", gammaMax);
         yuvGammaShader.uniform("gamma_pow", gammaPow);
         yuvGammaShader.end();
+        mOmni.forCenter(forCenter);
     }
     
     bool result = OmniApp::onFrame();
@@ -292,20 +294,25 @@ void Renderer::setOnDisplayedCubemapFace(const std::function<void (Renderer*, in
 
 void Renderer::setGammaMin(float gammaMin)
 {
-    boost::mutex::scoped_lock(gammaMutex);
+    boost::mutex::scoped_lock(uniformsMutex);
     this->gammaMin = gammaMin;
 }
 
 void Renderer::setGammaMax(float gammaMax)
 {
-    boost::mutex::scoped_lock(gammaMutex);
+    boost::mutex::scoped_lock(uniformsMutex);
     this->gammaMax = gammaMax;
 }
 
 void Renderer::setGammaPow(float gammaPow)
 {
-    boost::mutex::scoped_lock(gammaMutex);
+    boost::mutex::scoped_lock(uniformsMutex);
     this->gammaPow = gammaPow;
+}
+void Renderer::setFORCenter(const al::Vec<3, float>& forCenter)
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    this->forCenter = forCenter;
 }
 
 void Renderer::setCubemapSource(CubemapSource* cubemapSource)

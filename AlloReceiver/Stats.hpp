@@ -246,8 +246,7 @@ namespace AlloReceiver
 		return postProcessor;
 	};
 
-	Stats::FormatStringMaker formatStringMaker = [](boost::chrono::microseconds             window,
-		                                            boost::chrono::steady_clock::time_point now)
+	auto formatStringMaker = []()
 	{
 		std::stringstream stream;
 		/*stream << "-------------------------------------------------------------------------------" << std::endl;

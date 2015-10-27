@@ -75,7 +75,7 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
     stats.autoSummary(boost::chrono::seconds(10),
 					  AlloReceiver::statValsMaker,
 					  AlloReceiver::postProcessorMaker,
-					  AlloReceiver::formatStringMaker);
+					  AlloReceiver::formatStringMaker());
     
     ::cubemapSource = cubemapSource;
     

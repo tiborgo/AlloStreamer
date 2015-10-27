@@ -19,6 +19,7 @@ static Stats    stats;
 static bool     noDisplay;
 static Renderer renderer;
 static auto     lastStatsTime = boost::chrono::steady_clock::now();
+static std::string statsFormat = AlloReceiver::formatStringMaker();
 
 StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
@@ -113,7 +114,7 @@ std::pair<bool, std::string> onEnteredCommand(std::string command, std::string v
             std::cout << stats.summary(boost::chrono::duration_cast<boost::chrono::microseconds>(now - lastStatsTime),
                                        AlloReceiver::statValsMaker,
                                        AlloReceiver::postProcessorMaker,
-                                       AlloReceiver::formatStringMaker);
+                                       statsFormat);
             lastStatsTime = now;
         }
         else if (command == "quit")
@@ -131,6 +132,14 @@ std::pair<bool, std::string> onEnteredCommand(std::string command, std::string v
         else if (command == "gamma-pow")
         {
             renderer.setGammaPow(boost::lexical_cast<float>(value));
+        }
+        else if (command == "for-center")
+        {
+            al::Quatf quat;
+            quat.fromAxisAngle(boost::lexical_cast<float>(value), 0, 1, 0);
+            al::Mat3f mat;
+            quat.toMatrix(mat.elems());
+            renderer.setFORCenter(mat * al::Vec3f(1, 0, 0));
         }
         
         return std::make_pair(true, "");
@@ -215,7 +224,7 @@ int main(int argc, char* argv[])
     rtspClient->setOnDidConnect(boost::bind(&onDidConnect, _1, _2));
     rtspClient->connect();
     
-    std::vector<std::string> commands({"help", "stats", "quit", "gamma-min", "gamma-max", "gamma-pow"});
+    std::vector<std::string> commands({"help", "stats", "quit", "gamma-min", "gamma-max", "gamma-pow", "for-center"});
     Console console(commands);
     console.setOnEnteredCommand(boost::bind(&onEnteredCommand, _1, _2));
     console.start();

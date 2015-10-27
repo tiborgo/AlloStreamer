@@ -24,16 +24,16 @@ public:
     {
     public:
         template <typename Feature>
-        static StatVal makeStatVal(boost::function<bool (TimeValueDatum)>   filter,
-                                   boost::function<double (TimeValueDatum)> accessor,
-                                   const Feature&                           accumulator,
-                                   const std::string&                       name)
+        static StatVal makeStatVal(boost::function<bool (const TimeValueDatum&)>   filter,
+                                   boost::function<double (const TimeValueDatum&)> accessor,
+                                   const Feature&                                  accumulator,
+                                   const std::string&                              name)
         {
             auto filterAccExtractorMaker = [filter, accessor]()
             {
                 auto acc = new boost::accumulators::accumulator_set<double, boost::accumulators::features<Feature> >();
                 
-                auto filterAcc = [acc, filter, accessor](Stats::TimeValueDatum datum)
+                auto filterAcc = [acc, filter, accessor](const Stats::TimeValueDatum& datum)
                 {
                     if (filter(datum))
                     {
@@ -56,7 +56,7 @@ public:
     private:
         friend class Stats;
         
-        typedef std::pair<boost::function<void (Stats::TimeValueDatum)>,  boost::function<double ()> > FilterAccExtractor;
+        typedef std::pair<boost::function<void (const Stats::TimeValueDatum&)>, boost::function<double ()> > FilterAccExtractor;
         typedef boost::function<FilterAccExtractor ()> FilterAccExtractorMaker;
         
         StatVal(FilterAccExtractorMaker filterAccExtractorMaker,
@@ -81,17 +81,15 @@ public:
 		                                              boost::chrono::steady_clock::time_point)> StatValsMaker;
 	typedef boost::function<PostProcessor(boost::chrono::microseconds,
 		                                  boost::chrono::steady_clock::time_point)> PostProcessorMaker;
-	typedef boost::function<std::string (boost::chrono::microseconds,
-		                                 boost::chrono::steady_clock::time_point)> FormatStringMaker;
 
 	std::string summary(boost::chrono::microseconds window,
 		                StatValsMaker               statValsMaker,
 		                PostProcessorMaker          postProcessorMaker,
-		                FormatStringMaker           formatStringMaker);
+		                const std::string&          format);
     void autoSummary(boost::chrono::microseconds frequency,
 					 StatValsMaker               statValsMaker,
 					 PostProcessorMaker          postProcessorMaker,
-					 FormatStringMaker           formatStringMaker);
+                     const std::string&          format);
 	void stopAutoSummary();
 
 private:
@@ -115,6 +113,6 @@ private:
     void autoSummaryLoop(boost::chrono::microseconds frequency,
 						 StatValsMaker               statValsMaker,
 						 PostProcessorMaker          postProcessorMaker,
-						 FormatStringMaker           formatStringMaker);
+						 const std::string&          format);
 };
 

@@ -365,7 +365,7 @@ void RTSPCubemapSourceClient::continueAfterDESCRIBE(RTSPClient* self_, int resul
 	std::string header = sdpLines[0];
 	sdpLines.erase(sdpLines.begin());
 	std::transform(sdpLines.begin(), sdpLines.end(), sdpLines.begin(), [](std::string &subsession){ return "m=" + subsession + "\n"; });
-	delete[] sdpDescription;
+	//delete[] sdpDescription;
 
 	for (int i = 0; i < sdpLines.size(); i++)
 	{

@@ -123,7 +123,7 @@ void Stats::store(const boost::any& datum)
 std::string Stats::summary(boost::chrono::microseconds window,
 	                       StatValsMaker               statValsMaker,
 	                       PostProcessorMaker          postProcessorMaker,
-	                       FormatStringMaker           formatStringMaker)
+	                       const std::string&          format)
 {
     {
         boost::mutex::scoped_lock lock(mutex);
@@ -148,8 +148,8 @@ std::string Stats::summary(boost::chrono::microseconds window,
 
     std::stringstream ss;
     ss << "===============================================================================" << std::endl;
-    ss << "Stats for last {duration}:" << std::endl;
-    ss << formatStringMaker(window, now);
+    ss << "Stats for last {duration} (" << processingStorage->size() << " items processed):" << std::endl;
+    ss << format;
     
     std::string summary = format::fmt(ss.str()) % dict;
 
@@ -162,7 +162,7 @@ std::string Stats::summary(boost::chrono::microseconds window,
 void Stats::autoSummaryLoop(boost::chrono::microseconds frequency,
 							StatValsMaker               statValsMaker,
 							PostProcessorMaker          postProcessorMaker,
-							FormatStringMaker           formatStringMaker)
+							const std::string&          format)
 {
     auto summaryTime = boost::chrono::system_clock::now();
 
@@ -175,17 +175,17 @@ void Stats::autoSummaryLoop(boost::chrono::microseconds frequency,
         {
             return;
         }
-		std::cout << summary(frequency, statValsMaker, postProcessorMaker, formatStringMaker);
+		std::cout << summary(frequency, statValsMaker, postProcessorMaker, format);
     }
 }
 
 void Stats::autoSummary(boost::chrono::microseconds frequency,
 						StatValsMaker               statValsMaker,
 						PostProcessorMaker          postProcessorMaker,
-						FormatStringMaker           formatStringMaker)
+						const std::string&          format)
 {
     stopAutoSummary_ = false;
-	autoSummaryThread = boost::thread(boost::bind(&Stats::autoSummaryLoop, this, frequency, statValsMaker, postProcessorMaker, formatStringMaker));
+	autoSummaryThread = boost::thread(boost::bind(&Stats::autoSummaryLoop, this, frequency, statValsMaker, postProcessorMaker, format));
 }
 
 void Stats::stopAutoSummary()
