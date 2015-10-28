@@ -13,6 +13,9 @@
 #include "AlloReceiver/Stats.hpp"
 #include "AlloReceiver/H264CubemapSource.h"
 
+#define DEG_DIV_RAD 57.29577951308233
+#define RAD_DIV_DEG  0.01745329251994
+
 const unsigned int DEFAULT_SINK_BUFFER_SIZE = 2000000000;
 
 static Stats    stats;
@@ -219,30 +222,30 @@ int main(int argc, char* argv[])
         },
         {
             "for-rotation",
-            {"rad_alpha", "rad_beta", "rad_gamma"},
+            {"deg_alpha", "deg_beta", "deg_gamma"},
             [](const std::vector<std::string>& values)
             {
-                renderer.setFORRotation(al::Vec3f(boost::lexical_cast<float>(values[0]),
-                                                  boost::lexical_cast<float>(values[1]),
-                                                  boost::lexical_cast<float>(values[2])));
+                renderer.setFORRotation(al::Vec3f(boost::lexical_cast<float>(values[0]) * RAD_DIV_DEG,
+                                                  boost::lexical_cast<float>(values[1]) * RAD_DIV_DEG,
+                                                  boost::lexical_cast<float>(values[2]) * RAD_DIV_DEG));
             }
         },
         {
             "for-angle",
-            {"rad"},
+            {"deg"},
             [](const std::vector<std::string>& values)
             {
-                renderer.setFORAngle(boost::lexical_cast<float>(values[0]));
+                renderer.setFORAngle(boost::lexical_cast<float>(values[0]) * RAD_DIV_DEG );
             }
         },
         {
             "rotation",
-            {"rad_alpha", "rad_beta", "rad_gamma"},
+            {"deg_alpha", "deg_beta", "deg_gamma"},
             [](const std::vector<std::string>& values)
             {
-                renderer.setRotation(al::Vec3f(boost::lexical_cast<float>(values[0]),
-                                               boost::lexical_cast<float>(values[1]),
-                                               boost::lexical_cast<float>(values[2])));
+                renderer.setRotation(al::Vec3f(boost::lexical_cast<float>(values[0]) * RAD_DIV_DEG,
+                                               boost::lexical_cast<float>(values[1]) * RAD_DIV_DEG,
+                                               boost::lexical_cast<float>(values[2]) * RAD_DIV_DEG));
             }
         }
     });

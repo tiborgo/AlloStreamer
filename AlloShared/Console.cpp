@@ -175,9 +175,9 @@ void Console::runLoop()
                 }
                 else
                 {
-                    std::cout << "Input "
+                    std::cout << "Inputted "
                               << args.size() << " args. Expected " << commandIter->argNames.size()
-                              << " args for '" << commandIter->name << "'" << std::endl;
+                              << " args for '" << commandIter->name << "'." << std::endl;
                 }
                 
             }
