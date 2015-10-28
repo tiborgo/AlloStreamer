@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
     {
         {
             "stats",
-            0,
+            {},
             [](const std::vector<std::string>& values)
             {
                 boost::chrono::steady_clock::time_point now = boost::chrono::steady_clock::now();
@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
         },
         {
             "quit",
-            0,
+            {},
             [](const std::vector<std::string>& values)
             {
                 exit(0);
@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
         },
         {
             "gamma-min",
-            1,
+            {"val"},
             [](const std::vector<std::string>& values)
             {
                 renderer.setGammaMin(boost::lexical_cast<float>(values[0]));
@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
         },
         {
             "gamma-max",
-            1,
+            {"val"},
             [](const std::vector<std::string>& values)
             {
                 renderer.setGammaMax(boost::lexical_cast<float>(values[0]));
@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
         },
         {
             "gamma-pow",
-            1,
+            {"val"},
             [](const std::vector<std::string>& values)
             {
                 renderer.setGammaPow(boost::lexical_cast<float>(values[0]));
@@ -219,7 +219,7 @@ int main(int argc, char* argv[])
         },
         {
             "for-rotation",
-            3,
+            {"rad_alpha", "rad_beta", "rad_gamma"},
             [](const std::vector<std::string>& values)
             {
                 renderer.setFORRotation(al::Vec3f(boost::lexical_cast<float>(values[0]),
@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
         },
         {
             "for-angle",
-            1,
+            {"rad"},
             [](const std::vector<std::string>& values)
             {
                 renderer.setFORAngle(boost::lexical_cast<float>(values[0]));
@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
         },
         {
             "rotation",
-            3,
+            {"rad_alpha", "rad_beta", "rad_gamma"},
             [](const std::vector<std::string>& values)
             {
                 renderer.setRotation(al::Vec3f(boost::lexical_cast<float>(values[0]),

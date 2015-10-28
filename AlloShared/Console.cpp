@@ -62,15 +62,18 @@ Console::Console(std::initializer_list<ConsoleCommand> commands)
     this->commands.push_back(
     {
         "help",
-        0,
+        {},
         [this](const std::vector<std::string>& values)
         {
             std::cout << "Valid commands:" << std::endl;
             for (auto command : this->commands)
             {
-                std::vector<std::string> argVec(command.argsCount, "<arg>");
-                argVec.insert(argVec.begin(), command.name);
-                std::cout << "\t" << boost::algorithm::join(argVec, "\t") << std::endl;
+                std::cout << "\t" << command.name;
+                for (auto argName : command.argNames)
+                {
+                    std::cout << " <" << argName << ">";
+                }
+                std::cout << std::endl;
             }
         }
     });
@@ -159,7 +162,7 @@ void Console::runLoop()
                 std::vector<std::string> args(std::sregex_token_iterator(argsStr.begin(), argsStr.end(), argsRegex, 1),
                                               std::sregex_token_iterator());
                 
-                if (commandIter->argsCount == args.size())
+                if (commandIter->argNames.size() == args.size())
                 {
                     try
                     {
@@ -172,8 +175,9 @@ void Console::runLoop()
                 }
                 else
                 {
-                    std::cout << "Input " << args.size() << " args. Expected " << commandIter->argsCount
-                        << " number of args for '" << commandIter->name << "'" << std::endl;
+                    std::cout << "Input "
+                              << args.size() << " args. Expected " << commandIter->argNames.size()
+                              << " args for '" << commandIter->name << "'" << std::endl;
                 }
                 
             }

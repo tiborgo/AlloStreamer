@@ -11,9 +11,9 @@ public:
     
     struct ConsoleCommand
     {
-        std::string      name;
-        size_t           argsCount;
-        OnEnteredCommand callback;
+        std::string              name;
+        std::vector<std::string> argNames;
+        OnEnteredCommand         callback;
     };
     
     Console(std::initializer_list<ConsoleCommand> commands);
