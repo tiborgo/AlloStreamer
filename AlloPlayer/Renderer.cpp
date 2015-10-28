@@ -277,8 +277,14 @@ void Renderer::onDraw(al::Graphics& gl)
 void Renderer::onMessage(al::osc::Message& m)
 {
     OmniApp::onMessage(m);
-    
-    m.print();
+ 
+    m.resetStream();
+    if (m.addressPattern() == "/mx")
+    {
+        float x;
+        m >> x;
+        setRotation(al::Vec3f(0, rotation[1]+x/10.0f, 0));
+    }
 }
 
 bool Renderer::onKeyDown(const al::Keyboard& k)
