@@ -82,7 +82,7 @@ void RTSPCubemapSourceClient::continueAfterDESCRIBE2(RTSPClient* self_, int resu
     
 	static int count = 0;
 	char* sdpDescription = resultString;
-	self->envir() << "Opened URL \"" << self->url() << "\", returning a SDP description:\n" << sdpDescription << "\n";
+	//self->envir() << "Opened URL \"" << self->url() << "\", returning a SDP description:\n" << sdpDescription << "\n";
 	if (count == 0)
 	{
 		self->sendDescribeCommand(continueAfterDESCRIBE2);
@@ -357,7 +357,7 @@ void RTSPCubemapSourceClient::continueAfterDESCRIBE(RTSPClient* self_, int resul
 	}
 
 	char* sdpDescription = resultString;
-	self->envir() << "Opened URL \"" << self->url() << "\", returning a SDP description:\n" << sdpDescription << "\n";
+	//self->envir() << "Opened URL \"" << self->url() << "\", returning a SDP description:\n" << sdpDescription << "\n";
 
 	// Parse SDP description and extract subsession information
 	std::vector<std::string> sdpLines;
@@ -365,7 +365,7 @@ void RTSPCubemapSourceClient::continueAfterDESCRIBE(RTSPClient* self_, int resul
 	std::string header = sdpLines[0];
 	sdpLines.erase(sdpLines.begin());
 	std::transform(sdpLines.begin(), sdpLines.end(), sdpLines.begin(), [](std::string &subsession){ return "m=" + subsession + "\n"; });
-	//delete[] sdpDescription;
+	delete[] sdpDescription;
 
 	for (int i = 0; i < sdpLines.size(); i++)
 	{
