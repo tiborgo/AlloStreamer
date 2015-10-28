@@ -389,7 +389,7 @@ int main(int argc, char* argv[])
 		stats.autoSummary(boost::chrono::seconds(statsInterval),
 			              AlloReceiver::statValsMaker,
 						  AlloReceiver::postProcessorMaker,
-						  AlloReceiver::formatStringMaker);
+						  AlloReceiver::formatStringMaker());
         unityProcess.join();
         std::cout << "Lost connection to Unity :(" << std::endl;
         stopStreaming();
