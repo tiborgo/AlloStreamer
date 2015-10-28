@@ -277,6 +277,8 @@ void Renderer::onDraw(al::Graphics& gl)
 void Renderer::onMessage(al::osc::Message& m)
 {
     OmniApp::onMessage(m);
+    
+    m.print();
 }
 
 bool Renderer::onKeyDown(const al::Keyboard& k)

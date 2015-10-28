@@ -277,8 +277,6 @@ H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
     :
     sinks(sinks), format(format), oldCubemap(nullptr), lastFrameSeqNum(0), matchStereoPairs(matchStereoPairs)
 {
-    
-    av_log_set_level(AV_LOG_WARNING);
     int i = 0;
     for (H264RawPixelsSink* sink : sinks)
     {

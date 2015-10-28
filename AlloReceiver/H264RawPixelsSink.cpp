@@ -19,6 +19,7 @@ H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
                                                 AVPixelFormat format,
                                                 MediaSubsession* subsession)
 {
+    av_log_set_level(AV_LOG_FATAL);
     avcodec_register_all();
     avformat_network_init();
 	return new H264RawPixelsSink(env, bufferSize, format, subsession);
