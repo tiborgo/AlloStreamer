@@ -2,21 +2,13 @@
 
 #include <iostream>
 #include <boost/thread.hpp>
-#include <boost/any.hpp>
+
+#include "CommandHandler.hpp"
 
 class Console
 {
 public:
-    typedef boost::function<void (const std::vector<std::string>& values)> OnEnteredCommand;
-    
-    struct ConsoleCommand
-    {
-        std::string              name;
-        std::vector<std::string> argNames;
-        OnEnteredCommand         callback;
-    };
-    
-    Console(std::initializer_list<ConsoleCommand> commands);
+    Console(CommandHandler& commandHandler);
     
     void start();
     
@@ -40,7 +32,7 @@ private:
     void runLoop();
     boost::thread runThread;
     ReadlineStreambuf readlineStreambuf;
-    std::vector<ConsoleCommand> commands;
     
-    static std::vector<ConsoleCommand>* currentCommands;
+    static std::vector<CommandHandler::Command> const* currentCommands;
+    CommandHandler& commandHandler;
 };

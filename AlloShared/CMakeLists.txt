@@ -9,6 +9,7 @@ set(SOURCES
 	to_human_readable_byte_count.cpp
 	Barrier.cpp
 	Console.cpp
+    CommandHandler.cpp
 )
 	
 set(HEADERS
@@ -25,6 +26,7 @@ set(HEADERS
 	Barrier.hpp
 	format.hpp
 	Console.hpp
+    CommandHandler.hpp
 )
 
 find_package(Boost

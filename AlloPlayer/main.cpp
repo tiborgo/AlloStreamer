@@ -7,6 +7,7 @@
 #include "Renderer.hpp"
 #include "AlloShared/StatsUtils.hpp"
 #include "AlloShared/to_human_readable_byte_count.hpp"
+#include "AlloShared/CommandHandler.hpp"
 #include "AlloShared/Console.hpp"
 #include "AlloReceiver/RTSPCubemapSourceClient.hpp"
 #include "AlloReceiver/AlloReceiver.h"
@@ -173,7 +174,7 @@ int main(int argc, char* argv[])
     rtspClient->setOnDidConnect(boost::bind(&onDidConnect, _1, _2));
     rtspClient->connect();
     
-    Console console(
+    std::initializer_list<CommandHandler::Command> consoleCommands =
     {
         {
             "stats",
@@ -248,7 +249,11 @@ int main(int argc, char* argv[])
                                                boost::lexical_cast<float>(values[2]) * RAD_DIV_DEG));
             }
         }
-    });
+    };
+    
+    CommandHandler consoleCommandHandler(consoleCommands);
+    
+    Console console(consoleCommandHandler);
     console.start();
     
     if (noDisplay)

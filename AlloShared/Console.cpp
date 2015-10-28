@@ -6,11 +6,11 @@
 
 #include "Console.hpp"
 
-std::vector<Console::ConsoleCommand>* Console::currentCommands = nullptr;
+std::vector<CommandHandler::Command> const* Console::currentCommands = nullptr;
 
 char* Console::generator(const char* text, int state)
 {
-    static std::vector<ConsoleCommand>::iterator iter;
+    static std::vector<CommandHandler::Command>::const_iterator iter;
     
     if (!state)
     {
@@ -18,13 +18,13 @@ char* Console::generator(const char* text, int state)
     }
     
     iter = std::find_if(iter, currentCommands->end(),
-              [text](const ConsoleCommand& val)
-              {
-                  std::string prefix(text);
-                  std::string comp = val.name.substr(0, prefix.size());
-                  bool d = comp == prefix;
-                  return d;
-              });
+                        [text](const CommandHandler::Command& val)
+                        {
+                            std::string prefix(text);
+                            std::string comp = val.name.substr(0, prefix.size());
+                            bool d = comp == prefix;
+                            return d;
+                        });
     
     if (iter != currentCommands->end())
     {
@@ -54,27 +54,18 @@ char** Console::completion(const char * text , int start, int end)
     
 }
 
-Console::Console(std::initializer_list<ConsoleCommand> commands)
+Console::Console(CommandHandler& commandHandler)
     :
     readlineStreambuf(*std::cout.rdbuf()),
-    commands(commands)
+    commandHandler(commandHandler)
 {
-    this->commands.push_back(
+    commandHandler.addCommand(
     {
         "help",
         {},
         [this](const std::vector<std::string>& values)
         {
-            std::cout << "Valid commands:" << std::endl;
-            for (auto command : this->commands)
-            {
-                std::cout << "\t" << command.name;
-                for (auto argName : command.argNames)
-                {
-                    std::cout << " <" << argName << ">";
-                }
-                std::cout << std::endl;
-            }
+            this->commandHandler.printCommandHelp();
         }
     });
 }
@@ -136,7 +127,7 @@ void Console::runLoop()
 {
     char *buf;
     
-    currentCommands = &commands;
+    currentCommands = &(commandHandler.getCommands());
     rl_attempted_completion_function = completion;
     
     std::regex commandRegex("([a-zA-z0-9-]+)((?: [^\\s]+)*)");
@@ -151,39 +142,17 @@ void Console::runLoop()
         std::string command(buf);
         if (std::regex_match(command, commandMatch, commandRegex))
         {
-            auto commandIter = std::find_if(commands.begin(), commands.end(),
-                                         [&commandMatch](const ConsoleCommand& command){
-                                            return commandMatch.str(1) == command.name;
-                                         });
-                                         
-            if (commandIter != commands.end())
-            {
-                std::string argsStr = commandMatch.str(2);
-                std::vector<std::string> args(std::sregex_token_iterator(argsStr.begin(), argsStr.end(), argsRegex, 1),
-                                              std::sregex_token_iterator());
+            std::string argsStr = commandMatch.str(2);
+            std::vector<std::string> args(std::sregex_token_iterator(argsStr.begin(),
+                                                                     argsStr.end(),
+                                                                     argsRegex,
+                                                                     1),
+                                          std::sregex_token_iterator());
                 
-                if (commandIter->argNames.size() == args.size())
-                {
-                    try
-                    {
-                        commandIter->callback(args);
-                    }
-                    catch (const std::exception& e)
-                    {
-                        std::cout << "Wrong value. " << e.what() << "." << std::endl;
-                    }
-                }
-                else
-                {
-                    std::cout << "Inputted "
-                              << args.size() << " args. Expected " << commandIter->argNames.size()
-                              << " args for '" << commandIter->name << "'." << std::endl;
-                }
-                
-            }
-            else
+            if (!commandHandler.executeCommand(commandMatch.str(1),
+                                               args))
             {
-                std::cout << "Unknown command. Type 'help' for more info." << std::endl;
+                std::cout << "Type 'help' for more info." << std::endl;
             }
         }
         else if (command != "")
