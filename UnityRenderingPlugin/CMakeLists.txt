@@ -6,9 +6,12 @@ set(SOURCES
 	RenderBinocularsEditor.cs
 	RenderStereoCubemap.cs
 	ConvertRGBtoYUV420p.compute
+	ParticlesAdditiveSoftMaterialDummy.mat
+	UnlitColorMaterialDummy.mat
+	UnlitTextureMaterialDummy.mat
 )
 
-add_custom_target(UnityRenderingPlugin	
+add_custom_target(UnityRenderingPlugin ALL
 	SOURCES ${SOURCES}
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_LIST_DIR}/ExposeProperties.cs
@@ -31,4 +34,13 @@ add_custom_target(UnityRenderingPlugin
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_LIST_DIR}/ConvertRGBtoYUV420p.compute
         ${UNITY_PROJECT_ASSETS_DIR}/Resources/AlloUnity/ConvertRGBtoYUV420p.compute
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_LIST_DIR}/ParticlesAdditiveSoftMaterialDummy.mat
+        ${UNITY_PROJECT_ASSETS_DIR}/Resources/AlloUnity/ParticlesAdditiveSoftMaterialDummy.mat
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_LIST_DIR}/UnlitColorMaterialDummy.mat
+        ${UNITY_PROJECT_ASSETS_DIR}/Resources/AlloUnity/UnlitColorMaterialDummy.mat
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_LIST_DIR}/UnlitTextureMaterialDummy.mat
+        ${UNITY_PROJECT_ASSETS_DIR}/Resources/AlloUnity/UnlitTextureMaterialDummy.mat
 )

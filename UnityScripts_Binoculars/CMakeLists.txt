@@ -7,7 +7,7 @@ set(SOURCES
 	UseRenderingPlugin.cs
 )
 
-add_custom_target(UnityScripts_Binoculars	
+add_custom_target(UnityScripts_Binoculars ALL
 	SOURCES ${SOURCES}
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_LIST_DIR}/MouseLook.cs
