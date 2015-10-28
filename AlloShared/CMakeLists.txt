@@ -10,6 +10,7 @@ set(SOURCES
 	Barrier.cpp
 	Console.cpp
     CommandHandler.cpp
+    Config.cpp
 )
 	
 set(HEADERS
@@ -27,6 +28,7 @@ set(HEADERS
 	format.hpp
 	Console.hpp
     CommandHandler.hpp
+    Config.hpp
 )
 
 find_package(Boost

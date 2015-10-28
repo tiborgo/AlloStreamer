@@ -1,16 +1,23 @@
 #include <iostream>
+#include <sstream>
 
 #include "CommandHandler.hpp"
 
-CommandHandler::CommandHandler(std::initializer_list<Command> commands)
-    :
-    commands(commands)
+CommandHandler::CommandHandler(std::initializer_list<std::initializer_list<Command> > commandGroups)
 {
+    for (auto commands : commandGroups)
+    {
+        this->commands.insert(this->commands.begin(),
+                              commands.begin(),
+                              commands.end());
+    }
 }
 
-bool CommandHandler::executeCommand(const std::string& commandName,
-                                    const std::vector<std::string>& args)
+std::pair<bool, std::string> CommandHandler::executeCommand(const std::string& commandName,
+                                                            const std::vector<std::string>& args)
 {
+    std::stringstream resultSS;
+    
     auto commandIter = std::find_if(commands.begin(), commands.end(),
                                     [&commandName](const Command& command){
                                         return commandName == command.name;
@@ -23,27 +30,26 @@ bool CommandHandler::executeCommand(const std::string& commandName,
             try
             {
                 commandIter->callback(args);
-                return true;
+                return std::make_pair(true, "");
             }
             catch (const std::exception& e)
             {
-                std::cout << "Wrong value. " << e.what() << "." << std::endl;
+                resultSS << "Wrong value. " << e.what() << ".";
             }
         }
         else
         {
-            std::cout << "Inputted "
-                      << args.size() << " args. Expected " << commandIter->argNames.size()
-                      << " args for '" << commandIter->name << "'." << std::endl;
+            resultSS << "Inputted "
+                     << args.size() << " args. Expected " << commandIter->argNames.size()
+                    << " args for '" << commandIter->name << "'.";
         }
-        
     }
     else
     {
-        std::cout << "'" << commandName <<"' is unknown." << std::endl;
+        resultSS << "'" << commandName <<"' is unknown.";
     }
     
-    return false;
+    return std::make_pair(false, resultSS.str());
 }
 
 const std::vector<CommandHandler::Command>& CommandHandler::getCommands()
@@ -56,16 +62,18 @@ void CommandHandler::addCommand(const Command& command)
     commands.push_back(command);
 }
 
-void CommandHandler::printCommandHelp()
+std::string CommandHandler::getCommandHelpString()
 {
-    std::cout << "Valid commands:" << std::endl;
+    std::stringstream commandHelpSS;
+    commandHelpSS << "Valid commands:" << std::endl;
     for (auto command : this->commands)
     {
-        std::cout << "\t" << command.name;
+        commandHelpSS << "\t" << command.name;
         for (auto argName : command.argNames)
         {
-          std::cout << " <" << argName << ">";
+          commandHelpSS << " <" << argName << ">";
         }
-        std::cout << std::endl;
+        commandHelpSS << std::endl;
     }
+    return commandHelpSS.str();
 }

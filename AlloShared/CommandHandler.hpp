@@ -15,14 +15,14 @@ public:
         OnEnteredCommand         callback;
     };
     
-    CommandHandler(std::initializer_list<Command> commands);
+    CommandHandler(std::initializer_list<std::initializer_list<Command> > commandGroups);
     
-    bool executeCommand(const std::string& commandName,
-                        const std::vector<std::string>& args);
+    std::pair<bool, std::string> executeCommand(const std::string& commandName,
+                                                const std::vector<std::string>& args);
     
     const std::vector<Command>& getCommands();
     void addCommand(const Command& command);
-    void printCommandHelp();
+    std::string getCommandHelpString();
     
 private:
     std::vector<Command> commands;

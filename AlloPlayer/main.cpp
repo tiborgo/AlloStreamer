@@ -9,6 +9,7 @@
 #include "AlloShared/to_human_readable_byte_count.hpp"
 #include "AlloShared/CommandHandler.hpp"
 #include "AlloShared/Console.hpp"
+#include "AlloShared/Config.hpp"
 #include "AlloReceiver/RTSPCubemapSourceClient.hpp"
 #include "AlloReceiver/AlloReceiver.h"
 #include "AlloReceiver/Stats.hpp"
@@ -174,29 +175,8 @@ int main(int argc, char* argv[])
     rtspClient->setOnDidConnect(boost::bind(&onDidConnect, _1, _2));
     rtspClient->connect();
     
-    std::initializer_list<CommandHandler::Command> consoleCommands =
+    std::initializer_list<CommandHandler::Command> generalCommands =
     {
-        {
-            "stats",
-            {},
-            [](const std::vector<std::string>& values)
-            {
-                boost::chrono::steady_clock::time_point now = boost::chrono::steady_clock::now();
-                std::cout << stats.summary(boost::chrono::duration_cast<boost::chrono::microseconds>(now - lastStatsTime),
-                                           AlloReceiver::statValsMaker,
-                                           AlloReceiver::postProcessorMaker,
-                                           statsFormat);
-                lastStatsTime = now;
-            }
-        },
-        {
-            "quit",
-            {},
-            [](const std::vector<std::string>& values)
-            {
-                exit(0);
-            }
-        },
         {
             "gamma-min",
             {"val"},
@@ -251,7 +231,42 @@ int main(int argc, char* argv[])
         }
     };
     
-    CommandHandler consoleCommandHandler(consoleCommands);
+    std::initializer_list<CommandHandler::Command> consoleOnlyCommands =
+    {
+        {
+            "stats",
+            {},
+            [](const std::vector<std::string>& values)
+            {
+                boost::chrono::steady_clock::time_point now = boost::chrono::steady_clock::now();
+                std::cout << stats.summary(boost::chrono::duration_cast<boost::chrono::microseconds>(now - lastStatsTime),
+                                           AlloReceiver::statValsMaker,
+                                           AlloReceiver::postProcessorMaker,
+                                           statsFormat);
+                lastStatsTime = now;
+            }
+        },
+        {
+            "quit",
+            {},
+            [](const std::vector<std::string>& values)
+            {
+                exit(0);
+            }
+        }
+    };
+    
+    CommandHandler consoleCommandHandler({generalCommands, consoleOnlyCommands});
+    CommandHandler configCommandHandler({generalCommands});
+    
+    auto configParseResult = Config::parseConfigFile(configCommandHandler,
+                                                     "AlloPlayer.config");
+    if (!configParseResult.first)
+    {
+        std::cerr << configParseResult.second << std::endl;
+        std::cerr << configCommandHandler.getCommandHelpString();
+        abort();
+    }
     
     Console console(consoleCommandHandler);
     console.start();

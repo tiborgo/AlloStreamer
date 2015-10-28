@@ -65,7 +65,7 @@ Console::Console(CommandHandler& commandHandler)
         {},
         [this](const std::vector<std::string>& values)
         {
-            this->commandHandler.printCommandHelp();
+            std::cout << this->commandHandler.getCommandHelpString();
         }
     });
 }
@@ -148,16 +148,18 @@ void Console::runLoop()
                                                                      argsRegex,
                                                                      1),
                                           std::sregex_token_iterator());
-                
-            if (!commandHandler.executeCommand(commandMatch.str(1),
-                                               args))
+            
+            auto executeResult = commandHandler.executeCommand(commandMatch.str(1),
+                                                               args);
+            if (!executeResult.first)
             {
-                std::cout << "Type 'help' for more info." << std::endl;
+                std::cout << executeResult.second << "Type 'help' for more info." << std::endl;
             }
         }
         else if (command != "")
         {
             std::cout << "Wrong syntax. Syntax is command <value>*." << std::endl;
+            std::cout << "Type 'help' for more info." << std::endl;
         }
         
         if (command != "")
