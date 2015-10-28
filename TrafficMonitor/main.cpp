@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
 		stats.autoSummary(boost::chrono::seconds(statsInterval),
 			              AlloReceiver::statValsMaker,
 						  AlloReceiver::postProcessorMaker,
-						  AlloReceiver::formatStringMaker);
+						  AlloReceiver::formatStringMaker());
 
 		std::vector<boost::thread> io_threads;
 
