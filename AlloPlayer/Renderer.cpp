@@ -345,3 +345,39 @@ void Renderer::setCubemapSource(CubemapSource* cubemapSource)
                                                 _1,
                                                 _2));
 }
+
+float Renderer::getGammaMin()
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    return gammaMin;
+}
+
+float Renderer::getGammaMax()
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    return gammaMax;
+}
+
+float Renderer::getGammaPow()
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    return gammaPow;
+}
+
+const al::Vec3f& Renderer::getFORRotation()
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    return forRotation;
+}
+
+float Renderer::Renderer::getFORAngle()
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    return forAngle;
+}
+
+const al::Vec3f& Renderer::getRotation()
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    return rotation;
+}

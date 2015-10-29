@@ -239,6 +239,32 @@ int main(int argc, char* argv[])
             {
                 exit(0);
             }
+        },
+        {
+            "info",
+            {},
+            [&bufferSize, &url, &interfaceAddress, &matchStereoPairs](const std::vector<std::string>& values)
+            {
+                al::Vec3f forRotation = renderer.getFORRotation() * DEG_DIV_RAD;
+                al::Vec3f rotation    = renderer.getRotation()    * DEG_DIV_RAD;
+                
+                std::cout << std::setiosflags(std::ios::fixed) << std::setprecision(1);
+                std::cout << "Display:            " << ((noDisplay) ? "no" : "yes") << std::endl;
+                std::cout << "RTSP URL:           " << url << std::endl;
+                std::cout << "Interface address:  " << interfaceAddress << std::endl;
+                std::cout << "Buffer size:        " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
+                std::cout << "Match stereo pairs: " << ((matchStereoPairs) ? "yes" : "no") << std::endl;
+                std::cout << "Gamma min:          " << renderer.getGammaMin() << std::endl;
+                std::cout << "Gamma max:          " << renderer.getGammaMax() << std::endl;
+                std::cout << "Gamma pow:          " << renderer.getGammaPow() << std::endl;
+                std::cout << "FOR angle:          " << renderer.getFORAngle() * DEG_DIV_RAD << "°" << std::endl;
+                std::cout << "FOR rotation:       " << "α=" << forRotation[0] << "°\t"
+                                                    << "β=" << forRotation[1] << "°\t"
+                                                    << "γ=" << forRotation[2] << "°" << std::endl;
+                std::cout << "Scene rotation:     " << "α=" << rotation[0] << "°\t"
+                                                    << "β=" << rotation[1] << "°\t"
+                                                    << "γ=" << rotation[2] << "°" << std::endl;
+            }
         }
     };
     
@@ -273,9 +299,6 @@ int main(int argc, char* argv[])
     
     Console console(consoleCommandHandler);
     console.start();
-    
-
-    std::cout << "Buffer size " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
     
     
     RTSPCubemapSourceClient* rtspClient = RTSPCubemapSourceClient::create(url.c_str(),

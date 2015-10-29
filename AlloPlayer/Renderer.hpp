@@ -30,6 +30,13 @@ public:
     void setRotation(const al::Vec3f& rotation);
     void setCubemapSource(CubemapSource* source);
     
+    float            getGammaMin();
+    float            getGammaMax();
+    float            getGammaPow();
+    const al::Vec3f& getFORRotation();
+    float            getFORAngle();
+    const al::Vec3f& getRotation();
+    
 protected:
     std::function<void (Renderer*)> onDisplayedFrame;
     std::function<void (Renderer*, int)> onDisplayedCubemapFace;
