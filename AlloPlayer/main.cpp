@@ -1,8 +1,8 @@
 #include <boost/filesystem.hpp>
-#include <boost/program_options.hpp>
 #include <boost/ref.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "Renderer.hpp"
 #include "AlloShared/StatsUtils.hpp"
@@ -10,6 +10,7 @@
 #include "AlloShared/CommandHandler.hpp"
 #include "AlloShared/Console.hpp"
 #include "AlloShared/Config.hpp"
+#include "AlloShared/CommandLine.hpp"
 #include "AlloReceiver/RTSPCubemapSourceClient.hpp"
 #include "AlloReceiver/AlloReceiver.h"
 #include "AlloReceiver/Stats.hpp"
@@ -103,77 +104,11 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
 
 int main(int argc, char* argv[])
 {
-    if (argc < 2)
-    {
-        boost::filesystem::path exePath(argv[0]);
-        std::cout << "usage: " << exePath.filename().string() << " <RTSP url of stream>" << std::endl;
-        std::cout << "\texample: " << exePath.filename().string() << " rtsp://192.168.1.185:8554/h264ESVideoTest" << std::endl;
-        return -1;
-    }
-    
-    boost::program_options::options_description desc("");
-    desc.add_options()
-        ("no-display", "")
-        ("url", boost::program_options::value<std::string>(), "url")
-        ("interface", boost::program_options::value<std::string>(), "interface")
-        ("buffer-size", boost::program_options::value<unsigned long>(), "buffer-size")
-        ("match-stereo-pairs", "");
-    
-    boost::program_options::positional_options_description p;
-    p.add("url", -1);
-    
-    boost::program_options::variables_map vm;
-    boost::program_options::store(boost::program_options::command_line_parser(argc, argv).
-              options(desc).positional(p).run(), vm);
-    boost::program_options::notify(vm);
-    
-    const char* interface;
-    if (vm.count("interface"))
-    {
-        interface = vm["interface"].as<std::string>().c_str();
-    }
-    else
-    {
-        interface = "0.0.0.0";
-    }
-    
-    unsigned long bufferSize;
-    if (vm.count("buffer-size"))
-    {
-        bufferSize = vm["buffer-size"].as<unsigned long>();
-    }
-    else
-    {
-        bufferSize = DEFAULT_SINK_BUFFER_SIZE;
-    }
-    std::cout << "Buffer size " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
-
-    if (vm.count("no-display"))
-    {
-        noDisplay = true;
-    }
-    else
-    {
-        noDisplay = false;
-    }
-    
-    bool matchStereoPairs;
-    if (vm.count("match-stereo-pairs"))
-    {
-        matchStereoPairs = true;
-    }
-    else
-    {
-        matchStereoPairs = false;
-    }
-    
-    RTSPCubemapSourceClient* rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(),
-                                                                          bufferSize,
-                                                                          AV_PIX_FMT_YUV420P,
-                                                                          matchStereoPairs,
-                                                                          interface);
-    rtspClient->setOnDidConnect(boost::bind(&onDidConnect, _1, _2));
-    rtspClient->connect();
+                  noDisplay        = false;
+    std::string   url              = "";
+    std::string   interfaceAddress = "0.0.0.0";
+    unsigned long bufferSize       = DEFAULT_SINK_BUFFER_SIZE;
+    bool          matchStereoPairs = false;
     
     std::initializer_list<CommandHandler::Command> generalCommands =
     {
@@ -216,7 +151,7 @@ int main(int argc, char* argv[])
             {"deg"},
             [](const std::vector<std::string>& values)
             {
-                renderer.setFORAngle(boost::lexical_cast<float>(values[0]) * RAD_DIV_DEG );
+                renderer.setFORAngle(boost::lexical_cast<float>(values[0]) * RAD_DIV_DEG);
             }
         },
         {
@@ -227,6 +162,57 @@ int main(int argc, char* argv[])
                 renderer.setRotation(al::Vec3f(boost::lexical_cast<float>(values[0]) * RAD_DIV_DEG,
                                                boost::lexical_cast<float>(values[1]) * RAD_DIV_DEG,
                                                boost::lexical_cast<float>(values[2]) * RAD_DIV_DEG));
+            }
+        }
+    };
+    
+    std::initializer_list<CommandHandler::Command> configOnlyCommands =
+    {
+        {
+            "no-display",
+            {},
+            [](const std::vector<std::string>& values)
+            {
+                noDisplay = true;
+            }
+        },
+        {
+            "url",
+            {"rtsp_url"},
+            [&url](const std::vector<std::string>& values)
+            {
+                url = values[0];
+            }
+        },
+        {
+            "interface-address",
+            {"ip"},
+            [&interfaceAddress](const std::vector<std::string>& values)
+            {
+                interfaceAddress = values[0];
+            }
+        },
+        {
+            "buffer-size",
+            {"bytes"},
+            [&bufferSize](const std::vector<std::string>& values)
+            {
+                bufferSize = boost::lexical_cast<unsigned long>(values[0]);
+            }
+        },
+        {
+            "match-stereo-pairs",
+            {},
+            [&matchStereoPairs](const std::vector<std::string>& values)
+            {
+                matchStereoPairs = true;
+            }
+        },
+        {
+            "config",
+            {"file_path"},
+            [](const std::vector<std::string>& values)
+            {
             }
         }
     };
@@ -257,7 +243,8 @@ int main(int argc, char* argv[])
     };
     
     CommandHandler consoleCommandHandler({generalCommands, consoleOnlyCommands});
-    CommandHandler configCommandHandler({generalCommands});
+    CommandHandler configCommandHandler({generalCommands, configOnlyCommands});
+    CommandHandler commandLineCommandHandler({generalCommands, configOnlyCommands});
     
     auto configParseResult = Config::parseConfigFile(configCommandHandler,
                                                      "AlloPlayer.config");
@@ -268,8 +255,38 @@ int main(int argc, char* argv[])
         abort();
     }
     
+    auto commandLineParseResult = CommandLine::parseCommandLine(commandLineCommandHandler,
+                                                                argc,
+                                                                argv);
+    if (!commandLineParseResult.first)
+    {
+        std::cerr << commandLineParseResult.second << std::endl;
+        std::cerr << commandLineCommandHandler.getCommandHelpString();
+        abort();
+    }
+    
+    
+    if (url == "")
+    {
+        std::cerr << "No URL specified." << std::endl;
+    }
+    
     Console console(consoleCommandHandler);
     console.start();
+    
+
+    std::cout << "Buffer size " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
+    
+    
+    RTSPCubemapSourceClient* rtspClient = RTSPCubemapSourceClient::create(url.c_str(),
+                                                                          bufferSize,
+                                                                          AV_PIX_FMT_YUV420P,
+                                                                          matchStereoPairs,
+                                                                          interfaceAddress.c_str());
+    rtspClient->setOnDidConnect(boost::bind(&onDidConnect, _1, _2));
+    rtspClient->connect();
+    
+    
     
     if (noDisplay)
     {

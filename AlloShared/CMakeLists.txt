@@ -11,6 +11,7 @@ set(SOURCES
 	Console.cpp
     CommandHandler.cpp
     Config.cpp
+    CommandLine.cpp
 )
 	
 set(HEADERS
@@ -29,6 +30,7 @@ set(HEADERS
 	Console.hpp
     CommandHandler.hpp
     Config.hpp
+    CommandLine.hpp
 )
 
 find_package(Boost
