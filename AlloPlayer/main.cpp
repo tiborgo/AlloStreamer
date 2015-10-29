@@ -249,7 +249,7 @@ int main(int argc, char* argv[])
         {
             "info",
             {},
-            [&bufferSize, &url, &interfaceAddress, &matchStereoPairs](const std::vector<std::string>& values)
+            [&bufferSize, &url, &interfaceAddress, &matchStereoPairs, &configFilePath](const std::vector<std::string>& values)
             {
                 al::Vec3f forRotation = renderer.getFORRotation() * DEG_DIV_RAD;
                 al::Vec3f rotation    = renderer.getRotation()    * DEG_DIV_RAD;
@@ -270,6 +270,7 @@ int main(int argc, char* argv[])
                 std::cout << "Scene rotation:     " << "α=" << rotation[0] << "°\t"
                                                     << "β=" << rotation[1] << "°\t"
                                                     << "γ=" << rotation[2] << "°" << std::endl;
+                std::cout << "Config file:        " << configFilePath << std::endl;
             }
         }
     };
