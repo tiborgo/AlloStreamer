@@ -317,6 +317,7 @@ int main(int argc, char* argv[])
     if (url == "")
     {
         std::cerr << "No URL specified." << std::endl;
+        abort();
     }
     
     Console console(consoleCommandHandler);
