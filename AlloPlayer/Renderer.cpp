@@ -279,7 +279,7 @@ void Renderer::onMessage(al::osc::Message& m)
     OmniApp::onMessage(m);
  
     m.resetStream();
-    if (m.addressPattern() == "/mx")
+    if (m.addressPattern() == "/ty")
     {
         float x;
         m >> x;

@@ -109,6 +109,7 @@ int main(int argc, char* argv[])
     std::string   interfaceAddress = "0.0.0.0";
     unsigned long bufferSize       = DEFAULT_SINK_BUFFER_SIZE;
     bool          matchStereoPairs = false;
+    std::string   configFilePath   = "AlloPlayer.config";
     
     std::initializer_list<CommandHandler::Command> generalCommands =
     {
@@ -166,7 +167,19 @@ int main(int argc, char* argv[])
         }
     };
     
-    std::initializer_list<CommandHandler::Command> configOnlyCommands =
+    std::initializer_list<CommandHandler::Command> commandLineOnlyCommands =
+    {
+        {
+            "config",
+            {"file_path"},
+            [&configFilePath](const std::vector<std::string>& values)
+            {
+                configFilePath = values[0];
+            }
+        }
+    };
+    
+    std::initializer_list<CommandHandler::Command> configCommandLineOnlyCommands =
     {
         {
             "no-display",
@@ -206,13 +219,6 @@ int main(int argc, char* argv[])
             [&matchStereoPairs](const std::vector<std::string>& values)
             {
                 matchStereoPairs = true;
-            }
-        },
-        {
-            "config",
-            {"file_path"},
-            [](const std::vector<std::string>& values)
-            {
             }
         }
     };
@@ -269,11 +275,26 @@ int main(int argc, char* argv[])
     };
     
     CommandHandler consoleCommandHandler({generalCommands, consoleOnlyCommands});
-    CommandHandler configCommandHandler({generalCommands, configOnlyCommands});
-    CommandHandler commandLineCommandHandler({generalCommands, configOnlyCommands});
+    CommandHandler configCommandHandler({generalCommands, configCommandLineOnlyCommands});
+    CommandHandler commandLineCommandHandler({generalCommands, configCommandLineOnlyCommands, commandLineOnlyCommands});
+    
+    // The desired behaviour is that command line parameters override config file settings.
+    // So, we would run the config file parser first and then the command line parser.
+    // However, then we cannot pass the config file path as a command line parameter.
+    // The solution here is to run the command line parser twice:
+    // before and after the config file parser.
+    auto commandLineParseResult = CommandLine::parseCommandLine(commandLineCommandHandler,
+                                                                argc,
+                                                                argv);
+    if (!commandLineParseResult.first)
+    {
+        std::cerr << commandLineParseResult.second << std::endl;
+        std::cerr << commandLineCommandHandler.getCommandHelpString();
+        abort();
+    }
     
     auto configParseResult = Config::parseConfigFile(configCommandHandler,
-                                                     "AlloPlayer.config");
+                                                     configFilePath);
     if (!configParseResult.first)
     {
         std::cerr << configParseResult.second << std::endl;
@@ -281,7 +302,7 @@ int main(int argc, char* argv[])
         abort();
     }
     
-    auto commandLineParseResult = CommandLine::parseCommandLine(commandLineCommandHandler,
+    commandLineParseResult = CommandLine::parseCommandLine(commandLineCommandHandler,
                                                                 argc,
                                                                 argv);
     if (!commandLineParseResult.first)
