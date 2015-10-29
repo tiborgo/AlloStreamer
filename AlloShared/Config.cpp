@@ -9,7 +9,7 @@ std::pair<bool, std::string> Config::parseConfigFile(CommandHandler& commandHand
 {
     std::ifstream configFile(configFilename);
     
-    std::regex commandRegex("([a-zA-z0-9-]+)=((?: ?[^\\s^ ]+)+)");
+    std::regex commandRegex("([a-zA-z0-9-]+)(?:=((?: ?[^\\s^ ]+)+))?");
     std::regex argsRegex("([^\\s]+)");
     
     std::string errorString;
