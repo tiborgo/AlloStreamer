@@ -31,13 +31,14 @@ public:
     void setRotationSpeed(float speed);
     void setCubemapSource(CubemapSource* source);
     
-    float            getGammaMin();
-    float            getGammaMax();
-    float            getGammaPow();
-    const al::Vec3f& getFORRotation();
-    float            getFORAngle();
-    const al::Vec3f& getRotation();
-    float            getRotationSpeed();
+    float                            getGammaMin();
+    float                            getGammaMax();
+    float                            getGammaPow();
+    const al::Vec3f&                 getFORRotation();
+    float                            getFORAngle();
+    const al::Vec3f&                 getRotation();
+    float                            getRotationSpeed();
+    std::vector<std::pair<int, int>> getFaceResolutions();
     
 protected:
     std::function<void (Renderer*)> onDisplayedFrame;

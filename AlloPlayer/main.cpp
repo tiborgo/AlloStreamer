@@ -280,6 +280,19 @@ int main(int argc, char* argv[])
                                                     << "γ=" << rotation[2] << "°" << std::endl;
                 std::cout << "Rotation speed:     " << renderer.getRotationSpeed() << std::endl;
                 std::cout << "Config file:        " << configFilePath << std::endl;
+                std::cout << "Face resolutions:   ";
+                
+                auto faceResokutions = renderer.getFaceResolutions();
+                for (int eye = 0; eye < StereoCubemap::MAX_EYES_COUNT; eye++)
+                {
+                    for (int face = 0; face < Cubemap::MAX_FACES_COUNT; face++)
+                    {
+                        auto faceResolution = faceResokutions[eye * Cubemap::MAX_FACES_COUNT + face];
+                        std::cout << faceResolution.first << "x" << faceResolution.second << "px ";
+                    }
+                    std::cout << std::endl << "                    ";
+                }
+                std::cout << std::endl;
             }
         }
     };

@@ -81,6 +81,8 @@ bool Renderer::onFrame()
 {
     now = al::MainLoop::now();
     
+    boost::mutex::scoped_lock(uniformsMutex);
+    
     StereoCubemap* cubemap;
     if (cubemapBuffer.try_pop(cubemap))
     {
@@ -189,7 +191,7 @@ bool Renderer::onFrame()
     
     // Set uniforms
     {
-        boost::mutex::scoped_lock(uniformsMutex);
+        
         yuvGammaShader.begin();
         yuvGammaShader.uniform("gamma_min", gammaMin);
         yuvGammaShader.uniform("gamma_max", gammaMax);
@@ -392,4 +394,23 @@ float Renderer::getRotationSpeed()
 {
     boost::mutex::scoped_lock(uniformsMutex);
     return rotationSpeed;
+}
+
+std::vector<std::pair<int, int>> Renderer::getFaceResolutions()
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    std::vector<std::pair<int, int>> resolutions;
+    for (auto texture : textures)
+    {
+        if (texture.yTexture)
+        {
+            resolutions.push_back(std::make_pair(texture.yTexture->width(),
+                                                 texture.yTexture->width()));
+        }
+        else
+        {
+            resolutions.push_back(std::make_pair(0, 0));
+        }
+    }
+    return resolutions;
 }
