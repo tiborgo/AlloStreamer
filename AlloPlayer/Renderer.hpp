@@ -28,6 +28,7 @@ public:
     void setFORRotation(const al::Vec3f& forRotation);
     void setFORAngle(float forAngle);
     void setRotation(const al::Vec3f& rotation);
+    void setRotationSpeed(float speed);
     void setCubemapSource(CubemapSource* source);
     
     float            getGammaMin();
@@ -36,6 +37,7 @@ public:
     const al::Vec3f& getFORRotation();
     float            getFORAngle();
     const al::Vec3f& getRotation();
+    float            getRotationSpeed();
     
 protected:
     std::function<void (Renderer*)> onDisplayedFrame;
@@ -62,4 +64,5 @@ private:
     al::Vec3f                        forRotation;
     float                            forAngle;
     al::Vec3f                        rotation;
+    float                            rotationSpeed;
 };

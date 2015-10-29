@@ -42,7 +42,7 @@ static const char* yuvGammaFragShader = AL_STRINGIFY
 Renderer::Renderer()
     :
     al::OmniApp("AlloPlayer", false, 2048), gammaMin(0.0f), gammaMax(1.0f), gammaPow(1.0f),
-    forRotation(0, 0, 0), forAngle(M_PI*2.0), rotation(0, 0, 0)
+    forRotation(0, 0, 0), forAngle(M_PI*2.0), rotation(0, 0, 0), rotationSpeed(0.01)
 {
     nav().smooth(0.8);
     
@@ -283,7 +283,7 @@ void Renderer::onMessage(al::osc::Message& m)
     {
         float x;
         m >> x;
-        setRotation(al::Vec3f(0, rotation[1]+x/10.0f, 0));
+        setRotation(al::Vec3f(0, rotation[1]-x/rotationSpeed, 0));
     }
 }
 
@@ -338,6 +338,12 @@ void Renderer::setRotation(const al::Vec3f& rotation)
     this->rotation = rotation;
 }
 
+void Renderer::setRotationSpeed(float speed)
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    this->rotationSpeed = speed;
+}
+
 void Renderer::setCubemapSource(CubemapSource* cubemapSource)
 {
     cubemapSource->setOnNextCubemap(boost::bind(&Renderer::onNextCubemap,
@@ -370,7 +376,7 @@ const al::Vec3f& Renderer::getFORRotation()
     return forRotation;
 }
 
-float Renderer::Renderer::getFORAngle()
+float Renderer::getFORAngle()
 {
     boost::mutex::scoped_lock(uniformsMutex);
     return forAngle;
@@ -380,4 +386,10 @@ const al::Vec3f& Renderer::getRotation()
 {
     boost::mutex::scoped_lock(uniformsMutex);
     return rotation;
+}
+
+float Renderer::getRotationSpeed()
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    return rotationSpeed;
 }

@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
         },
         {
             "for-rotation",
-            {"deg_alpha", "deg_beta", "deg_gamma"},
+            {"α°", "β°", "γ°"},
             [](const std::vector<std::string>& values)
             {
                 renderer.setFORRotation(al::Vec3f(boost::lexical_cast<float>(values[0]) * RAD_DIV_DEG,
@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
         },
         {
             "for-angle",
-            {"deg"},
+            {"°"},
             [](const std::vector<std::string>& values)
             {
                 renderer.setFORAngle(boost::lexical_cast<float>(values[0]) * RAD_DIV_DEG);
@@ -157,12 +157,20 @@ int main(int argc, char* argv[])
         },
         {
             "rotation",
-            {"deg_alpha", "deg_beta", "deg_gamma"},
+            {"α°", "β°", "γ°"},
             [](const std::vector<std::string>& values)
             {
                 renderer.setRotation(al::Vec3f(boost::lexical_cast<float>(values[0]) * RAD_DIV_DEG,
                                                boost::lexical_cast<float>(values[1]) * RAD_DIV_DEG,
                                                boost::lexical_cast<float>(values[2]) * RAD_DIV_DEG));
+            }
+        },
+        {
+            "rotation-speed",
+            {"val"},
+            [](const std::vector<std::string>& values)
+            {
+                renderer.setRotationSpeed(boost::lexical_cast<float>(values[0]));
             }
         }
     };
@@ -270,6 +278,7 @@ int main(int argc, char* argv[])
                 std::cout << "Scene rotation:     " << "α=" << rotation[0] << "°\t"
                                                     << "β=" << rotation[1] << "°\t"
                                                     << "γ=" << rotation[2] << "°" << std::endl;
+                std::cout << "Rotation speed:     " << renderer.getRotationSpeed() << std::endl;
                 std::cout << "Config file:        " << configFilePath << std::endl;
             }
         }
