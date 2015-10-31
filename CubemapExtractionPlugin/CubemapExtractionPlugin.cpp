@@ -30,6 +30,9 @@ static boost::mutex d3D11DeviceContextMutex;
 static boost::interprocess::managed_shared_memory shm;
 static Binoculars* binoculars = nullptr;
 static StereoCubemap::Ptr cubemap;
+static boost::mutex mutex;
+static bool closeResetIPCThread;
+static boost::thread resetIPCThread;
 
 struct CubemapConfig
 {
@@ -58,6 +61,30 @@ static void DebugLog (const char* str)
 	#else
 	printf ("%s", str);
 	#endif
+}
+
+void resetIPCLoop()
+{
+	while (true)
+	{
+		while (!alloServerProcess.timedWaitForBirth(boost::chrono::milliseconds(100)))
+		{
+			if (closeResetIPCThread) return;
+		}
+		while (!alloServerProcess.timedJoin(boost::chrono::milliseconds(100)))
+		{
+			if (closeResetIPCThread) return;
+		}
+		boost::mutex::scoped_lock lock(mutex);
+		for (int j = 0; j < cubemap->getEyesCount(); j++)
+		{
+			Cubemap* eye = cubemap->getEye(j);
+			for (int i = 0; i < eye->getFacesCount(); i++)
+			{
+				eye->getFace(i)->getContent()->getBarrier().reset();
+			}
+		}
+	}
 }
 
 void allocateCubemap(CubemapConfig* cubemapConfig)
@@ -138,12 +165,17 @@ void allocateSHM(CubemapConfig* cubemapConfig, BinocularsConfig* binocularsConfi
     allocateBinoculars(binocularsConfig);
     
     thisProcess = new Process(CUBEMAPEXTRACTIONPLUGIN_ID, true);
+
+	closeResetIPCThread = false;
+	resetIPCThread = boost::thread(&resetIPCLoop);
 }
 
 
 
 void releaseSHM()
 {
+	boost::mutex::scoped_lock lock(mutex);
+	closeResetIPCThread = true;
     shm.destroy<Cubemap::Ptr>("Cubemap");
     cubemap = nullptr;
     cubemapConfig = nullptr;
@@ -364,8 +396,10 @@ void copyFromGPUToCPU(Frame* frame)
 
 	if (alloServerProcess.isAlive())
 	{
-		frame->getBarrier().wait();
-	}	
+		while (!frame->getBarrier().timedWait(boost::chrono::milliseconds(100)) && alloServerProcess.isAlive())
+		{
+		}
+	}
 }
 
 void copyFromGPUtoCPU (std::vector<Frame*>& frames)
@@ -391,6 +425,16 @@ void copyFromGPUtoCPU (std::vector<Frame*>& frames)
             copyFromGPUToCPU(frames[i]);
         }
     }
+
+	/*static bool alloServerWasAlive = alloServerProcess.isAlive();
+	if (!alloServerProcess.isAlive() && alloServerWasAlive)
+	{
+		for (auto frame : frames)
+		{
+			frame->getBarrier().reset();
+		}
+		alloServerWasAlive = false;
+	}*/
 }
 
 // --------------------------------------------------------------------------
@@ -407,6 +451,8 @@ extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 	// and binoculars respectively!
     if (eventID == 1)
     {
+		boost::mutex::scoped_lock lock(mutex);
+
         // Allocate cubemap the first time we render a frame.
         // By doing so, we can make sure that both
         // the cubemap and the binoculars are fully configured.

@@ -91,6 +91,42 @@ void Process::waitForBirth()
     }
 }
 
+bool Process::timedJoin(const boost::chrono::microseconds& timeout)
+{
+	if (!isSelf())
+	{
+		if (boost::filesystem::exists(lockfilePath))
+		{
+			boost::interprocess::file_lock fileLock(lockfilePath.string().c_str());
+			if (fileLock.timed_lock(boost::get_system_time() + boost::posix_time::microseconds(timeout.count())))
+			{
+				fileLock.unlock();
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
+	}
+}
+
+bool Process::timedWaitForBirth(const boost::chrono::microseconds& timeout)
+{
+	size_t sleepIntervals = ceil((double)timeout.count() / 100000);
+	size_t counter = 0;
+	while (!isAlive())
+	{
+		if (sleepIntervals >= counter)
+		{
+			return false;
+		}
+		boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+		counter++;
+	}
+	return true;
+}
+
 bool Process::isSelf()
 {
     return (fileLock != nullptr);

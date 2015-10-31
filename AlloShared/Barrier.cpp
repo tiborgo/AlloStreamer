@@ -55,6 +55,19 @@ bool Barrier::timedWait(boost::chrono::microseconds timeout)
 	}
 }
 
+void Barrier::reset()
+{
+	// Hacky solution indeed
+	// That's not possible unfortunately since the mutex is locked and abandoned
+	//mutex.~interprocess_mutex();
+	void* mutexAddr = &mutex;
+	void* conditionAddr = &condition;
+	memset(mutexAddr, 0, sizeof(boost::interprocess::interprocess_mutex));
+	memset(conditionAddr, 0, sizeof(boost::interprocess::interprocess_condition));
+	new (mutexAddr)     boost::interprocess::interprocess_mutex;
+	new (conditionAddr)boost::interprocess::interprocess_condition;
+}
+
 bool Barrier::step()
 {
 	counter--;

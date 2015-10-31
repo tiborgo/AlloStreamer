@@ -11,6 +11,7 @@ public:
     
 	void wait();
 	bool timedWait(boost::chrono::microseconds timeout);
+	void reset();
     
 private:
 	bool step();

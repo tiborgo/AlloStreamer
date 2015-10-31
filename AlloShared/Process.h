@@ -12,7 +12,9 @@ public:
     bool isAlive();
     void join();
     void waitForBirth();
-    bool isSelf();
+	bool timedJoin(const boost::chrono::microseconds& timeout);
+	bool timedWaitForBirth(const boost::chrono::microseconds& timeout);
+	bool isSelf();
     
 private:
     
