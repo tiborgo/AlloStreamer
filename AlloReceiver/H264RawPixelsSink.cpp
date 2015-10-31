@@ -15,14 +15,15 @@ const size_t MAX_NALU_SIZE = 1000000;
 const size_t MAX_PKT_SIZE  = (sizeof(START_CODE) + MAX_NALU_SIZE) * MAX_NALUS_PER_PKT;
 
 H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
-                                                unsigned long bufferSize,
-                                                AVPixelFormat format,
-                                                MediaSubsession* subsession)
+                                                unsigned long     bufferSize,
+                                                AVPixelFormat     format,
+                                                MediaSubsession*  subsession,
+                                                bool              robustSyncing)
 {
     av_log_set_level(AV_LOG_FATAL);
     avcodec_register_all();
     avformat_network_init();
-	return new H264RawPixelsSink(env, bufferSize, format, subsession);
+	return new H264RawPixelsSink(env, bufferSize, format, subsession, robustSyncing);
 }
 
 void H264RawPixelsSink::setOnReceivedNALU(const OnReceivedNALU& callback)
@@ -46,14 +47,15 @@ void H264RawPixelsSink::setOnColorConvertedFrame(const OnColorConvertedFrame& ca
 }
 
 H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
-                                     unsigned int bufferSize,
-                                     AVPixelFormat format,
-                                     MediaSubsession* subsession)
+                                     unsigned int      bufferSize,
+                                     AVPixelFormat     format,
+                                     MediaSubsession*  subsession,
+                                     bool              robustSyncing)
     :
     MediaSink(env), bufferSize(bufferSize), buffer(new unsigned char[bufferSize]),
     imageConvertCtx(NULL), receivedFirstPriorityPackages(false), format(format),
     counter(0), sumRelativePresentationTimeMicroSec(0), maxRelativePresentationTimeMicroSec(0), subsession(subsession), lastTotal(0),
-    pts(-1), lastPTS(-1)
+    pts(-1), lastPTS(-1), robustSyncing(robustSyncing)
 {
     for (int i = 0; i < MAX_NALUS_PER_PKT + 1; i++)
     {
@@ -156,7 +158,26 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
     
     //std::cout << naluPool.size() << std::endl;
     
-    pts = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec;
+    /*pts = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec;
+    int64_t altPts;
+    for (int i = 0; i < sizeof(int64_t); i++)
+    {
+        ((char*)&altPts)[i] = *(buffer + frameSize - (8-i));
+    }
+    altPts = *((int64_t*)(buffer + frameSize - sizeof(int64_t)));
+    std::cout << altPts << " " << pts << std::endl;*/
+    
+    size_t packageSize;
+    if (robustSyncing && frameSize >= sizeof(int64_t))
+    {
+        pts = *((int64_t*)(buffer + frameSize - sizeof(int64_t)));
+        packageSize = frameSize - sizeof(int64_t);
+    }
+    else
+    {
+        pts = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec;
+        packageSize = frameSize;
+    }
     
     // Check if all NALUs for current frame have arrived
     if (lastPTS != -1 && lastPTS != pts)
@@ -177,15 +198,15 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
     }
     
     // Add NALU to current frame pkt
-    if (sizeof(START_CODE) + frameSize + currentPkt->size > MAX_PKT_SIZE)
+    if (sizeof(START_CODE) + packageSize > MAX_PKT_SIZE)
     {
         std::cout << "NALUs are too big for one pkt!" << std::endl;
     }
     else
     {
         memcpy(currentPkt->data + currentPkt->size, START_CODE, sizeof(START_CODE));
-        memcpy(currentPkt->data + currentPkt->size + sizeof(START_CODE), buffer, frameSize);
-        currentPkt->size += sizeof(START_CODE) + frameSize;
+        memcpy(currentPkt->data + currentPkt->size + sizeof(START_CODE), buffer, packageSize);
+        currentPkt->size += sizeof(START_CODE) + packageSize;
         currentPkt->pts = pts;
     }
     

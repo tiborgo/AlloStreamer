@@ -45,6 +45,7 @@ static boost::uint16_t rtspPort;
 static int avgBitRate;
 
 static size_t bufferSize = 2000000000;
+static bool robustSyncing = false;
 
 // Cubemap related
 static StereoCubemap*                cubemap;
@@ -109,7 +110,8 @@ void addFaceSubstreams0(void*)
 
 			RawPixelSource* source = RawPixelSource::createNew(*env,
 				state->content,
-				avgBitRate);
+				avgBitRate,
+				robustSyncing);
 
 			source->setOnSentNALU    (boost::bind(&onSentNALU,     _1, _2, _3, j, i));
 			source->setOnEncodedFrame(boost::bind(&onEncodedFrame, _1, j, i));
@@ -164,7 +166,8 @@ void addBinocularsSubstream0(void*)
     binocularsStream->source = H264VideoStreamDiscreteFramer::createNew(*env,
                                                                         RawPixelSource::createNew(*env,
                                                                                                   binocularsStream->content,
-                                                                                                  avgBitRate));
+                                                                                                  avgBitRate,
+																								  robustSyncing));
     binocularsStream->sink->startPlaying(*binocularsStream->source, NULL, NULL);
     
     std::cout << "Streaming binoculars ..." << std::endl;
@@ -295,7 +298,8 @@ int main(int argc, char* argv[])
 		("rtsp-port",         boost::program_options::value<boost::uint16_t>(), "")
 		("avg-bit-rate",      boost::program_options::value<int>(),             "")
 		("buffer-size",       boost::program_options::value<size_t>(),          "")
-	    ("stats-interval",    boost::program_options::value<size_t>(),          "");
+	    ("stats-interval",    boost::program_options::value<size_t>(),          "")
+		("robust-syncing",    "");
 		
     
     boost::program_options::variables_map vm;
@@ -368,6 +372,11 @@ int main(int argc, char* argv[])
 	else
 	{
 		statsInterval = DEFAULT_STATS_INTERVAL;
+	}
+
+	if (vm.count("robust-syncing"))
+	{
+		robustSyncing = true;
 	}
 
     av_log_set_level(AV_LOG_WARNING);

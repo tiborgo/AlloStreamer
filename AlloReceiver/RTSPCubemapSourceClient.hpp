@@ -16,6 +16,7 @@ public:
                                            unsigned int sinkBufferSize,
                                            AVPixelFormat format,
                                            bool matchStereoPairs,
+                                           bool robustSyncing,
                                            const char* interfaceAddress = "0.0.0.0",
                                            int verbosityLevel = 0,
                                            char const* applicationName = NULL,
@@ -30,6 +31,7 @@ protected:
                             unsigned int sinkBufferSize,
                             AVPixelFormat format,
                             bool matchStereoPairs,
+                            bool robustSyncing,
                             int verbosityLevel,
                             char const* applicationName,
                             portNumBits tunnelOverHTTPPortNum,
@@ -76,4 +78,5 @@ private:
     unsigned int lastTotalPacketsReceived;
     unsigned int lastTotalPacketsExpected;
     bool matchStereoPairs;
+    bool robustSyncing;
 };

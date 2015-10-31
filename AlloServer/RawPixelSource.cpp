@@ -47,9 +47,10 @@ int RawPixelSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
 
 RawPixelSource* RawPixelSource::createNew(UsageEnvironment& env,
                                           Frame* content,
-                                          int avgBitRate)
+                                          int avgBitRate,
+										  bool robustSyncing)
 {
-	return new RawPixelSource(env, content, avgBitRate);
+	return new RawPixelSource(env, content, avgBitRate, robustSyncing);
 }
 
 unsigned RawPixelSource::referenceCount = 0;
@@ -58,9 +59,10 @@ struct timeval prevtime;
 
 RawPixelSource::RawPixelSource(UsageEnvironment& env,
                                Frame* content,
-							   int avgBitRate)
+							   int avgBitRate,
+							   bool robustSyncing)
 	:
-	FramedSource(env), img_convert_ctx(NULL), content(content), /*encodeBarrier(2),*/ destructing(false), lastPTS(0)
+	FramedSource(env), img_convert_ctx(NULL), content(content), /*encodeBarrier(2),*/ destructing(false), lastPTS(0), robustSyncing(robustSyncing)
 {
 
 	gettimeofday(&prevtime, NULL); // If you have a more accurate time - e.g., from an encoder - then use that instead.
@@ -447,8 +449,18 @@ void RawPixelSource::encodeFrameLoop()
 				naluPoses.pop();
 
 				AVPacket naluPkt;
-				av_new_packet(&naluPkt, naluPos.second - naluPos.first + 1);
-				memcpy(naluPkt.data, pkt.data + naluPos.first, naluPkt.size);
+				int naluPktSize = naluPos.second - naluPos.first + 1;
+				if (robustSyncing)
+				{
+					naluPktSize += sizeof(int64_t);
+				}
+				av_new_packet(&naluPkt, naluPktSize);
+				memcpy(naluPkt.data, pkt.data + naluPos.first, naluPos.second - naluPos.first + 1);
+				if (robustSyncing)
+				{
+					*((int64_t*)(naluPkt.data + naluPos.second - naluPos.first + 1)) = pts;
+				}
+				//std::cout << *((int64_t*)(naluPkt.data + naluPos.second - naluPos.first + 1)) << std::endl;
 				naluPkt.pts = pts;
 
 				pktBuffer.push(naluPkt);

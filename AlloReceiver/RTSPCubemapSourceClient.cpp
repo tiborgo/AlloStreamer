@@ -213,7 +213,8 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
             H264RawPixelsSink* sink = H264RawPixelsSink::createNew(envir(),
                                                                    sinkBufferSize,
                                                                    format,
-                                                                   subsessions[i]);
+                                                                   subsessions[i],
+                                                                   robustSyncing);
             subsessions[i]->sink = sink;
             
             h264Sinks.push_back(sink);
@@ -222,7 +223,7 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
         
         if (onDidConnect)
         {
-            onDidConnect(this, new H264CubemapSource(h264Sinks, format, matchStereoPairs));
+            onDidConnect(this, new H264CubemapSource(h264Sinks, format, matchStereoPairs, robustSyncing));
         }
     }
     
@@ -502,6 +503,7 @@ RTSPCubemapSourceClient* RTSPCubemapSourceClient::create(char const* rtspURL,
                                                          unsigned int sinkBufferSize,
                                                          AVPixelFormat format,
                                                          bool matchStereoPairs,
+                                                         bool robustSyncing,
                                                          const char* interfaceAddress,
                                                          int verbosityLevel,
                                                          char const* applicationName,
@@ -525,6 +527,7 @@ RTSPCubemapSourceClient* RTSPCubemapSourceClient::create(char const* rtspURL,
                                        sinkBufferSize,
                                        format,
                                        matchStereoPairs,
+                                       robustSyncing,
                                        verbosityLevel,
                                        applicationName,
                                        tunnelOverHTTPPortNum,
@@ -536,6 +539,7 @@ RTSPCubemapSourceClient::RTSPCubemapSourceClient(UsageEnvironment& env,
                                                  unsigned int sinkBufferSize,
                                                  AVPixelFormat format,
                                                  bool matchStereoPairs,
+                                                 bool robustSyncing,
                                                  int verbosityLevel,
                                                  char const* applicationName,
                                                  portNumBits tunnelOverHTTPPortNum,
@@ -543,6 +547,6 @@ RTSPCubemapSourceClient::RTSPCubemapSourceClient(UsageEnvironment& env,
     :
     RTSPClient(env, rtspURL, verbosityLevel, applicationName, tunnelOverHTTPPortNum, socketNumToServer),
     sinkBufferSize(sinkBufferSize), format(format), lastTotalKBytes(0.0), lastTotalPacketsReceived(0), lastTotalPacketsExpected(0),
-    matchStereoPairs(matchStereoPairs)
+    matchStereoPairs(matchStereoPairs), robustSyncing(robustSyncing)
 {
 }

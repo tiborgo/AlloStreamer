@@ -61,7 +61,15 @@ void H264CubemapSource::getNextFramesLoop()
             {
                 boost::mutex::scoped_lock lock(frameMapMutex);
                 
-                int key = frames[i]->coded_picture_number;
+                int64_t key;
+                if (robustSyncing)
+                {
+                    key = frames[i]->pts;
+                }
+                else
+                {
+                    key = frames[i]->coded_picture_number;
+                }
                 
                 if (key <= lastFrameSeqNum)
                 {
@@ -273,9 +281,11 @@ void H264CubemapSource::getNextCubemapLoop()
 
 H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
                                      AVPixelFormat                    format,
-                                     bool                             matchStereoPairs)
+                                     bool                             matchStereoPairs,
+                                     bool                             robustSyncing)
     :
-    sinks(sinks), format(format), oldCubemap(nullptr), lastFrameSeqNum(0), matchStereoPairs(matchStereoPairs)
+    sinks(sinks), format(format), oldCubemap(nullptr), lastFrameSeqNum(0), matchStereoPairs(matchStereoPairs),
+    robustSyncing(robustSyncing)
 {
     int i = 0;
     for (H264RawPixelsSink* sink : sinks)

@@ -25,7 +25,8 @@ class RawPixelSource : public FramedSource
 public:
 	static RawPixelSource* createNew(UsageEnvironment& env,
                                      Frame* content,
-                                     int avgBitRate);
+                                     int avgBitRate,
+									 bool robustSyncing);
 
 	typedef std::function<void(RawPixelSource* self,
 		                       uint8_t type,
@@ -38,7 +39,8 @@ public:
 protected:
 	RawPixelSource(UsageEnvironment& env,
                    Frame* content,
-                   int avgBitRate);
+                   int avgBitRate,
+				   bool robustSyncing);
 	// called only by createNew(), or by subclass constructors
 	virtual ~RawPixelSource();
 
@@ -85,4 +87,5 @@ private:
 	int64_t lastFrameTime;
 
 	int_least64_t lastPTS;
+	bool robustSyncing;
 };

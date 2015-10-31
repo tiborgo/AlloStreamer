@@ -110,6 +110,7 @@ int main(int argc, char* argv[])
     unsigned long bufferSize       = DEFAULT_SINK_BUFFER_SIZE;
     bool          matchStereoPairs = false;
     std::string   configFilePath   = "AlloPlayer.config";
+    bool          robustSyncing    = false;
     
     std::initializer_list<CommandHandler::Command> generalCommands =
     {
@@ -228,6 +229,14 @@ int main(int argc, char* argv[])
             {
                 matchStereoPairs = true;
             }
+        },
+        {
+            "robust-syncing",
+            {},
+            [&robustSyncing](const std::vector<std::string>& values)
+            {
+                robustSyncing = true;
+            }
         }
     };
     
@@ -257,7 +266,12 @@ int main(int argc, char* argv[])
         {
             "info",
             {},
-            [&bufferSize, &url, &interfaceAddress, &matchStereoPairs, &configFilePath](const std::vector<std::string>& values)
+            [&bufferSize,
+             &url,
+             &interfaceAddress,
+             &matchStereoPairs,
+             &configFilePath,
+             &robustSyncing](const std::vector<std::string>& values)
             {
                 al::Vec3f forRotation = renderer.getFORRotation() * DEG_DIV_RAD;
                 al::Vec3f rotation    = renderer.getRotation()    * DEG_DIV_RAD;
@@ -281,7 +295,6 @@ int main(int argc, char* argv[])
                 std::cout << "Rotation speed:     " << renderer.getRotationSpeed() << std::endl;
                 std::cout << "Config file:        " << configFilePath << std::endl;
                 std::cout << "Face resolutions:   ";
-                
                 auto faceResokutions = renderer.getFaceResolutions();
                 for (int eye = 0; eye < StereoCubemap::MAX_EYES_COUNT; eye++)
                 {
@@ -293,6 +306,7 @@ int main(int argc, char* argv[])
                     std::cout << std::endl << "                    ";
                 }
                 std::cout << std::endl;
+                std::cout << "Robust syncing:     " << ((robustSyncing) ? "yes" : "no") << std::endl;
             }
         }
     };
@@ -350,6 +364,7 @@ int main(int argc, char* argv[])
                                                                           bufferSize,
                                                                           AV_PIX_FMT_YUV420P,
                                                                           matchStereoPairs,
+                                                                          robustSyncing,
                                                                           interfaceAddress.c_str());
     rtspClient->setOnDidConnect(boost::bind(&onDidConnect, _1, _2));
     rtspClient->connect();

@@ -30,7 +30,8 @@ public:
     
     H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
                       AVPixelFormat                    format,
-                      bool                             matchStereoPairs);
+                      bool                             matchStereoPairs,
+                      bool                             robustSyncing);
 
 protected:
     OnReceivedNALU            onReceivedNALU;
@@ -54,12 +55,13 @@ private:
     boost::condition_variable                 frameMapCondition;
     std::map<int, std::vector<AVFrame*> >     frameMap;
     std::vector<H264RawPixelsSink*>           sinks;
-    std::map<H264RawPixelsSink*, int>         sinksFaceMap;
+    std::map<H264RawPixelsSink*, int64_t>     sinksFaceMap;
     AVPixelFormat                             format;
     HeapAllocator                             heapAllocator;
     boost::thread                             getNextCubemapThread;
     boost::thread                             getNextFramesThread;
     StereoCubemap*                            oldCubemap;
-    int                                       lastFrameSeqNum;
+    int64_t                                   lastFrameSeqNum;
     bool                                      matchStereoPairs;
+    bool                                      robustSyncing;
 };

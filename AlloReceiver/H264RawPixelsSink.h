@@ -24,9 +24,10 @@ class ALLORECEIVER_API H264RawPixelsSink : public MediaSink
 {
 public:
 	static H264RawPixelsSink* createNew(UsageEnvironment& env,
-                                        unsigned long bufferSize,
-                                        AVPixelFormat format,
-                                        MediaSubsession* subsession);
+                                        unsigned long     bufferSize,
+                                        AVPixelFormat     format,
+                                        MediaSubsession*  subsession,
+                                        bool              robustSyncing);
 
 	AVFrame* getNextFrame();
     void returnFrame(AVFrame* usedFrame);
@@ -43,9 +44,10 @@ public:
 	
 protected:
 	H264RawPixelsSink(UsageEnvironment& env,
-                      unsigned int bufferSize,
-                      AVPixelFormat format,
-                      MediaSubsession* subsession);
+                      unsigned int      bufferSize,
+                      AVPixelFormat     format,
+                      MediaSubsession*  subsession,
+                      bool              robustSyncing);
 
 	virtual void afterGettingFrame(unsigned frameSize,
 		unsigned numTruncatedBytes,
@@ -87,6 +89,8 @@ private:
     AVPacket* currentPkt;
     int64_t pts;
     int64_t lastPTS;
+    
+    bool robustSyncing;
     
 	SwsContext* imageConvertCtx;
     
