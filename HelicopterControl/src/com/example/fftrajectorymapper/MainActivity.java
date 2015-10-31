@@ -62,6 +62,7 @@ public class MainActivity extends Activity{
     float originY = 0;
     float mapWidth = 400;
     float mapHeight = 400;
+    int dragButtonSize = 160;
     float sX, sY, fX, fY, prevX, prevY, picX, picY;
     Bitmap  mBitmap;
     int OSCPort = 7244;
@@ -101,12 +102,13 @@ public class MainActivity extends Activity{
         String defaultClient = this.getResources().getString(R.string.defaultClient);
         //playerX = Float.parseFloat(this.getResources().getString(R.string.playerX));
         playerX = Float.parseFloat(p.getString("playerX","0"));
-        playerY = Float.parseFloat(this.getResources().getString(R.string.playerY));
-        originX = Float.parseFloat(this.getResources().getString(R.string.originX));
-        originY = Float.parseFloat(this.getResources().getString(R.string.originY));
-        mapWidth = Float.parseFloat(this.getResources().getString(R.string.mapWidth));
-        mapHeight = Float.parseFloat(this.getResources().getString(R.string.mapHeight));
-		String prefClient = "192.168.1.157";//p.getString("Client", defaultClient);
+        playerY = Float.parseFloat(p.getString("playerY","0"));
+        originX = Float.parseFloat(p.getString("originX","0"));
+        originY = Float.parseFloat(p.getString("originY","0"));
+        mapWidth = Float.parseFloat(p.getString("mapWidth","0"));
+        mapHeight = Float.parseFloat(p.getString("mapHeight","0"));
+        String prefClient  = p.getString("OSCClient","192.168.");//"192.168.1.64";//
+        Log.w("osc",prefClient);
         
         try{
         	//This expects a string w/ a url
@@ -127,7 +129,6 @@ public class MainActivity extends Activity{
     }
     
     public void sendMessage(float sX,float sY,float fX,float fY,float picX,float picY,Bitmap mBitmap){
-    	Log.w("oscthread", "it works");
     	//Need to account for changing the origin!
     	float unityStartX = ((sX - picX - originX)/mBitmap.getWidth())*mapWidth;
 		float unityStartY = ((sY - picY - originY)/mBitmap.getHeight())*mapHeight;
@@ -216,7 +217,9 @@ public class MainActivity extends Activity{
             canvas.drawLine(sX,sY,fX,fY,mPaint);
             
             //Draw a circle at the player location
-            canvas.drawCircle(mBitmap.getWidth() * (playerX/mapWidth) + picX, mBitmap.getHeight() * (playerY/mapHeight) + picY, 8, mPaint);
+            canvas.drawCircle(mBitmap.getWidth() * (playerX/mapWidth) + picX + originX, mBitmap.getHeight() * (playerY/mapHeight) + picY + originY, 8, mPaint);
+            canvas.drawCircle(sX, sY, 3, mPaint);
+            canvas.drawRect(0, 0, dragButtonSize, dragButtonSize, mPaint);
         }
 
         private static final float TOUCH_TOLERANCE = 4;
@@ -250,11 +253,11 @@ public class MainActivity extends Activity{
         }
         private void touch_up(float x, float y) {
         	if(mapMove){
-        		if(x < 80 && y < 80){
+        		if(x < dragButtonSize && y < dragButtonSize){
         			mapMove = false;
         		}
         	} else {
-        		if(x < 80 && y < 80){
+        		if(x < dragButtonSize && y < dragButtonSize){
         			mapMove = true;
         		} else {
         			new oscthread().execute("test");
