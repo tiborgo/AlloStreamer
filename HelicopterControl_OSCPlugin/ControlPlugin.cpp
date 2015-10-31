@@ -509,12 +509,7 @@ extern "C" {
 	void EXPORT_API oscStart();
 	void EXPORT_API oscPhaseSpaceStart();
 }
-extern "C" void EXPORT_API endServer()
-{
-    data->shutdownServer = true;
-    fprintf(pluginFile, "Ending server...\n");
-    fflush(pluginFile);
-}
+
 
 extern "C" float EXPORT_API getStartX()
 {
@@ -622,6 +617,27 @@ extern "C" void EXPORT_API oscPhaseSpaceStartHelicopterControl()
     
     qs->Run();
 	qsBreakBarrier.wait();
+}
+
+extern "C" void EXPORT_API endServer()
+{
+	//AlloServer is finished, so shutdown OSC
+	if (s != NULL)
+	{
+		s->AsynchronousBreak();
+		sBreakBarrier.wait();
+		delete s;
+		s = NULL;
+	}
+	//OSC END
+
+	if (qs != NULL)
+	{
+		qs->AsynchronousBreak();
+		qsBreakBarrier.wait();
+		delete qs;
+		qs = NULL;
+	}
 }
 
 unsigned char testPixels[i_width*i_height*3];
