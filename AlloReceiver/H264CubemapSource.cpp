@@ -97,7 +97,7 @@ void H264CubemapSource::getNextFramesLoop()
                     if (onAddedFrameToCubemap) onAddedFrameToCubemap(this, i);
                 }
                 
-                if (frameMap.size() >= 30)
+                if (frameMap.size() >= maxFrameMapSize)
                 {
                     frameMapCondition.notify_all();
                 }
@@ -120,7 +120,7 @@ void H264CubemapSource::getNextCubemapLoop()
         {
             boost::mutex::scoped_lock lock(frameMapMutex);
             
-            if (frameMap.size() < 30)
+            if (frameMap.size() < maxFrameMapSize)
             {
                 frameMapCondition.wait(lock);
             }
@@ -282,10 +282,11 @@ void H264CubemapSource::getNextCubemapLoop()
 H264CubemapSource::H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
                                      AVPixelFormat                    format,
                                      bool                             matchStereoPairs,
-                                     bool                             robustSyncing)
+                                     bool                             robustSyncing,
+                                     size_t                           maxFrameMapSize)
     :
     sinks(sinks), format(format), oldCubemap(nullptr), lastFrameSeqNum(0), matchStereoPairs(matchStereoPairs),
-    robustSyncing(robustSyncing)
+    robustSyncing(robustSyncing), maxFrameMapSize(maxFrameMapSize)
 {
     int i = 0;
     for (H264RawPixelsSink* sink : sinks)

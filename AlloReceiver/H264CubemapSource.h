@@ -31,7 +31,8 @@ public:
     H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
                       AVPixelFormat                    format,
                       bool                             matchStereoPairs,
-                      bool                             robustSyncing);
+                      bool                             robustSyncing,
+                      size_t                           maxFrameMapSize);
 
 protected:
     OnReceivedNALU            onReceivedNALU;
@@ -64,4 +65,5 @@ private:
     int64_t                                   lastFrameSeqNum;
     bool                                      matchStereoPairs;
     bool                                      robustSyncing;
+    size_t                                    maxFrameMapSize;
 };

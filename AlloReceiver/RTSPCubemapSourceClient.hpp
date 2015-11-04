@@ -17,6 +17,7 @@ public:
                                            AVPixelFormat format,
                                            bool matchStereoPairs,
                                            bool robustSyncing,
+                                           size_t maxFrameMapSize,
                                            const char* interfaceAddress = "0.0.0.0",
                                            int verbosityLevel = 0,
                                            char const* applicationName = NULL,
@@ -32,6 +33,7 @@ protected:
                             AVPixelFormat format,
                             bool matchStereoPairs,
                             bool robustSyncing,
+                            size_t maxFrameMapSize,
                             int verbosityLevel,
                             char const* applicationName,
                             portNumBits tunnelOverHTTPPortNum,
@@ -79,4 +81,5 @@ private:
     unsigned int lastTotalPacketsExpected;
     bool matchStereoPairs;
     bool robustSyncing;
+    size_t maxFrameMapSize;
 };

@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
 
 	std::cout << "Buffer size " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
 
-	rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, false, false, interfaceAddress);
+	rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(), bufferSize, AV_PIX_FMT_RGBA, false, false, 5, interfaceAddress);
     std::function<void (RTSPCubemapSourceClient*, CubemapSource*)> callback(boost::bind(&onDidConnect, _1, _2));
     rtspClient->setOnDidConnect(callback);
     rtspClient->connect();

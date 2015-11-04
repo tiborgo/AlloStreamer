@@ -111,6 +111,7 @@ int main(int argc, char* argv[])
     bool          matchStereoPairs = false;
     std::string   configFilePath   = "AlloPlayer.config";
     bool          robustSyncing    = false;
+    size_t        maxFrameMapSize  = 2;
     
     std::initializer_list<CommandHandler::Command> generalCommands =
     {
@@ -237,6 +238,14 @@ int main(int argc, char* argv[])
             {
                 robustSyncing = true;
             }
+        },
+        {
+            "cubemap-queue-size",
+            {},
+            [&maxFrameMapSize](const std::vector<std::string>& values)
+            {
+                maxFrameMapSize = boost::lexical_cast<size_t>(values[0]);
+            }
         }
     };
     
@@ -271,7 +280,8 @@ int main(int argc, char* argv[])
              &interfaceAddress,
              &matchStereoPairs,
              &configFilePath,
-             &robustSyncing](const std::vector<std::string>& values)
+             &robustSyncing,
+             &maxFrameMapSize](const std::vector<std::string>& values)
             {
                 al::Vec3f forRotation = renderer.getFORRotation() * DEG_DIV_RAD;
                 al::Vec3f rotation    = renderer.getRotation()    * DEG_DIV_RAD;
@@ -307,6 +317,7 @@ int main(int argc, char* argv[])
                 }
                 std::cout << std::endl;
                 std::cout << "Robust syncing:     " << ((robustSyncing) ? "yes" : "no") << std::endl;
+                std::cout << "Cubemap queue size: " << maxFrameMapSize << std::endl;
             }
         }
     };
@@ -365,6 +376,7 @@ int main(int argc, char* argv[])
                                                                           AV_PIX_FMT_YUV420P,
                                                                           matchStereoPairs,
                                                                           robustSyncing,
+                                                                          maxFrameMapSize,
                                                                           interfaceAddress.c_str());
     rtspClient->setOnDidConnect(boost::bind(&onDidConnect, _1, _2));
     rtspClient->connect();
