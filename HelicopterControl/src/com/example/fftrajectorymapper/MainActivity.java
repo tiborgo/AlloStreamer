@@ -19,8 +19,6 @@ import android.graphics.Canvas;
 import android.graphics.EmbossMaskFilter;
 import android.graphics.MaskFilter;
 import android.graphics.Paint;
-import android.graphics.Path;
-import android.graphics.PointF;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.os.AsyncTask;
@@ -28,6 +26,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -62,8 +61,8 @@ public class MainActivity extends Activity{
     float originY = 0;
     float mapWidth = 400;
     float mapHeight = 400;
-    int dragButtonSize = 160;
-    float sX, sY, fX, fY, prevX, prevY, picX, picY;
+    int submitButtonSize = 160;
+    float sX, sY, tmpX, tmpY, prevX, prevY, picX, picY;
     Bitmap  mBitmap;
     int OSCPort = 7244;
     
@@ -84,7 +83,7 @@ public class MainActivity extends Activity{
         mPaint = new Paint();
         mPaint.setAntiAlias(true);
         mPaint.setDither(true);
-        mPaint.setColor(0xFF0000FF);
+        mPaint.setColor(0xFFFF0000);
         mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setStrokeJoin(Paint.Join.ROUND);
         mPaint.setStrokeCap(Paint.Cap.ROUND);
@@ -128,17 +127,14 @@ public class MainActivity extends Activity{
         mPaint.setColor(color);
     }
     
-    public void sendMessage(float sX,float sY,float fX,float fY,float picX,float picY,Bitmap mBitmap){
+    public void sendMessage(float sX,float sY,float picX,float picY,Bitmap mBitmap,boolean submitted){
     	//Need to account for changing the origin!
     	float unityStartX = ((sX - picX - originX)/mBitmap.getWidth())*mapWidth;
 		float unityStartY = ((sY - picY - originY)/mBitmap.getHeight())*mapHeight;
-		float unityEndX = ((fX - picX - originX)/mBitmap.getWidth())*mapWidth;
-		float unityEndY = ((fY - picY - originY)/mBitmap.getHeight())*mapHeight;
-        args = new Object[4];
+        args = new Object[3];
         args[0] = unityStartX;
         args[1] = unityStartY;
-        args[2] = unityEndX;
-        args[3] = unityEndY;
+        args[2] = submitted;
     	message = new OSCMessage("/coords",Arrays.asList(args));
         try{
             sender.send(message);
@@ -151,8 +147,12 @@ public class MainActivity extends Activity{
 
 		@Override
 		protected String doInBackground(String... params) {
-			sendMessage(sX,sY,fX,fY,picX,picY,mBitmap);
+			sendMessage(sX,sY,picX,picY,mBitmap,false);
 			return null;
+		}
+		
+		void submit(){
+			sendMessage(sX,sY,picX,picY,mBitmap,true);
 		}
     	
     }
@@ -184,52 +184,25 @@ public class MainActivity extends Activity{
             //Log.i("DRBRG", "Width: " + w + " Height: " + h);
             
         }
-
-        protected void calcFinalPoints(float x,float y){
-        	double dist = Math.sqrt(Math.pow((sX - x),2) + Math.pow((sY - y),2));
-        	if(dist > maxLength){
-        		double theta;
-        		if(x > sX){
-        			theta = Math.atan((sY-y)/(sX-x));
-        		} else if (sX > x){
-        			theta = Math.atan((sY-y)/(sX-x)) + Math.PI; 
-        		} else {
-        			if(y > sY){
-        				theta = Math.PI/2;
-        			} else {
-        				theta = (3*Math.PI)/2;
-        			}
-        		}
-        		fX = sX + (float) (maxLength * Math.cos(theta));
-        		fY = sY + (float) (maxLength * Math.sin(theta));
-        	} else {
-        		fX = x;
-        		fY = y;
-        	}
-        }
         
         @Override
         protected void onDraw(Canvas canvas) {
             canvas.drawColor(0xFFAAAAAA);
 
             canvas.drawBitmap(mBitmap, picX, picY, mBitmapPaint);
-
-            canvas.drawLine(sX,sY,fX,fY,mPaint);
             
             //Draw a circle at the player location
             canvas.drawCircle(mBitmap.getWidth() * (playerX/mapWidth) + picX + originX, mBitmap.getHeight() * (playerY/mapHeight) + picY + originY, 8, mPaint);
             canvas.drawCircle(sX, sY, 3, mPaint);
-            canvas.drawRect(0, 0, dragButtonSize, dragButtonSize, mPaint);
+            canvas.drawRect(0, 0, submitButtonSize, submitButtonSize, mPaint);
         }
 
         private static final float TOUCH_TOLERANCE = 4;
 
         private void touch_start(float x, float y) {
-        	if(!mapMove && x > 80 && y > 40){
+        	if(!mapMove && x > submitButtonSize && y > submitButtonSize){
         		sX = x;
             	sY = y;
-            	fX = x;
-            	fY = y;
         	}
             prevX = x;
             prevY = y;
@@ -243,25 +216,16 @@ public class MainActivity extends Activity{
         		picY += deltY;
         		sX += deltX;
         		sY += deltY;
-        		fX += deltX;
-        		fY += deltY;
         		prevX = x;
         		prevY = y;
-        	} else {
-        		calcFinalPoints(x,y);
+        	}  else {
+        		sX = x;
+        		sY = y;
         	}
         }
         private void touch_up(float x, float y) {
-        	if(mapMove){
-        		if(x < dragButtonSize && y < dragButtonSize){
-        			mapMove = false;
-        		}
-        	} else {
-        		if(x < dragButtonSize && y < dragButtonSize){
-        			mapMove = true;
-        		} else {
-        			new oscthread().execute("test");
-        		}
+        	if(x < submitButtonSize && y < submitButtonSize){
+        		new oscthread().execute("submit");
         	}
         }
 
@@ -270,8 +234,19 @@ public class MainActivity extends Activity{
             float x = event.getX();
             float y = event.getY();
 
-            switch (event.getAction()) {
+            switch (event.getActionMasked()) {
+	            case MotionEvent.ACTION_POINTER_DOWN:
+	            	Log.w("osc", "down twice");
+	            	mapMove = true;
+	            	sX = tmpX;
+	            	sY = tmpY;
+	            	touch_start(x,y);
+	            	invalidate();
+	            	break;
                 case MotionEvent.ACTION_DOWN:
+                	Log.w("osc", "down");
+                	tmpX = sX;
+                	tmpY = sY;
                     touch_start(x, y);
                     invalidate();
                     break;
@@ -279,6 +254,11 @@ public class MainActivity extends Activity{
                     touch_move(x, y);
                     invalidate();
                     break;
+                case MotionEvent.ACTION_POINTER_UP:
+                	mapMove = false;
+                	touch_up(x, y);
+                	invalidate();
+                	break;
                 case MotionEvent.ACTION_UP:
                     touch_up(x, y);
                     invalidate();
