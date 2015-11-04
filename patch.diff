@@ -1,0 +1,64 @@
+diff --git a/AlloReceiver/H264CubemapSource.cpp b/AlloReceiver/H264CubemapSource.cpp
+index 904051b..28e7600 100644
+--- a/AlloReceiver/H264CubemapSource.cpp
++++ b/AlloReceiver/H264CubemapSource.cpp
+@@ -61,7 +61,7 @@ void H264CubemapSource::getNextFramesLoop()
+             {
+                 boost::mutex::scoped_lock lock(frameMapMutex);
+                 
+-                int key = frames[i]->coded_picture_number;
++                int64_t key = frames[i]->pts;
+                 
+                 if (key <= lastFrameSeqNum)
+                 {
+diff --git a/AlloReceiver/H264CubemapSource.h b/AlloReceiver/H264CubemapSource.h
+index 5437510..59e62b5 100644
+--- a/AlloReceiver/H264CubemapSource.h
++++ b/AlloReceiver/H264CubemapSource.h
+@@ -54,12 +54,12 @@ private:
+     boost::condition_variable                 frameMapCondition;
+     std::map<int, std::vector<AVFrame*> >     frameMap;
+     std::vector<H264RawPixelsSink*>           sinks;
+-    std::map<H264RawPixelsSink*, int>         sinksFaceMap;
++    std::map<H264RawPixelsSink*, int64_t>     sinksFaceMap;
+     AVPixelFormat                             format;
+     HeapAllocator                             heapAllocator;
+     boost::thread                             getNextCubemapThread;
+     boost::thread                             getNextFramesThread;
+     StereoCubemap*                            oldCubemap;
+-    int                                       lastFrameSeqNum;
++    int64_t                                   lastFrameSeqNum;
+     bool                                      matchStereoPairs;
+ };
+diff --git a/AlloReceiver/H264RawPixelsSink.cpp b/AlloReceiver/H264RawPixelsSink.cpp
+index 7117d86..f302a73 100644
+--- a/AlloReceiver/H264RawPixelsSink.cpp
++++ b/AlloReceiver/H264RawPixelsSink.cpp
+@@ -156,7 +156,15 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
+     
+     //std::cout << naluPool.size() << std::endl;
+     
+-    pts = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec;
++    /*pts = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec;
++    int64_t altPts;
++    for (int i = 0; i < sizeof(int64_t); i++)
++    {
++        ((char*)&altPts)[i] = *(buffer + frameSize - (8-i));
++    }
++    altPts = *((int64_t*)(buffer + frameSize - sizeof(int64_t)));
++    std::cout << altPts << " " << pts << std::endl;*/
++    pts = *((int64_t*)(buffer + frameSize - sizeof(int64_t)));
+     
+     // Check if all NALUs for current frame have arrived
+     if (lastPTS != -1 && lastPTS != pts)
+@@ -184,8 +192,8 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
+     else
+     {
+         memcpy(currentPkt->data + currentPkt->size, START_CODE, sizeof(START_CODE));
+-        memcpy(currentPkt->data + currentPkt->size + sizeof(START_CODE), buffer, frameSize);
+-        currentPkt->size += sizeof(START_CODE) + frameSize;
++        memcpy(currentPkt->data + currentPkt->size + sizeof(START_CODE), buffer, frameSize - sizeof(int64_t));
++        currentPkt->size += sizeof(START_CODE) + frameSize - sizeof(int64_t);
+         currentPkt->pts = pts;
+     }
+     

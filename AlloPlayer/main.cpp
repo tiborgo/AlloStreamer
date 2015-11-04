@@ -241,7 +241,7 @@ int main(int argc, char* argv[])
         },
         {
             "cubemap-queue-size",
-            {},
+            {"size"},
             [&maxFrameMapSize](const std::vector<std::string>& values)
             {
                 maxFrameMapSize = boost::lexical_cast<size_t>(values[0]);
