@@ -131,10 +131,13 @@ public class MainActivity extends Activity{
     	//Need to account for changing the origin!
     	float unityStartX = ((sX - picX - originX)/mBitmap.getWidth())*mapWidth;
 		float unityStartY = ((sY - picY - originY)/mBitmap.getHeight())*mapHeight;
-        args = new Object[3];
-        args[0] = unityStartX;
-        args[1] = unityStartY;
-        args[2] = submitted;
+        args = new Object[4];
+        args[0] = Float.valueOf(unityStartX);
+        args[1] = Float.valueOf(unityStartY);
+        args[2] = Boolean.valueOf(submitted);
+        // Receiver cannot handle three argument package (for reasons I don't know)
+        // Add a dummy arg
+        args[3] = Integer.valueOf(0);
     	message = new OSCMessage("/coords",Arrays.asList(args));
         try{
             sender.send(message);
@@ -143,18 +146,13 @@ public class MainActivity extends Activity{
         }
     }
 
-    private class oscthread extends AsyncTask<String, Integer, String> {
+    private class oscthread extends AsyncTask<Boolean, Void, Void> {
 
 		@Override
-		protected String doInBackground(String... params) {
-			sendMessage(sX,sY,picX,picY,mBitmap,false);
+		protected Void doInBackground(Boolean... params) {
+			sendMessage(sX,sY,picX,picY,mBitmap,params[0]);
 			return null;
 		}
-		
-		void submit(){
-			sendMessage(sX,sY,picX,picY,mBitmap,true);
-		}
-    	
     }
     
     public class MyView extends View {
@@ -225,7 +223,10 @@ public class MainActivity extends Activity{
         }
         private void touch_up(float x, float y) {
         	if(x < submitButtonSize && y < submitButtonSize){
-        		new oscthread().execute("submit");
+        		new oscthread().execute(true);
+        	}
+        	else{
+        		new oscthread().execute(false);
         	}
         }
 
