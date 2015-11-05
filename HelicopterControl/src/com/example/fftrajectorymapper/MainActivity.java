@@ -54,7 +54,9 @@ import android.view.ViewGroup.LayoutParams;
  * limitations under the License.
  */
 import android.view.Window;
+import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import us.gorges.my_package.TwoDScrollView;
 
@@ -75,6 +77,7 @@ public class MainActivity extends Activity{
     float sX, sY, tmpX, tmpY, prevX, prevY, picX, picY;
     Bitmap  mBitmap;
     int OSCPort = 7244;
+    MyView myView;
     
     //OSC end
     
@@ -96,7 +99,7 @@ public class MainActivity extends Activity{
         
         mapContainer = (FrameLayout) findViewById(R.id.mMapContainer);
         
-        MyView myView = new MyView(this);
+        myView = new MyView(this);
         mapContainer.addView(myView);
         //myView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
         
@@ -153,6 +156,21 @@ public class MainActivity extends Activity{
         });*/
         
         //setContentView(new MyView(this));
+        
+        // Submit buttons
+        ImageButton submitButton1 = (ImageButton) findViewById(R.id.mSubmitButton1);
+        ImageButton submitButton2 = (ImageButton) findViewById(R.id.mSubmitButton2);
+        ImageButton submitButton3 = (ImageButton) findViewById(R.id.mSubmitButton3);
+        ImageButton submitButton4 = (ImageButton) findViewById(R.id.mSubmitButton4);
+        View.OnClickListener submitButtonClickListener = new View.OnClickListener() {
+            public void onClick(View v) {
+            	new oscthread().execute(true);
+            }
+        };
+        submitButton1.setOnClickListener(submitButtonClickListener);
+        submitButton2.setOnClickListener(submitButtonClickListener);
+        submitButton3.setOnClickListener(submitButtonClickListener);
+        submitButton4.setOnClickListener(submitButtonClickListener);
 
         View decorView = getWindow().getDecorView();
 
@@ -207,8 +225,8 @@ public class MainActivity extends Activity{
     
     public void sendMessage(float sX, float sY, float picX,float picY,Bitmap mBitmap,boolean submitted){
     	//Need to account for changing the origin!
-    	float unityStartX = ((sX - picX - originX)/mBitmap.getWidth())*mapWidth;
-		float unityStartY = ((sY - picY - originY)/mBitmap.getHeight())*mapHeight;
+    	float unityStartX = ((sX - originX)/myView.getWidth())*mapWidth;
+		float unityStartY = ((sY - originY)/myView.getHeight())*mapHeight;
         args = new Object[4];
         args[0] = Float.valueOf(unityStartX);
         args[1] = Float.valueOf(unityStartY);
@@ -293,7 +311,7 @@ public class MainActivity extends Activity{
             int height = getHeight();
             mPaint.setStrokeWidth(10);
             mPaint.setAlpha(255);
-            canvas.drawCircle(playerX + picX + originX, playerY + picY + originY, 8, mPaint);
+            canvas.drawCircle(playerX + originX, playerY + originY, 8, mPaint);
             
             mPaint.setStrokeWidth(2);
             //canvas.drawCircle(sX, sY, 3, mPaint);
@@ -350,6 +368,7 @@ public class MainActivity extends Activity{
         	sX = x;
     		sY = y;
     		invalidate();
+    		new oscthread().execute(false);
         }
         
         private float touchOffsetX;

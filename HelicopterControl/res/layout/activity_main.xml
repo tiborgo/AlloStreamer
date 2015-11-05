@@ -44,7 +44,7 @@
         android:layout_height="match_parent" >
 
         <ImageButton
-            android:id="@+id/imageButton1"
+            android:id="@+id/mSubmitButton4"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
@@ -52,7 +52,7 @@
             android:src="@drawable/ic_launcher" />
 
         <ImageButton
-            android:id="@+id/ImageButton01"
+            android:id="@+id/mSubmitButton1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
@@ -60,7 +60,7 @@
             android:src="@drawable/ic_launcher" />
 
         <ImageButton
-            android:id="@+id/ImageButton02"
+            android:id="@+id/mSubmitButton3"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
@@ -68,7 +68,7 @@
             android:src="@drawable/ic_launcher" />
 
         <ImageButton
-            android:id="@+id/ImageButton03"
+            android:id="@+id/mSubmitButton2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
