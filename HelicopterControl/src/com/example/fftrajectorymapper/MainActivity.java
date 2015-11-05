@@ -78,6 +78,7 @@ public class MainActivity extends Activity{
     Bitmap  mBitmap;
     int OSCPort = 7244;
     MyView myView;
+    ImageView mapView;
     
     //OSC end
     
@@ -92,7 +93,7 @@ public class MainActivity extends Activity{
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         
         setContentView(R.layout.activity_main);
-        final ImageView mapView = (ImageView) findViewById(R.id.mMapView);
+        mapView = (ImageView) findViewById(R.id.mMapView);
         String path = Environment.getExternalStorageDirectory() + "/FFTrajectoryBackground.jpg";
         //Bitmap tempBitmap = BitmapFactory.decodeFile(Environment.getExternalStorageDirectory() + "/FFTrajectoryBackground.jpg");
         //mapView.setImageBitmap(tempBitmap);
@@ -111,7 +112,7 @@ public class MainActivity extends Activity{
         
         TileBitmapDrawable.attachTileBitmapDrawable(mapView, path, null, null);
         
-        myView.setLayoutParams(new FrameLayout.LayoutParams(4000, 4000));
+        
         
         /*scrollView.setOnTouchListener(new View.OnTouchListener() {
 
@@ -215,6 +216,12 @@ public class MainActivity extends Activity{
         //OSC end
     }
 
+    @Override
+    public void onWindowFocusChanged (boolean hasFocus) {
+    	super.onWindowFocusChanged(hasFocus);
+    	myView.setLayoutParams(new FrameLayout.LayoutParams(mapView.getWidth(), mapView.getHeight()));
+    }
+    
     private Paint mPaint;
     private MaskFilter  mEmboss;
     private MaskFilter  mBlur;
@@ -225,8 +232,8 @@ public class MainActivity extends Activity{
     
     public void sendMessage(float sX, float sY, float picX,float picY,Bitmap mBitmap,boolean submitted){
     	//Need to account for changing the origin!
-    	float unityStartX = ((sX - originX)/myView.getWidth())*mapWidth;
-		float unityStartY = ((sY - originY)/myView.getHeight())*mapHeight;
+    	float unityStartX = sX / (myView.getWidth() / mapWidth) + originX;
+		float unityStartY = sY / (myView.getWidth() / mapWidth) + originY;
         args = new Object[4];
         args[0] = Float.valueOf(unityStartX);
         args[1] = Float.valueOf(unityStartY);
@@ -311,7 +318,7 @@ public class MainActivity extends Activity{
             int height = getHeight();
             mPaint.setStrokeWidth(10);
             mPaint.setAlpha(255);
-            canvas.drawCircle(playerX + originX, playerY + originY, 8, mPaint);
+            canvas.drawCircle((playerX - originX) * (getWidth() / mapWidth), (playerY - originY) * (getHeight() / mapHeight), 8, mPaint);
             
             mPaint.setStrokeWidth(2);
             //canvas.drawCircle(sX, sY, 3, mPaint);
