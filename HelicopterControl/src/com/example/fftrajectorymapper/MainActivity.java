@@ -4,8 +4,11 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import com.diegocarloslima.byakugallery.lib.TileBitmapDrawable;
 import com.illposed.osc.OSCMessage;
 import com.illposed.osc.OSCPortOut;
+//import com.mathieu.alloclient.javadecoder.R;
+
 import java.net.InetAddress;
 
 import android.app.Activity;
@@ -25,12 +28,16 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Display;
+import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
+import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewGroup.LayoutParams;
 /*
  * Copyright (C) 2007 The Android Open Source Project
  *
@@ -47,6 +54,9 @@ import android.view.View;
  * limitations under the License.
  */
 import android.view.Window;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import us.gorges.my_package.TwoDScrollView;
 
 public class MainActivity extends Activity{
         //implements ColorPickerDialog.OnColorChangedListener {
@@ -67,19 +77,88 @@ public class MainActivity extends Activity{
     int OSCPort = 7244;
     
     //OSC end
+    
+    private StopInterceptScrollView scrollView;
+    
+    private FrameLayout mapContainer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        setContentView(new MyView(this));
+        
+        setContentView(R.layout.activity_main);
+        final ImageView mapView = (ImageView) findViewById(R.id.mMapView);
+        String path = Environment.getExternalStorageDirectory() + "/FFTrajectoryBackground.jpg";
+        //Bitmap tempBitmap = BitmapFactory.decodeFile(Environment.getExternalStorageDirectory() + "/FFTrajectoryBackground.jpg");
+        //mapView.setImageBitmap(tempBitmap);
+        
+        mapContainer = (FrameLayout) findViewById(R.id.mMapContainer);
+        
+        MyView myView = new MyView(this);
+        mapContainer.addView(myView);
+        //myView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        
+        scrollView = (StopInterceptScrollView) findViewById(R.id.mScrollView);
+        
+        
+        
+
+        
+        TileBitmapDrawable.attachTileBitmapDrawable(mapView, path, null, null);
+        
+        myView.setLayoutParams(new FrameLayout.LayoutParams(4000, 4000));
+        
+        /*scrollView.setOnTouchListener(new View.OnTouchListener() {
+
+        	private float mx, my;
+        	
+            public boolean onTouch(View arg0, MotionEvent event) {
+
+            	
+            	Log.w("touch", "scroll " + event.getX() + " " + event.getY() + " " + event.getAction());
+            	
+                /*float curX, curY;
+
+                switch (event.getAction()) {
+
+                    case MotionEvent.ACTION_DOWN:
+                        mx = event.getX();
+                        my = event.getY();
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        curX = event.getX();
+                        curY = event.getY();
+                        mapView.scrollBy((int) (mx - curX), (int) (my - curY));
+                        mx = curX;
+                        my = curY;
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        curX = event.getX();
+                        curY = event.getY();
+                        mapView.scrollBy((int) (mx - curX), (int) (my - curY));
+                        break;
+                }*/
+
+            /*	if (event.getPointerCount() > 1)
+            	{
+            		return true;
+            	}
+            	else
+            	{
+            		return true;
+            	}
+            }
+        });*/
+        
+        //setContentView(new MyView(this));
 
         View decorView = getWindow().getDecorView();
 
         int uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN |View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN ;
         decorView.setSystemUiVisibility(uiOptions);
-        
+
         mPaint = new Paint();
         mPaint.setAntiAlias(true);
         mPaint.setDither(true);
@@ -88,7 +167,6 @@ public class MainActivity extends Activity{
         mPaint.setStrokeJoin(Paint.Join.ROUND);
         mPaint.setStrokeCap(Paint.Cap.ROUND);
         mPaint.setStrokeWidth(12);
-
         mEmboss = new EmbossMaskFilter(new float[] { 1, 1, 1 },
                                        0.4f, 6, 3.5f);
 
@@ -119,15 +197,15 @@ public class MainActivity extends Activity{
         //OSC end
     }
 
-    private Paint       mPaint;
+    private Paint mPaint;
     private MaskFilter  mEmboss;
     private MaskFilter  mBlur;
 
-    public void colorChanged(int color) {
+    /*public void colorChanged(int color) {
         mPaint.setColor(color);
-    }
+    }*/
     
-    public void sendMessage(float sX,float sY,float picX,float picY,Bitmap mBitmap,boolean submitted){
+    public void sendMessage(float sX, float sY, float picX,float picY,Bitmap mBitmap,boolean submitted){
     	//Need to account for changing the origin!
     	float unityStartX = ((sX - picX - originX)/mBitmap.getWidth())*mapWidth;
 		float unityStartY = ((sY - picY - originY)/mBitmap.getHeight())*mapHeight;
@@ -159,25 +237,43 @@ public class MainActivity extends Activity{
 
         private static final float MINP = 0.25f;
         private static final float MAXP = 0.75f;
+        
+        
 
         private Canvas  mCanvas;
         private Paint   mBitmapPaint;
         private float prevX, prevY;
         private float maxLength = 200;
         private boolean mapMove = false;
+        
+        private boolean isMarking = false;
+        private GestureDetector gestureDetector;
 
+        private final float RING_RADIUS = 200;
+        private final float RING_THICKNESS = 150;
+        
         public MyView(Context c) {
             super(c);
             mBitmapPaint = new Paint(Paint.DITHER_FLAG);
+            
+            gestureDetector = new GestureDetector(new GestureDetector.SimpleOnGestureListener() {
+                
+            	@Override
+            	public void onLongPress(MotionEvent e) {
+                    //scrollView.stopIntercepting();
+                    //isMarking = true;
+                    mark(e.getX(), e.getY());
+                }
+            });
         }
 
         @Override
         protected void onSizeChanged(int w, int h, int oldw, int oldh) {
             super.onSizeChanged(w, h, oldw, oldh);
-            String path = Environment.getExternalStorageDirectory() + "/FFTrajectoryBackground.jpg";
-            Bitmap tempBitmap = BitmapFactory.decodeFile(Environment.getExternalStorageDirectory() + "/FFTrajectoryBackground.jpg");//Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-            mBitmap = tempBitmap.copy(Bitmap.Config.ARGB_8888, true);
-            mCanvas = new Canvas(mBitmap);
+            //String path = Environment.getExternalStorageDirectory() + "/FFTrajectoryBackground.jpg";
+            //Bitmap tempBitmap = BitmapFactory.decodeFile(Environment.getExternalStorageDirectory() + "/FFTrajectoryBackground.jpg");//Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            //mBitmap = tempBitmap.copy(Bitmap.Config.ARGB_8888, true);
+            mCanvas = new Canvas(/*mBitmap*/);
             
             //Log.i("DRBRG", "Width: " + w + " Height: " + h);
             
@@ -185,14 +281,34 @@ public class MainActivity extends Activity{
         
         @Override
         protected void onDraw(Canvas canvas) {
-            canvas.drawColor(0xFFAAAAAA);
+            //canvas.drawColor(0xFFAAAAAA);
 
-            canvas.drawBitmap(mBitmap, picX, picY, mBitmapPaint);
+            //canvas.drawBitmap(mBitmap, picX, picY, mBitmapPaint);
+            
+            int width2 = mapContainer.getWidth();
+            int height2 = mapContainer.getHeight();
             
             //Draw a circle at the player location
-            canvas.drawCircle(mBitmap.getWidth() * (playerX/mapWidth) + picX + originX, mBitmap.getHeight() * (playerY/mapHeight) + picY + originY, 8, mPaint);
-            canvas.drawCircle(sX, sY, 3, mPaint);
-            canvas.drawRect(0, 0, submitButtonSize, submitButtonSize, mPaint);
+            int width = getWidth();
+            int height = getHeight();
+            mPaint.setStrokeWidth(10);
+            mPaint.setAlpha(255);
+            canvas.drawCircle(playerX + picX + originX, playerY + picY + originY, 8, mPaint);
+            
+            mPaint.setStrokeWidth(2);
+            //canvas.drawCircle(sX, sY, 3, mPaint);
+            float lineLength = 20;
+            float lineGap = 5;
+            canvas.drawLine(sX-lineGap, sY, sX-lineGap-lineLength, sY, mPaint);
+            canvas.drawLine(sX+lineGap, sY, sX+lineGap+lineLength, sY, mPaint);
+            canvas.drawLine(sX, sY-lineGap, sX, sY-lineGap-lineLength, mPaint);
+            canvas.drawLine(sX, sY+lineGap, sX, sY+lineGap+lineLength, mPaint);
+            
+            mPaint.setStrokeWidth(RING_THICKNESS);
+            mPaint.setAlpha(50);
+            canvas.drawCircle(sX, sY, RING_RADIUS, mPaint);
+            //canvas.drawRect(0, 0, submitButtonSize, submitButtonSize, mPaint);
+    
         }
 
         private static final float TOUCH_TOLERANCE = 4;
@@ -230,42 +346,75 @@ public class MainActivity extends Activity{
         	}
         }
 
+        private void mark(float x, float y) {
+        	sX = x;
+    		sY = y;
+    		invalidate();
+        }
+        
+        private float touchOffsetX;
+        private float touchOffsetY;
+        
         @Override
         public boolean onTouchEvent(MotionEvent event) {
             float x = event.getX();
             float y = event.getY();
 
+            Log.w("touch", "" + event.getPointerCount());
+            
+            //if (event.getPointerCount() == 1)
+            //{
             switch (event.getActionMasked()) {
 	            case MotionEvent.ACTION_POINTER_DOWN:
-	            	Log.w("osc", "down twice");
-	            	mapMove = true;
-	            	sX = tmpX;
-	            	sY = tmpY;
-	            	touch_start(x,y);
-	            	invalidate();
+	            	float x2 = event.getX(1);
+	            	float y2 = event.getY(1);
+	            	mark((x + x2) / 2.0f, (y + y2) / 2.0f);
 	            	break;
                 case MotionEvent.ACTION_DOWN:
-                	Log.w("osc", "down");
-                	tmpX = sX;
-                	tmpY = sY;
-                    touch_start(x, y);
-                    invalidate();
-                    break;
+                	if (event.getPointerCount() == 1)
+                    {
+	                	float distanceToTarget = (float)Math.sqrt(Math.pow(x - sX, 2) + Math.pow(y - sY, 2));
+	                	//Log.w("touch", "touch " + distanceToTarget);
+	                	if (distanceToTarget >= RING_RADIUS - 0.5 * RING_THICKNESS &&
+	                			distanceToTarget <= RING_RADIUS + 0.5 * RING_THICKNESS)
+	                		
+	                		
+	                	{
+	                		scrollView.stopIntercepting();
+	                		touchOffsetX = sX - x;
+	                		touchOffsetY = sY - y;
+	                		//Log.w("touch", "touch inside " + distanceToTarget + " " + touchOffsetX + " " + touchOffsetY);
+	                		isMarking = true;
+	                	}
+                    }
+                	break;
                 case MotionEvent.ACTION_MOVE:
-                    touch_move(x, y);
-                    invalidate();
+                	if (event.getPointerCount() == 1)
+                    {
+                		if (isMarking)
+                		{
+                			//Log.w("touch", "move " + touchOffsetX + " " + touchOffsetY);
+                			mark(x + touchOffsetX, y + touchOffsetY);
+                		}
+                	}
                     break;
-                case MotionEvent.ACTION_POINTER_UP:
+                /*case MotionEvent.ACTION_POINTER_UP:
                 	mapMove = false;
                 	touch_up(x, y);
                 	invalidate();
-                	break;
+                	break;*/
                 case MotionEvent.ACTION_UP:
-                    touch_up(x, y);
-                    invalidate();
+                    isMarking = false;
+                    scrollView.continueIntercepting();
                     break;
             }
+            gestureDetector.onTouchEvent(event);
             return true;
+            //}
+            //else
+           //{
+           // 	return false;
+            //}
         }
     }
 
@@ -336,5 +485,49 @@ public class MainActivity extends Activity{
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+    
+    static public class StopInterceptScrollView extends TwoDScrollView
+    {
+
+    	private boolean isIntercepting = true;
+    	
+		public StopInterceptScrollView(Context context) {
+			super(context);
+			// TODO Auto-generated constructor stub
+		}
+    	
+		public StopInterceptScrollView(Context context, AttributeSet attrs)
+        {
+            super(context, attrs);
+        }
+        public StopInterceptScrollView(Context context, AttributeSet attrs, int defStyle) {
+            super(context, attrs, defStyle);
+        }
+       
+        public void stopIntercepting() {
+        	isIntercepting = false;
+        }
+        
+        public void continueIntercepting() {
+        	isIntercepting = true;
+        }
+        
+        /*@Override
+        public boolean onTouchEvent (MotionEvent event)
+        {
+        	if (event.getPointerCount() > 1) {
+        		return super.onTouchEvent(event);
+        	}
+        	else {
+        		return false;
+        	}
+        }*/
+        
+        @Override
+        public boolean onInterceptTouchEvent (MotionEvent ev) {
+        	//return super.onInterceptTouchEvent(ev);
+        	return (isIntercepting) ? super.onInterceptTouchEvent(ev) : false;
+        }
     }
 }
