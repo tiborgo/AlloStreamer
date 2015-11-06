@@ -24,6 +24,7 @@ extern "C"
 #include "CubemapExtractionPlugin/CubemapExtractionPlugin.h"
 #include "AlloServer.h"
 #include "AlloReceiver/Stats.hpp"
+#include "DiscreteFlowControlFilter.hpp"
 
 static Stats stats;
 
@@ -62,6 +63,7 @@ static EventTriggerId addBinularsSubstreamTriggerId;
 static EventTriggerId removeBinularsSubstreamTriggerId;
 static std::string binocularsStreamName = "binoculars";
 static FrameStreamState* binocularsStream = nullptr;
+static unsigned long bandwidth = 700 * boost::mega::num; // limit bandwidth to 700 MBit/s
 
 static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms, std::string& name)
 {
@@ -116,8 +118,12 @@ void addFaceSubstreams0(void*)
 			source->setOnSentNALU    (boost::bind(&onSentNALU,     _1, _2, _3, j, i));
 			source->setOnEncodedFrame(boost::bind(&onEncodedFrame, _1, j, i));
 
+			DiscreteFlowControlFilter* flowControlFilter = DiscreteFlowControlFilter::createNew(*env,
+				                                                                                source,
+																								bandwidth);
+
 			state->source = H264VideoStreamDiscreteFramer::createNew(*env,
-				source);
+				flowControlFilter);
 
 			state->sink->startPlaying(*state->source, NULL, NULL);
 
@@ -299,7 +305,8 @@ int main(int argc, char* argv[])
 		("avg-bit-rate",      boost::program_options::value<int>(),             "")
 		("buffer-size",       boost::program_options::value<size_t>(),          "")
 	    ("stats-interval",    boost::program_options::value<size_t>(),          "")
-		("robust-syncing",    "");
+		("robust-syncing",    "")
+		("bandwidth",         boost::program_options::value<unsigned long>(),   "");
 		
     
     boost::program_options::variables_map vm;
@@ -377,6 +384,11 @@ int main(int argc, char* argv[])
 	if (vm.count("robust-syncing"))
 	{
 		robustSyncing = true;
+	}
+
+	if (vm.count("bandwidth"))
+	{
+		bandwidth = vm["bandwidth"].as<unsigned long>();
 	}
 
     av_log_set_level(AV_LOG_WARNING);

@@ -1,12 +1,14 @@
 set(SOURCES
 	AlloServer.cpp
 	RawPixelSource.cpp
+	DiscreteFlowControlFilter.cpp
 )
 	
 set(HEADERS
 	config.h
 	RawPixelSource.hpp
 	AlloServer.h
+	DiscreteFlowControlFilter.hpp
 )
 
 # include Boost, FFMpeg, live555, x264

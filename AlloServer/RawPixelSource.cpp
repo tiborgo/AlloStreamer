@@ -78,7 +78,7 @@ RawPixelSource::RawPixelSource(UsageEnvironment& env,
 	//myfile = fopen("/Users/tiborgoldschwendt/Desktop/Logs/deviceglxgears.log", "w");
 
 	// initialize frame pool
-	for (int i = 0; i < 1; i++)
+	for (int i = 0; i < 2; i++)
 	{
 		AVFrame* frame = av_frame_alloc();
 		if (!frame)
@@ -102,7 +102,7 @@ RawPixelSource::RawPixelSource(UsageEnvironment& env,
 		framePool.push(frame);
 	}
 
-	for (int i = 0; i < 1; i++)
+	for (int i = 0; i < 2; i++)
 	{
 		AVPacket pkt;
 		av_init_packet(&pkt);
