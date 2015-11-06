@@ -10,16 +10,16 @@ public class GuideHelicopter : MonoBehaviour
 {
 
     [DllImport("HelicopterControlPlugin")]
-    private static extern float getStartX();
+    private static extern float getRecentX();
 
     [DllImport("HelicopterControlPlugin")]
-    private static extern float getStartY();
+    private static extern float getRecentY();
 
     [DllImport("HelicopterControlPlugin")]
-    private static extern float getEndX();
+    private static extern float getSubmitX();
 
     [DllImport("HelicopterControlPlugin")]
-    private static extern float getEndY();
+    private static extern float getSubmitY();
 
     [DllImport("HelicopterControlPlugin")]
     private static extern float endServer();
@@ -28,14 +28,14 @@ public class GuideHelicopter : MonoBehaviour
 
     void Update()
     {
-        float startX = getStartX();
-        float startY = getStartY();
-        float endX = getEndX();
-        float endY = getEndY();
-        //Debug.Log ("(" + startX + "," + startY + ") -> (" + endX + "," + endY + ")");
+        float recentX = getRecentX();
+        float recentY = getRecentY();
+        float submitX = getSubmitX();
+        float submitY = getSubmitY();
+        Debug.Log ("(" + recentX + "," + recentY + ") -> (" + submitX + "," + submitY + ")");
         if (marker != null)
         {
-            marker.transform.position = new Vector3(startX, marker.transform.position.y, -startY);
+            marker.transform.position = new Vector3(recentX, marker.transform.position.y, -recentY);
         }
     }
 

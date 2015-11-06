@@ -493,17 +493,18 @@ static void DoRendering (const float* worldMatrix, const float* identityMatrix, 
 #define PORT 7245
 #define QPORT 7244
 #define SEND_PORT 7001
-float startX = 0;
-float startY = 0;
-float endX = 0;
-float endY = 0;
+float recentX = 0;
+float recentY = 0;
+float submitX = 0;
+float submitY = 0;
+float submitted = 0;
 extern "C" {
 	int EXPORT_API startStream();
 	int EXPORT_API initInterprocessMemory();
-	float EXPORT_API getStartX();
-	float EXPORT_API getStartY();
-	float EXPORT_API getEndX();
-	float EXPORT_API getEndY();
+	float EXPORT_API getRecentX();
+	float EXPORT_API getRecentY();
+	float EXPORT_API getSubmitX();
+	float EXPORT_API getSubmitY();
 	void EXPORT_API setDistance(float distance);
 	void EXPORT_API endServer();
 	void EXPORT_API oscStart();
@@ -511,24 +512,31 @@ extern "C" {
 }
 
 
-extern "C" float EXPORT_API getStartX()
+extern "C" float EXPORT_API getRecentX()
 {
-	return startX;
+	return recentX;
 }
 
-extern "C" float EXPORT_API getStartY()
+extern "C" float EXPORT_API getRecentY()
 {
-	return startY;
+	return recentY;
 }
 
-extern "C" float EXPORT_API getEndX()
+extern "C" float EXPORT_API getSubmitX()
 {
-	return endX;
+	return submitX;
 }
 
-extern "C" float EXPORT_API getEndY()
+extern "C" float EXPORT_API getSubmitY()
 {
-	return endY;
+	return submitY;
+}
+
+void checkForSubmit(float x, float y,float submit){
+	if(submit){
+		submitX = x;
+		submitY = y;
+	}
 }
 
 UdpTransmitSocket* transmitSocket = nullptr;
@@ -568,11 +576,10 @@ protected:
             // reflection for overloaded messages (eg you can call
             // (*arg)->IsBool() to check if a bool was passed etc).
             osc::ReceivedMessage::const_iterator arg = m.ArgumentsBegin();
-            startX = (arg++)->AsFloat();
-            startY = (arg++)->AsFloat();
-            endX = (arg++)->AsFloat();
-            endY = (arg++)->AsFloat();
-            
+            recentX = (arg++)->AsFloat();
+            recentY = (arg++)->AsFloat();
+			submitted = (arg++)->AsFloat();
+			checkForSubmit(recentX,recentY,submitted);
             if( arg != m.ArgumentsEnd() )
                 throw osc::ExcessArgumentException();
             

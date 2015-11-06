@@ -62,6 +62,7 @@ public class MainActivity extends Activity{
     float mapWidth = 400;
     float mapHeight = 400;
     int submitButtonSize = 160;
+    int submitButtonMargin = 10;
     float sX, sY, tmpX, tmpY, prevX, prevY, picX, picY;
     Bitmap  mBitmap;
     int OSCPort = 7244;
@@ -127,7 +128,7 @@ public class MainActivity extends Activity{
         mPaint.setColor(color);
     }
     
-    public void sendMessage(float sX,float sY,float picX,float picY,Bitmap mBitmap,boolean submitted){
+    public void sendMessage(float sX,float sY,float picX,float picY,Bitmap mBitmap,float submitted){
     	//Need to account for changing the origin!
     	float unityStartX = ((sX - picX - originX)/mBitmap.getWidth())*mapWidth;
 		float unityStartY = ((sY - picY - originY)/mBitmap.getHeight())*mapHeight;
@@ -135,6 +136,7 @@ public class MainActivity extends Activity{
         args[0] = unityStartX;
         args[1] = unityStartY;
         args[2] = submitted;
+        //args[3] = 2.7;
     	message = new OSCMessage("/coords",Arrays.asList(args));
         try{
             sender.send(message);
@@ -147,14 +149,14 @@ public class MainActivity extends Activity{
 
 		@Override
 		protected String doInBackground(String... params) {
-			sendMessage(sX,sY,picX,picY,mBitmap,false);
+			boolean submitted = params[0] == "submit";
+			if(submitted){
+				sendMessage(sX,sY,picX,picY,mBitmap,1);
+			} else {
+				sendMessage(sX,sY,picX,picY,mBitmap,0);
+			}
 			return null;
-		}
-		
-		void submit(){
-			sendMessage(sX,sY,picX,picY,mBitmap,true);
-		}
-    	
+		}	
     }
     
     public class MyView extends View {
@@ -194,15 +196,23 @@ public class MainActivity extends Activity{
             //Draw a circle at the player location
             canvas.drawCircle(mBitmap.getWidth() * (playerX/mapWidth) + picX + originX, mBitmap.getHeight() * (playerY/mapHeight) + picY + originY, 8, mPaint);
             canvas.drawCircle(sX, sY, 3, mPaint);
-            canvas.drawRect(0, 0, submitButtonSize, submitButtonSize, mPaint);
+            canvas.drawRect(submitButtonMargin, submitButtonMargin, submitButtonSize, submitButtonSize, mPaint);
         }
 
         private static final float TOUCH_TOLERANCE = 4;
 
         private void touch_start(float x, float y) {
-        	if(!mapMove && x > submitButtonSize && y > submitButtonSize){
-        		sX = x;
-            	sY = y;
+        	if(!mapMove){
+        		//Check if pressed submit
+        		if(x > submitButtonMargin 
+        		&& y >submitButtonMargin 
+        		&& x < submitButtonSize - submitButtonMargin 
+        		&& y < submitButtonSize - submitButtonMargin){
+            		//Maybe do something?
+        		} else {
+        			sX = x;
+            		sY = y;
+        		}
         	}
             prevX = x;
             prevY = y;
@@ -219,13 +229,25 @@ public class MainActivity extends Activity{
         		prevX = x;
         		prevY = y;
         	}  else {
-        		sX = x;
-        		sY = y;
+        		if(x > submitButtonMargin 
+        		&& y >submitButtonMargin 
+        		&& x < submitButtonSize - submitButtonMargin 
+        		&& y < submitButtonSize - submitButtonMargin){
+            		//Maybe do something?
+        		} else {
+        			sX = x;
+        			sY = y;
+        		}
         	}
         }
         private void touch_up(float x, float y) {
-        	if(x < submitButtonSize && y < submitButtonSize){
+        	if(x > submitButtonMargin 
+            && y >submitButtonMargin 
+            && x < submitButtonSize - submitButtonMargin 
+            && y < submitButtonSize - submitButtonMargin){
         		new oscthread().execute("submit");
+        	} else {
+        		new oscthread().execute("standard");
         	}
         }
 
