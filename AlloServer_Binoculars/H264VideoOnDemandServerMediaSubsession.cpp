@@ -24,6 +24,7 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 
 #include "H264VideoOnDemandServerMediaSubsession.hh"
 #include "MyDeviceSource.hh"
+#include "StreamFlowControlFilter.hpp"
 
 #ifndef INT64_C
 #define INT64_C(c) (c ## LL)
@@ -72,14 +73,15 @@ FramedSource* H264VideoOnDemandServerMediaSubsession::createNewStreamSource(unsi
   //ByteStreamFileSource* fileSource = ByteStreamFileSource::createNew(envir(), fFileName);
     
   MyDeviceSource *fileSource = MyDeviceSource::createNew(*envi);
-  
+  StreamFlowControlFilter* flowControlFilter = StreamFlowControlFilter::createNew(*envi, fileSource, 50000000);
+
   //FramedSource wrapper ?
     
   if (fileSource == NULL) return NULL;
   //fFileSize = fileSource->fileSize();
 
   // Create a framer for the Video Elementary Stream:
-  return H264VideoStreamFramer::createNew(envir(), fileSource);
+  return H264VideoStreamFramer::createNew(envir(), flowControlFilter);
 }
 
 RTPSink* H264VideoOnDemandServerMediaSubsession

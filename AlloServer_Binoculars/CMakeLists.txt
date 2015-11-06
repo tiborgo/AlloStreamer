@@ -3,6 +3,7 @@ set(SOURCES
 	AlloServer.cpp
 	serverUni.cpp
 	H264VideoOnDemandServerMediaSubsession.cpp
+	StreamFlowControlFilter.cpp
 )
 	
 set(HEADERS
@@ -11,6 +12,7 @@ set(HEADERS
 	MyDeviceSource.hh
 	H264VideoOnDemandServerMediaSubsession.hh
 	shared.h
+	StreamFlowControlFilter.hpp
 )
 
 find_package(Boost
