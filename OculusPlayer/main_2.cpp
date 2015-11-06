@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
         _interface = "0.0.0.0";
     }
 
-	rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(), DEFAULT_SINK_BUFFER_SIZE, AV_PIX_FMT_RGBA, false, false, _interface);
+	rtspClient = RTSPCubemapSourceClient::create(vm["url"].as<std::string>().c_str(), DEFAULT_SINK_BUFFER_SIZE, AV_PIX_FMT_RGBA, false, false, 10, _interface);
 	std::function<void(RTSPCubemapSourceClient*, CubemapSource*)> callback(boost::bind(&onDidConnect, _1, _2));
 	rtspClient->setOnDidConnect(callback);
 	rtspClient->connect();
