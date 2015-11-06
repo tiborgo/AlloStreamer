@@ -106,7 +106,7 @@ public class UseRenderingPlugin : MonoBehaviour
     private void CreateTextureAndPassToPlugin()
     {
         //movingCamera =  GameObject.Find("MonoCamera").GetComponent<Camera>();//Camera.allCameras[2];
-        movingCamera = GameObject.Find("Camera").GetComponent<Camera>();//Camera.allCameras[2]; //**This is the stereo renderer
+        movingCamera = /*GameObject.Find("Camera").*/GetComponent<Camera>();//Camera.allCameras[2]; //**This is the stereo renderer
 
 
         //movingCamera.rect = new Rect(0,0,width,height);

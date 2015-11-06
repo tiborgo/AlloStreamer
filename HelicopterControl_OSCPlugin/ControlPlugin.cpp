@@ -266,57 +266,57 @@ mapped_region region;
 shared_memory_object shm;
 extern "C" void EXPORT_API UnityRenderEvent (int eventID)
 {
-	// When we use the RenderCubemap.cs and USeRenderingPlugin.cs scripts
-	// This function will get called twice (with different eventIDs).
-	// We have to make sure that the extraction only happens once for the cubemap
-	// and binoculars respectively!
-	if (eventID == 0)
-	{
-		// Unknown graphics device type? Do nothing.
-		if (g_DeviceType == -1)
-			return;
-    
-    
-		// A colored triangle. Note that colors will come out differently
-		// in D3D9/11 and OpenGL, for example, since they expect color bytes
-		// in different ordering.
-		MyVertex verts[3] = {
-			{ -0.5f, -0.25f,  0, 0xFFff0000 },
-			{  0.5f, -0.25f,  0, 0xFF00ff00 },
-			{  0,     0.5f ,  0, 0xFF0000ff },
-		};
-    
-    
-		// Some transformation matrices: rotate around Z axis for world
-		// matrix, identity view matrix, and identity projection matrix.
-    
-		float phi = g_Time;
-		float cosPhi = cosf(phi);
-		float sinPhi = sinf(phi);
-    
-		float worldMatrix[16] = {
-			cosPhi,-sinPhi,0,0,
-			sinPhi,cosPhi,0,0,
-			0,0,1,0,
-			0,0,0.7f,1,
-		};
-		float identityMatrix[16] = {
-			1,0,0,0,
-			0,1,0,0,
-			0,0,1,0,
-			0,0,0,1,
-		};
-		float projectionMatrix[16] = {
-			1,0,0,0,
-			0,1,0,0,
-			0,0,1,0,
-			0,0,0,1,
-		};
-    
-		// Actual functions defined below
-		SetDefaultGraphicsState ();
-		DoRendering (worldMatrix, identityMatrix, projectionMatrix, verts);
-	}
+	//// When we use the RenderCubemap.cs and USeRenderingPlugin.cs scripts
+	//// This function will get called twice (with different eventIDs).
+	//// We have to make sure that the extraction only happens once for the cubemap
+	//// and binoculars respectively!
+	//if (eventID == 0)
+	//{
+	//	// Unknown graphics device type? Do nothing.
+	//	if (g_DeviceType == -1)
+	//		return;
+ //   
+ //   
+	//	// A colored triangle. Note that colors will come out differently
+	//	// in D3D9/11 and OpenGL, for example, since they expect color bytes
+	//	// in different ordering.
+	//	MyVertex verts[3] = {
+	//		{ -0.5f, -0.25f,  0, 0xFFff0000 },
+	//		{  0.5f, -0.25f,  0, 0xFF00ff00 },
+	//		{  0,     0.5f ,  0, 0xFF0000ff },
+	//	};
+ //   
+ //   
+	//	// Some transformation matrices: rotate around Z axis for world
+	//	// matrix, identity view matrix, and identity projection matrix.
+ //   
+	//	float phi = g_Time;
+	//	float cosPhi = cosf(phi);
+	//	float sinPhi = sinf(phi);
+ //   
+	//	float worldMatrix[16] = {
+	//		cosPhi,-sinPhi,0,0,
+	//		sinPhi,cosPhi,0,0,
+	//		0,0,1,0,
+	//		0,0,0.7f,1,
+	//	};
+	//	float identityMatrix[16] = {
+	//		1,0,0,0,
+	//		0,1,0,0,
+	//		0,0,1,0,
+	//		0,0,0,1,
+	//	};
+	//	float projectionMatrix[16] = {
+	//		1,0,0,0,
+	//		0,1,0,0,
+	//		0,0,1,0,
+	//		0,0,0,1,
+	//	};
+ //   
+	//	// Actual functions defined below
+	//	SetDefaultGraphicsState ();
+	//	DoRendering (worldMatrix, identityMatrix, projectionMatrix, verts);
+	//}
 }
 
 
@@ -492,18 +492,18 @@ static void DoRendering (const float* worldMatrix, const float* identityMatrix, 
 
 #define PORT 7245
 #define QPORT 7244
-#define SEND_PORT 7001
-float startX = 0;
-float startY = 0;
-float endX = 0;
-float endY = 0;
+#define SEND_PORT 7246
+float markX = 0;
+float markY = 0;
+int markUpdate = 0;
+
 extern "C" {
 	int EXPORT_API startStream();
 	int EXPORT_API initInterprocessMemory();
-	float EXPORT_API getStartX();
-	float EXPORT_API getStartY();
-	float EXPORT_API getEndX();
-	float EXPORT_API getEndY();
+	/*float EXPORT_API getMarkX();
+	float EXPORT_API getMarkY();
+	float EXPORT_API getSubmittedMarkX();
+	float EXPORT_API getSubmittedMarkY();*/
 	void EXPORT_API setDistance(float distance);
 	void EXPORT_API endServer();
 	void EXPORT_API oscStart();
@@ -511,24 +511,21 @@ extern "C" {
 }
 
 
-extern "C" float EXPORT_API getStartX()
+extern "C" float EXPORT_API getMarkX()
 {
-	return startX;
+	return markX;
 }
 
-extern "C" float EXPORT_API getStartY()
+extern "C" float EXPORT_API getMarkY()
 {
-	return startY;
+	return markY;
 }
 
-extern "C" float EXPORT_API getEndX()
+extern "C" int EXPORT_API getMarkUpdate()
 {
-	return endX;
-}
-
-extern "C" float EXPORT_API getEndY()
-{
-	return endY;
+	int markUpdate = ::markUpdate;
+	::markUpdate = 0;
+	return markUpdate;
 }
 
 UdpTransmitSocket* transmitSocket = nullptr;
@@ -560,7 +557,8 @@ protected:
     {
         (void) remoteEndpoint; // suppress unused parameter warning
         
-        try{
+        try
+		{
             // example of parsing single messages. osc::OsckPacketListener
             // handles the bundle traversal.
             
@@ -568,15 +566,27 @@ protected:
             // reflection for overloaded messages (eg you can call
             // (*arg)->IsBool() to check if a bool was passed etc).
             osc::ReceivedMessage::const_iterator arg = m.ArgumentsBegin();
-            startX = (arg++)->AsFloat();
-            startY = (arg++)->AsFloat();
-            endX = (arg++)->AsFloat();
-            endY = (arg++)->AsFloat();
+            markX = (arg++)->AsFloat();
+			markY = (arg++)->AsFloat();
+			bool submitted = (arg++)->AsBool();
+			int dummy = (arg++)->AsInt32();
             
-            if( arg != m.ArgumentsEnd() )
-                throw osc::ExcessArgumentException();
+			if (submitted)
+			{
+				markUpdate = 2;
+			}
+			else
+			{
+				markUpdate = 1;
+			}
             
-        }catch( osc::Exception& e ){
+			if (arg != m.ArgumentsEnd())
+			{
+				throw osc::ExcessArgumentException();
+			}
+        }
+		catch( osc::Exception& e )
+		{
             // any parsing errors such as unexpected argument types, or
             // missing arguments get thrown as exceptions.
             std::cout << "error while parsing message: "
