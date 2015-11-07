@@ -74,6 +74,16 @@ public class MouseLook : MonoBehaviour
     [DllImport("UnityServerPlugin")]
     private static extern void sendDistance(float distance);
 
+	public Vector3 GetOrientation()
+	{
+		return mobileDeviceRotation.eulerAngles;
+	}
+
+	public Vector3 GetCalibration()
+	{
+		return new Vector3(calibX, calibY, calibZ);
+	}
+
     Quaternion mobileDeviceRotation;
     Quaternion phaseSpaceRotation;
     GameObject distanceSphere;

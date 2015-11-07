@@ -19,6 +19,7 @@ public class RenderBinoculars : MonoBehaviour
     private GameObject rightEyeCamera;
     private Camera leftEyeCameraCam;
     private Camera rightEyeCameraCam;
+	private MouseLook mouseLook;
 
     [SerializeField]
     [HideInInspector]
@@ -121,6 +122,16 @@ public class RenderBinoculars : MonoBehaviour
         }
     }
 
+	public Vector3 GetOrientation()
+	{
+		return mouseLook.GetOrientation();
+	}
+	
+	public Vector3 GetCalibration()
+	{
+		return mouseLook.GetCalibration();
+	}
+
     // Use this for initialization
     void Start()
     {
@@ -211,7 +222,7 @@ public class RenderBinoculars : MonoBehaviour
         lineRenderer.SetWidth(0.1f, 0.1f);
         lineRenderer.SetVertexCount(2);
 
-        virtualCameraStereo.AddComponent<MouseLook>();
+		mouseLook = virtualCameraStereo.AddComponent<MouseLook>();
 
         GameObject hmd = new GameObject("HMD");
         hmd.transform.parent = virtualCameraStereo.transform;
