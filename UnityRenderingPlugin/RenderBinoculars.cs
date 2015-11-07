@@ -22,24 +22,28 @@ public class RenderBinoculars : MonoBehaviour
 
     [SerializeField]
     [HideInInspector]
-    private float fieldOfView = 90f;
+    private float fieldOfView_ = 90f;
 
     [SerializeField]
     [HideInInspector]
-    private float eyeSeparation = 0.128f;
+    private float eyeSeparation_ = 0.128f;
 
     [SerializeField]
     [HideInInspector]
-    private string binocularsAddress = "192.168.1.183";
+    private string binocularsAddress_ = "192.168.1.183";
+
+    [SerializeField]
+    [HideInInspector]
+    private float magnification_ = 1;
 
 #if UNITY_EDITOR
     [ExposeProperty]
 #endif
-    public float FieldOfView
+    public float fieldOfView
     {
         get
         {
-            return fieldOfView;
+            return fieldOfView_;
         }
         set
         {
@@ -47,10 +51,10 @@ public class RenderBinoculars : MonoBehaviour
             {
                 if (leftEyeCameraCam && rightEyeCameraCam)
                 {
-                    leftEyeCameraCam.fieldOfView = value;
-                    rightEyeCameraCam.fieldOfView = value;
+                    leftEyeCameraCam.fieldOfView = value / magnification;
+                    rightEyeCameraCam.fieldOfView = value / magnification;
                 }
-                fieldOfView = value;
+                fieldOfView_ = value;
             }
         }
     }
@@ -58,22 +62,22 @@ public class RenderBinoculars : MonoBehaviour
 #if UNITY_EDITOR
     [ExposeProperty]
 #endif
-    public float EyeSeparation
+    public float eyeSeparation
     {
         get
         {
-            return eyeSeparation;
+            return eyeSeparation_;
         }
         set
         {
-            if (value >= 0.0f)
+            if (value >= 0.5f)
             {
                 if (leftEyeCamera && rightEyeCamera)
                 {
                     leftEyeCamera.transform.localPosition = new Vector3(-value / 2, 0f, 0f);
                     rightEyeCamera.transform.localPosition = new Vector3(value / 2, 0f, 0f);
                 }
-                eyeSeparation = value;
+                eyeSeparation_ = value;
             }
         }
     }
@@ -81,16 +85,39 @@ public class RenderBinoculars : MonoBehaviour
 #if UNITY_EDITOR
 	[ExposeProperty]
 #endif
-    public string BinocularsAddress
+    public string binocularsAddress
     {
         get
         {
-            return binocularsAddress;
+            return binocularsAddress_;
         }
         set
         {
-            binocularsAddress = value;
+            binocularsAddress_ = value;
             setBinocularsAddress(value);
+        }
+    }
+
+#if UNITY_EDITOR
+	[ExposeProperty]
+#endif
+    public float magnification
+    {
+        get
+        {
+            return magnification_;
+        }
+        set
+        {
+            if (value >= 0.01f)
+            {
+                if (leftEyeCameraCam && rightEyeCameraCam)
+                {
+                    leftEyeCameraCam.fieldOfView = fieldOfView / value;
+                    rightEyeCameraCam.fieldOfView = fieldOfView / value;
+                }
+                magnification_ = value;
+            }
         }
     }
 
@@ -198,7 +225,7 @@ public class RenderBinoculars : MonoBehaviour
 
         leftEyeCameraCam = leftEyeCamera.AddComponent<Camera>();
         leftEyeCameraCam.targetTexture = leftEyeTexture;
-        leftEyeCameraCam.fieldOfView = fieldOfView;
+        leftEyeCameraCam.fieldOfView = fieldOfView / magnification;
         leftEyeCameraCam.cullingMask &= ~(1 << 8);
 
         rightEyeCamera = new GameObject("RightEyeCamera");
@@ -208,7 +235,7 @@ public class RenderBinoculars : MonoBehaviour
 
         rightEyeCameraCam = rightEyeCamera.AddComponent<Camera>();
         rightEyeCameraCam.targetTexture = rightEyeTexture;
-        rightEyeCameraCam.fieldOfView = fieldOfView;
+        rightEyeCameraCam.fieldOfView = fieldOfView / magnification;
         rightEyeCameraCam.cullingMask &= ~(1 << 8);
     }
 }

@@ -11,7 +11,7 @@ public class RenderStereoCubemap : MonoBehaviour
 {
     public int leftLayer = 15, rightLayer = 16;
     public int[] DoNotDisplayLayers = new int[1] { 8 };
-    public float eyeSep = 0.064f * 2, near = 0.1f, far = 10000f, focal_length = 10f, aperture = 90f;
+    public float eyeSep = 0.064f * 2, near = 0.1f, far = 10000f, focalLength = 10f, aperture = 90f;
     public int resolution = 1920;
     public int faceCount = 6;
 
@@ -174,38 +174,38 @@ public class RenderStereoCubemap : MonoBehaviour
     {
         //Init Vertices
         Vector3[] cubemapFacePositions = {
-            new Vector3(focal_length, 0, 0),
-            new Vector3(-focal_length, 0, 0),
-            new Vector3(0, 0, focal_length),
-            new Vector3(0, 0, -focal_length),
+            new Vector3(focalLength, 0, 0),
+            new Vector3(-focalLength, 0, 0),
+            new Vector3(0, 0, focalLength),
+            new Vector3(0, 0, -focalLength),
 
-            new Vector3(focal_length, 0, 0),
-            new Vector3(-focal_length, 0, 0),
-            new Vector3(0, 0, focal_length),
-            new Vector3(0, 0, -focal_length)                                                        
+            new Vector3(focalLength, 0, 0),
+            new Vector3(-focalLength, 0, 0),
+            new Vector3(0, 0, focalLength),
+            new Vector3(0, 0, -focalLength)                                                        
         };
         Vector3[][] ceilingVertices ={
-            new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (0, 0, 0), new Vector3 (focal_length, 0, focal_length) },
-            new Vector3[]{new Vector3 (-focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, focal_length), new Vector3 (0, 0, 0) },
-            new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, -focal_length), new Vector3 (0, 0, 0) },
-            new Vector3[]{new Vector3 (-focal_length, 0, focal_length), new Vector3 (focal_length, 0, focal_length), new Vector3 (0, 0, 0) },
+            new Vector3[]{new Vector3 (focalLength, 0, -focalLength), new Vector3 (0, 0, 0), new Vector3 (focalLength, 0, focalLength) },
+            new Vector3[]{new Vector3 (-focalLength, 0, -focalLength), new Vector3 (-focalLength, 0, focalLength), new Vector3 (0, 0, 0) },
+            new Vector3[]{new Vector3 (focalLength, 0, -focalLength), new Vector3 (-focalLength, 0, -focalLength), new Vector3 (0, 0, 0) },
+            new Vector3[]{new Vector3 (-focalLength, 0, focalLength), new Vector3 (focalLength, 0, focalLength), new Vector3 (0, 0, 0) },
             
-            new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (0, 0, 0), new Vector3 (focal_length, 0, focal_length) },
-            new Vector3[]{new Vector3 (-focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, focal_length), new Vector3 (0, 0, 0) },
-            new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, -focal_length), new Vector3 (0, 0, 0) },
-            new Vector3[]{new Vector3 (-focal_length, 0, focal_length), new Vector3 (focal_length, 0, focal_length), new Vector3 (0, 0, 0) }
+            new Vector3[]{new Vector3 (focalLength, 0, -focalLength), new Vector3 (0, 0, 0), new Vector3 (focalLength, 0, focalLength) },
+            new Vector3[]{new Vector3 (-focalLength, 0, -focalLength), new Vector3 (-focalLength, 0, focalLength), new Vector3 (0, 0, 0) },
+            new Vector3[]{new Vector3 (focalLength, 0, -focalLength), new Vector3 (-focalLength, 0, -focalLength), new Vector3 (0, 0, 0) },
+            new Vector3[]{new Vector3 (-focalLength, 0, focalLength), new Vector3 (focalLength, 0, focalLength), new Vector3 (0, 0, 0) }
         };
 
         Vector3[][] floorVertices ={
-            new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (0, 0, 0), new Vector3 (focal_length, 0, focal_length) },
-            new Vector3[]{new Vector3 (-focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, focal_length), new Vector3 (0, 0, 0) },
-            new Vector3[]{new Vector3 (-focal_length, 0, focal_length), new Vector3 (focal_length, 0, focal_length), new Vector3 (0, 0, 0) },
-            new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, -focal_length), new Vector3 (0, 0, 0) },
+            new Vector3[]{new Vector3 (focalLength, 0, -focalLength), new Vector3 (0, 0, 0), new Vector3 (focalLength, 0, focalLength) },
+            new Vector3[]{new Vector3 (-focalLength, 0, -focalLength), new Vector3 (-focalLength, 0, focalLength), new Vector3 (0, 0, 0) },
+            new Vector3[]{new Vector3 (-focalLength, 0, focalLength), new Vector3 (focalLength, 0, focalLength), new Vector3 (0, 0, 0) },
+            new Vector3[]{new Vector3 (focalLength, 0, -focalLength), new Vector3 (-focalLength, 0, -focalLength), new Vector3 (0, 0, 0) },
 
-            new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (0, 0, 0), new Vector3 (focal_length, 0, focal_length) },
-            new Vector3[]{new Vector3 (-focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, focal_length), new Vector3 (0, 0, 0) },
-            new Vector3[]{new Vector3 (-focal_length, 0, focal_length), new Vector3 (focal_length, 0, focal_length), new Vector3 (0, 0, 0) },
-            new Vector3[]{new Vector3 (focal_length, 0, -focal_length), new Vector3 (-focal_length, 0, -focal_length), new Vector3 (0, 0, 0) }
+            new Vector3[]{new Vector3 (focalLength, 0, -focalLength), new Vector3 (0, 0, 0), new Vector3 (focalLength, 0, focalLength) },
+            new Vector3[]{new Vector3 (-focalLength, 0, -focalLength), new Vector3 (-focalLength, 0, focalLength), new Vector3 (0, 0, 0) },
+            new Vector3[]{new Vector3 (-focalLength, 0, focalLength), new Vector3 (focalLength, 0, focalLength), new Vector3 (0, 0, 0) },
+            new Vector3[]{new Vector3 (focalLength, 0, -focalLength), new Vector3 (-focalLength, 0, -focalLength), new Vector3 (0, 0, 0) }
         };
         //Create RenderTextures
         renderTextures = new RenderTexture[faceCount];
@@ -279,7 +279,7 @@ public class RenderStereoCubemap : MonoBehaviour
             //Create Planes for Walls
             planes[i] = GameObject.CreatePrimitive(PrimitiveType.Plane);
             planes[i].transform.parent = cube.transform;
-            planes[i].transform.localScale = new Vector3(focal_length / 5, 1, focal_length / 5);
+            planes[i].transform.localScale = new Vector3(focalLength / 5, 1, focalLength / 5);
 
             //Game Object for Ceiling
             planeCeiling_4Way[i] = new GameObject();
@@ -347,11 +347,11 @@ public class RenderStereoCubemap : MonoBehaviour
             planes[i].transform.eulerAngles = cubemapFaceRotations[i];
 
             planeCeiling_4Way[i].name = cubemapCeilingFaceNames[i];
-            planeCeiling_4Way[i].transform.localPosition = new Vector3(0, focal_length, 0);
+            planeCeiling_4Way[i].transform.localPosition = new Vector3(0, focalLength, 0);
             planeCeiling_4Way[i].transform.eulerAngles = new Vector3(0, 180, 180);
 
             planeFloor_4Way[i].name = cubemapFloorFaceNames[i];
-            planeFloor_4Way[i].transform.localPosition = new Vector3(0, -focal_length, 0);
+            planeFloor_4Way[i].transform.localPosition = new Vector3(0, -focalLength, 0);
             planeFloor_4Way[i].transform.eulerAngles = new Vector3(0, 0, 0);
 
             k++;
@@ -367,7 +367,7 @@ public class RenderStereoCubemap : MonoBehaviour
                 break;
             planes[i] = GameObject.CreatePrimitive(PrimitiveType.Plane);
             planes[i].transform.parent = cube.transform;
-            planes[i].transform.localScale = new Vector3(focal_length / 5, 1, focal_length / 5);
+            planes[i].transform.localScale = new Vector3(focalLength / 5, 1, focalLength / 5);
 
             Renderer r = planes[i].GetComponent<Renderer>();
             r.shadowCastingMode = ShadowCastingMode.Off;
@@ -386,12 +386,12 @@ public class RenderStereoCubemap : MonoBehaviour
 
             if (i % 2 == 0)
             {
-                planes[i].transform.localPosition = new Vector3(0, focal_length, 0);
+                planes[i].transform.localPosition = new Vector3(0, focalLength, 0);
                 planes[i].transform.eulerAngles = new Vector3(0, 0, 180);
             }
             else
             {
-                planes[i].transform.localPosition = new Vector3(0, -focal_length, 0);
+                planes[i].transform.localPosition = new Vector3(0, -focalLength, 0);
                 planes[i].transform.eulerAngles = new Vector3(0, 180, 0);
             }
 
@@ -671,7 +671,7 @@ public class RenderStereoCubemap : MonoBehaviour
     /*
      * Returns asymmetric projection matrix for left and right eyes 
      */
-    Matrix4x4[] CalculateProjectionMatrix(float near, float far, float aperture, float eyeSep, float focal_length, int op = 0) //op: 0=not 4way stereo, 1= 4way stereo ceiling, 2= 4way stereo floor
+    Matrix4x4[] CalculateProjectionMatrix(float near, float far, float aperture, float eyeSep, float focalLength, int op = 0) //op: 0=not 4way stereo, 1= 4way stereo ceiling, 2= 4way stereo floor
     {
         //for asymmetric frustum for left and right eyes 
         Matrix4x4[] mats = new Matrix4x4[2];
@@ -681,7 +681,7 @@ public class RenderStereoCubemap : MonoBehaviour
         float l_L, l_R, r_L, r_R, top, bot, wid_div_2, shift;
 
         wid_div_2 = near * Mathf.Tan(0.5f * aperture * Mathf.PI / 180);
-        shift = 0.5f * eyeSep * near / focal_length;
+        shift = 0.5f * eyeSep * near / focalLength;
 
         top = wid_div_2;
         bot = -wid_div_2;
@@ -749,18 +749,18 @@ public class RenderStereoCubemap : MonoBehaviour
     void CameraProjectionInit()
     {
 
-        Matrix4x4[] mat = CalculateProjectionMatrix(near, far, aperture, eyeSep / 2, focal_length);
+        Matrix4x4[] mat = CalculateProjectionMatrix(near, far, aperture, eyeSep / 2, focalLength);
         Matrix4x4[] matC, matF;
         if (CeilingFloorStereoOption == Ceiling_Floor_StereoOption.All)
         {
-            matC = CalculateProjectionMatrix(near, far, aperture/*/2*/, eyeSep / 2, focal_length, 1);
-            matF = CalculateProjectionMatrix(near, far, aperture/*/2*/, eyeSep / 2, focal_length, 2);
+            matC = CalculateProjectionMatrix(near, far, aperture/*/2*/, eyeSep / 2, focalLength, 1);
+            matF = CalculateProjectionMatrix(near, far, aperture/*/2*/, eyeSep / 2, focalLength, 2);
         }
 
         else
         {
-            matC = CalculateProjectionMatrix(near, far, aperture, eyeSep / 2, focal_length);
-            matF = CalculateProjectionMatrix(near, far, aperture, eyeSep / 2, focal_length);
+            matC = CalculateProjectionMatrix(near, far, aperture, eyeSep / 2, focalLength);
+            matF = CalculateProjectionMatrix(near, far, aperture, eyeSep / 2, focalLength);
         }
 
         for (int i = 0; i < Math.Min(CameraL.Length, 4); i++)
