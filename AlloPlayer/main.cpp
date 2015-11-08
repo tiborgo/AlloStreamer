@@ -174,7 +174,15 @@ int main(int argc, char* argv[])
             {
                 renderer.setRotationSpeed(boost::lexical_cast<float>(values[0]));
             }
-        }
+        },
+        {
+            "force-mono",
+            {},
+            [](const std::vector<std::string>& values)
+            {
+                renderer.setForceMono(true);
+            }
+        },
     };
     
     std::initializer_list<CommandHandler::Command> commandLineOnlyCommands =
@@ -318,6 +326,7 @@ int main(int argc, char* argv[])
                 std::cout << std::endl;
                 std::cout << "Robust syncing:     " << ((robustSyncing) ? "yes" : "no") << std::endl;
                 std::cout << "Cubemap queue size: " << maxFrameMapSize << std::endl;
+                std::cout << "Force mono:         " << ((renderer.getForceMono()) ? "yes" : "no") << std::endl;
             }
         }
     };

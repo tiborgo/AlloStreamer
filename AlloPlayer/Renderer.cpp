@@ -42,7 +42,8 @@ static const char* yuvGammaFragShader = AL_STRINGIFY
 Renderer::Renderer()
     :
     al::OmniApp("AlloPlayer", false, 2048), gammaMin(0.0f), gammaMax(1.0f), gammaPow(1.0f),
-    forRotation(0, 0, 0), forAngle(M_PI*2.0), rotation(0, 0, 0), rotationSpeed(0.5)
+    forRotation(0, 0, 0), forAngle(M_PI*2.0), rotation(0, 0, 0), rotationSpeed(0.5),
+    forceMono(false)
 {
     nav().smooth(0.8);
     
@@ -88,7 +89,16 @@ bool Renderer::onFrame()
     {
         for (int j = 0; j < cubemap->getEyesCount(); j++)
         {
-            Cubemap* eye = cubemap->getEye(j);
+            Cubemap* eye;
+            if (forceMono && j == 1)
+            {
+                eye = cubemap->getEye(0);
+            }
+            else
+            {
+                eye = cubemap->getEye(j);
+            }
+            
             for (int i = 0; i < eye->getFacesCount(); i++)
             {
                 CubemapFace* face = eye->getFace(i);
@@ -346,6 +356,12 @@ void Renderer::setRotationSpeed(float speed)
     this->rotationSpeed = speed;
 }
 
+void Renderer::setForceMono(bool forceMono)
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    this->forceMono = forceMono;
+}
+
 void Renderer::setCubemapSource(CubemapSource* cubemapSource)
 {
     cubemapSource->setOnNextCubemap(boost::bind(&Renderer::onNextCubemap,
@@ -394,6 +410,12 @@ float Renderer::getRotationSpeed()
 {
     boost::mutex::scoped_lock(uniformsMutex);
     return rotationSpeed;
+}
+
+bool Renderer::getForceMono()
+{
+    boost::mutex::scoped_lock(uniformsMutex);
+    return forceMono;
 }
 
 std::vector<std::pair<int, int>> Renderer::getFaceResolutions()
