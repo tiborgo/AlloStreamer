@@ -45,6 +45,11 @@ void H264CubemapSource::setOnScheduledFrameInCubemap(const OnScheduledFrameInCub
     onScheduledFrameInCubemap = callback;
 }
 
+void H264CubemapSource::setOnScheduledCubemap(const OnScheduledCubemap& callback)
+{
+    onScheduledCubemap = callback;
+}
+
 void H264CubemapSource::getNextFramesLoop()
 {
 	std::vector<AVFrame*> frames(sinks.size(), nullptr);
@@ -275,6 +280,7 @@ void H264CubemapSource::getNextCubemapLoop()
             
             // Display frame
             oldCubemap = onNextCubemap(this, cubemap);
+            if (onScheduledCubemap) onScheduledCubemap(this, pts);
 		}
     }
 }

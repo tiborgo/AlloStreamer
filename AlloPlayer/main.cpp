@@ -3,6 +3,10 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/prettywriter.h>
+#include <fstream>
 
 #include "Renderer.hpp"
 #include "AlloShared/StatsUtils.hpp"
@@ -26,6 +30,7 @@ static bool     noDisplay;
 static Renderer renderer;
 static auto     lastStatsTime = boost::chrono::steady_clock::now();
 static std::string statsFormat = AlloReceiver::formatStringMaker();
+static std::ofstream ptsLogFile;
 
 StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
@@ -67,6 +72,27 @@ void setOnScheduledFrameInCubemap(CubemapSource* source, int face)
     stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::SCHEDULED));
 }
 
+void setOnScheduledCubemap(CubemapSource* source, int64_t pts)
+{
+    auto timeStamp = boost::chrono::system_clock::now().time_since_epoch();
+    
+    rapidjson::Value actualPTS(boost::chrono::duration_cast<boost::chrono::microseconds>(timeStamp).count());
+    rapidjson::Value desiredPTS(pts);
+    rapidjson::Document document;
+    document.SetObject();
+    document.AddMember("actualPTS",
+                       actualPTS,
+                       document.GetAllocator());
+    document.AddMember("desiredPTS",
+                       desiredPTS,
+                       document.GetAllocator());
+    rapidjson::StringBuffer buffer;
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+    document.Accept(writer);
+    ptsLogFile << buffer.GetString() << "," << std::endl;
+    ptsLogFile.flush();
+}
+
 void onDisplayedCubemapFace(Renderer* renderer, int face)
 {
     stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::DISPLAYED));
@@ -88,6 +114,7 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
         h264CubemapSource->setOnColorConvertedFrame    (boost::bind(&onColorConvertedFrame,        _1, _2, _3, _4));
         h264CubemapSource->setOnAddedFrameToCubemap    (boost::bind(&onAddedFrameToCubemap,        _1, _2));
         h264CubemapSource->setOnScheduledFrameInCubemap(boost::bind(&setOnScheduledFrameInCubemap, _1, _2));
+        h264CubemapSource->setOnScheduledCubemap       (boost::bind(&setOnScheduledCubemap,        _1, _2));
     }
     
     if (noDisplay)
@@ -104,6 +131,7 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
 
 int main(int argc, char* argv[])
 {
+    
                   noDisplay        = false;
     std::string   url              = "";
     std::string   interfaceAddress = "0.0.0.0";
@@ -112,6 +140,7 @@ int main(int argc, char* argv[])
     std::string   configFilePath   = "AlloPlayer.config";
     bool          robustSyncing    = false;
     size_t        maxFrameMapSize  = 2;
+    std::string   logPath          = ".";
     
     std::initializer_list<CommandHandler::Command> generalCommands =
     {
@@ -246,6 +275,14 @@ int main(int argc, char* argv[])
             {
                 maxFrameMapSize = boost::lexical_cast<size_t>(values[0]);
             }
+        },
+        {
+            "log-path",
+            {"path"},
+            [&logPath](const std::vector<std::string>& values)
+            {
+                logPath = values[0];
+            }
         }
     };
     
@@ -281,7 +318,8 @@ int main(int argc, char* argv[])
              &matchStereoPairs,
              &configFilePath,
              &robustSyncing,
-             &maxFrameMapSize](const std::vector<std::string>& values)
+             &maxFrameMapSize,
+             &logPath](const std::vector<std::string>& values)
             {
                 al::Vec3f forRotation = renderer.getFORRotation() * DEG_DIV_RAD;
                 al::Vec3f rotation    = renderer.getRotation()    * DEG_DIV_RAD;
@@ -318,6 +356,7 @@ int main(int argc, char* argv[])
                 std::cout << std::endl;
                 std::cout << "Robust syncing:     " << ((robustSyncing) ? "yes" : "no") << std::endl;
                 std::cout << "Cubemap queue size: " << maxFrameMapSize << std::endl;
+                std::cout << "Log path:           " << logPath << std::endl;
             }
         }
     };
@@ -369,6 +408,10 @@ int main(int argc, char* argv[])
     
     Console console(consoleCommandHandler);
     console.start();
+    
+    boost::filesystem::path dir(logPath);
+    boost::filesystem::create_directories(dir);
+    ptsLogFile.open(logPath + "/PTS.json", std::ofstream::out | std::ofstream::app);
     
     
     RTSPCubemapSourceClient* rtspClient = RTSPCubemapSourceClient::create(url.c_str(),
