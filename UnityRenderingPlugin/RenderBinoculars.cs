@@ -3,12 +3,15 @@ using System.Collections;
 using System.Runtime.InteropServices;
 using System;
 using System.Reflection;
+using Newtonsoft.Json;
 
-
+[JsonObject(MemberSerialization.OptIn)]
 public class RenderBinoculars : MonoBehaviour
 {
+    // Info to be logged
+    [JsonProperty]
 #if UNITY_EDITOR
-    [ExposeProperty]
+	[ExposeProperty]
 #endif
     public float fieldOfView
     {
@@ -30,8 +33,9 @@ public class RenderBinoculars : MonoBehaviour
         }
     }
 
+    [JsonProperty]
 #if UNITY_EDITOR
-    [ExposeProperty]
+	[ExposeProperty]
 #endif
     public float eyeSeparation
     {
@@ -53,6 +57,7 @@ public class RenderBinoculars : MonoBehaviour
         }
     }
 
+    [JsonProperty]
 #if UNITY_EDITOR
 	[ExposeProperty]
 #endif
@@ -69,6 +74,7 @@ public class RenderBinoculars : MonoBehaviour
         }
     }
 
+    [JsonProperty]
 #if UNITY_EDITOR
 	[ExposeProperty]
 #endif
@@ -222,7 +228,7 @@ public class RenderBinoculars : MonoBehaviour
         lineRenderer.SetWidth(0.1f, 0.1f);
         lineRenderer.SetVertexCount(2);
 
-		mouseLook = virtualCameraStereo.AddComponent<MouseLook>();
+        mouseLook = virtualCameraStereo.AddComponent<MouseLook>();
 
         GameObject hmd = new GameObject("HMD");
         hmd.transform.parent = virtualCameraStereo.transform;

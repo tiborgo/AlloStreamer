@@ -4,15 +4,23 @@ using System.Collections;
 using System.Runtime.InteropServices;
 using System;
 using System.Reflection;
+using Newtonsoft.Json;
 
+[JsonObject(MemberSerialization.OptIn)]
 public class RenderStereoCubemap : MonoBehaviour
 {
 	public enum Ceiling_Floor_StereoOption { None, PositiveZ, NegativeZ, PositiveX, NegativeX, All }
 
+	// Info to be logged
+	[JsonProperty]
 	public int[] DoNotDisplayLayers = new int[1] { 8 };
+	[JsonProperty]
 	public float eyeSep = 0.064f * 2, near = 0.1f, far = 10000f, focalLength = 10f, aperture = 90f,  moveSpeed = 1;
+	[JsonProperty]
 	public int resolution = 1920, faceCount = 6, leftLayer = 15, rightLayer = 16, fps = -1, inverseRate = 1;
+	[JsonProperty]
     public bool printFPS = false, extract = true, disablePlanes = false;
+	[JsonProperty]
     public Ceiling_Floor_StereoOption CeilingFloorStereoOption;
 
     private int DoNotDisplayCullingMask = 0;
