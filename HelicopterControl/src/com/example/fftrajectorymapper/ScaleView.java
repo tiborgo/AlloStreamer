@@ -21,14 +21,14 @@ public class ScaleView extends View {
         super(context, attrs);
         
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mPaint.setColor(0xFFFF0000);
+        mPaint.setColor(0xFF000000);
         mPaint.setStyle(Paint.Style.STROKE);
         //mPaint.setStrokeJoin(Paint.Join.ROUND);
         //mPaint.setStrokeCap(Paint.Cap.ROUND);
         mPaint.setStrokeWidth(3);
         
         mTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mTextPaint.setColor(0xFFFF0000);
+        mTextPaint.setColor(0xFF000000);
         mTextPaint.setStrokeWidth(1);
         mTextPaint.setTextSize(30);
         mTextPaint.setTextAlign(Paint.Align.CENTER);
