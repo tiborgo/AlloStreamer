@@ -29,6 +29,7 @@ public:
     void setFORAngle(float forAngle);
     void setRotation(const al::Vec3f& rotation);
     void setRotationSpeed(float speed);
+    void setForceMono(bool forceMono);
     void setCubemapSource(CubemapSource* source);
     
     float                            getGammaMin();
@@ -39,6 +40,7 @@ public:
     const al::Vec3f&                 getRotation();
     float                            getRotationSpeed();
     std::vector<std::pair<int, int>> getFaceResolutions();
+    bool                             getForceMono();
     
 protected:
     std::function<void (Renderer*)> onDisplayedFrame;
@@ -66,4 +68,5 @@ private:
     float                            forAngle;
     al::Vec3f                        rotation;
     float                            rotationSpeed;
+    bool                             forceMono;
 };
