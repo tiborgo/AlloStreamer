@@ -23,61 +23,72 @@
         </FrameLayout>
     </view>
 
-    <RelativeLayout
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent" >
 
-        <ImageButton
-            android:id="@+id/mSubmitButton1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentTop="true"
-            android:adjustViewBounds="true"
-            android:maxHeight="100dp"
-            android:maxWidth="100dp"
-            android:padding="15dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/circle" />
+        <com.example.fftrajectorymapper.ScaleView
+            android:id="@+id/mScaleView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-        <ImageButton
-            android:id="@+id/mSubmitButton2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentTop="true"
-            android:adjustViewBounds="true"
-            android:maxHeight="100dp"
-            android:maxWidth="100dp"
-            android:padding="15dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/circle" />
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
 
-        <ImageButton
-            android:id="@+id/mSubmitButton3"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentLeft="true"
-            android:adjustViewBounds="true"
-            android:maxHeight="100dp"
-            android:maxWidth="100dp"
-            android:padding="15dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/circle" />
+            <ImageButton
+                android:id="@+id/mSubmitButton1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentTop="true"
+                android:adjustViewBounds="true"
+                android:maxHeight="100dp"
+                android:maxWidth="100dp"
+                android:padding="15dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/circle" />
 
-        <ImageButton
-            android:id="@+id/mSubmitButton4"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentRight="true"
-            android:adjustViewBounds="true"
-            android:maxHeight="100dp"
-            android:maxWidth="100dp"
-            android:padding="15dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/circle" />
-    </RelativeLayout>
+            <ImageButton
+                android:id="@+id/mSubmitButton2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:layout_alignParentTop="true"
+                android:adjustViewBounds="true"
+                android:maxHeight="100dp"
+                android:maxWidth="100dp"
+                android:padding="15dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/circle" />
+
+            <ImageButton
+                android:id="@+id/mSubmitButton3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentLeft="true"
+                android:adjustViewBounds="true"
+                android:maxHeight="100dp"
+                android:maxWidth="100dp"
+                android:padding="15dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/circle" />
+
+            <ImageButton
+                android:id="@+id/mSubmitButton4"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentRight="true"
+                android:adjustViewBounds="true"
+                android:maxHeight="100dp"
+                android:maxWidth="100dp"
+                android:padding="15dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/circle" />
+        </RelativeLayout>
+
+    </FrameLayout>
 
 </FrameLayout>

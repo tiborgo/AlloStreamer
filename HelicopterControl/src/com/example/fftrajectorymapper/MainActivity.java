@@ -75,7 +75,7 @@ public class MainActivity extends Activity{
     float mapWidth = 400;
     float mapHeight = 400;
     int submitButtonSize = 160;
-    float sX, sY, tmpX, tmpY, prevX, prevY, picX, picY;
+    float sX = Float.POSITIVE_INFINITY, sY = Float.POSITIVE_INFINITY, tmpX, tmpY, prevX, prevY, picX, picY;
     Bitmap  mBitmap;
     int OSCPort = 7244;
     MyView myView;
@@ -215,6 +215,9 @@ public class MainActivity extends Activity{
             Log.w("dbg", "oscoutport: " + e.toString() + ": " + prefClient);
         }
         //OSC end
+        
+        ScaleView scaleView = (ScaleView) findViewById(R.id.mScaleView);
+        scaleView.setMapWidth(mapWidth);
     }
 
     @Override
