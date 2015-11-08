@@ -7,36 +7,6 @@ using System.Reflection;
 
 public class RenderBinoculars : MonoBehaviour
 {
-    [DllImport("UnityServerPlugin")]
-    private static extern void setBinocularsAddress(string address);
-
-    private RenderTexture stereoTexture;
-    private RenderTexture leftEyeTexture;
-    private RenderTexture rightEyeTexture;
-    private Material leftEyeMaterial;
-    private Material rightEyeMaterial;
-    private GameObject leftEyeCamera;
-    private GameObject rightEyeCamera;
-    private Camera leftEyeCameraCam;
-    private Camera rightEyeCameraCam;
-	private MouseLook mouseLook;
-
-    [SerializeField]
-    [HideInInspector]
-    private float fieldOfView_ = 90f;
-
-    [SerializeField]
-    [HideInInspector]
-    private float eyeSeparation_ = 0.128f;
-
-    [SerializeField]
-    [HideInInspector]
-    private string binocularsAddress_ = "192.168.1.183";
-
-    [SerializeField]
-    [HideInInspector]
-    private float magnification_ = 1;
-
 #if UNITY_EDITOR
     [ExposeProperty]
 #endif
@@ -71,7 +41,7 @@ public class RenderBinoculars : MonoBehaviour
         }
         set
         {
-            if (value >= 0.5f)
+            if (value >= 0.0f)
             {
                 if (leftEyeCamera && rightEyeCamera)
                 {
@@ -122,15 +92,45 @@ public class RenderBinoculars : MonoBehaviour
         }
     }
 
-	public Vector3 GetOrientation()
-	{
-		return mouseLook.GetOrientation();
-	}
-	
-	public Vector3 GetCalibration()
-	{
-		return mouseLook.GetCalibration();
-	}
+    [DllImport("UnityServerPlugin")]
+    private static extern void setBinocularsAddress(string address);
+
+    private RenderTexture stereoTexture;
+    private RenderTexture leftEyeTexture;
+    private RenderTexture rightEyeTexture;
+    private Material leftEyeMaterial;
+    private Material rightEyeMaterial;
+    private GameObject leftEyeCamera;
+    private GameObject rightEyeCamera;
+    private Camera leftEyeCameraCam;
+    private Camera rightEyeCameraCam;
+    private MouseLook mouseLook;
+
+    [SerializeField]
+    [HideInInspector]
+    private float fieldOfView_ = 90f;
+
+    [SerializeField]
+    [HideInInspector]
+    private float eyeSeparation_ = 0.128f;
+
+    [SerializeField]
+    [HideInInspector]
+    private string binocularsAddress_ = "192.168.1.183";
+
+    [SerializeField]
+    [HideInInspector]
+    private float magnification_ = 1;
+
+    public Vector3 GetOrientation()
+    {
+        return mouseLook.GetOrientation();
+    }
+
+    public Vector3 GetCalibration()
+    {
+        return mouseLook.GetCalibration();
+    }
 
     // Use this for initialization
     void Start()

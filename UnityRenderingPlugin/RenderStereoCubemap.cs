@@ -5,25 +5,14 @@ using System.Runtime.InteropServices;
 using System;
 using System.Reflection;
 
-
-//[ExecuteInEditMode]
 public class RenderStereoCubemap : MonoBehaviour
 {
-    public int leftLayer = 15, rightLayer = 16;
-    public int[] DoNotDisplayLayers = new int[1] { 8 };
-    public float eyeSep = 0.064f * 2, near = 0.1f, far = 10000f, focalLength = 10f, aperture = 90f;
-    public int resolution = 1920;
-    public int faceCount = 6;
+	public enum Ceiling_Floor_StereoOption { None, PositiveZ, NegativeZ, PositiveX, NegativeX, All }
 
-    public float moveSpeed = 1;
-    public bool printFPS = false;
-    public int fps = -1;
-
-    public bool extract = true, disablePlanes = false;
-    public int inverseRate = 1;
-
-    public enum Ceiling_Floor_StereoOption { None, PositiveZ, NegativeZ, PositiveX, NegativeX, All }
-
+	public int[] DoNotDisplayLayers = new int[1] { 8 };
+	public float eyeSep = 0.064f * 2, near = 0.1f, far = 10000f, focalLength = 10f, aperture = 90f,  moveSpeed = 1;
+	public int resolution = 1920, faceCount = 6, leftLayer = 15, rightLayer = 16, fps = -1, inverseRate = 1;
+    public bool printFPS = false, extract = true, disablePlanes = false;
     public Ceiling_Floor_StereoOption CeilingFloorStereoOption;
 
     private int DoNotDisplayCullingMask = 0;
