@@ -49,7 +49,7 @@ std::pair<bool, std::string> Config::parseConfigFile(CommandHandler& commandHand
     if (errorString.size() > 0)
     {
         std::stringstream resultSS;
-        resultSS << "Error in config file line " << lineNumber << " '" << line << "': " << errorString;
+        resultSS << "Error in config file '" << configFilename << "', line " << lineNumber << " '" << line << "': " << errorString;
         return std::make_pair(false, resultSS.str());
     }
     else

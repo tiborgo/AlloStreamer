@@ -36,7 +36,7 @@ static std::string   url              = "";
 static std::string   interfaceAddress = "0.0.0.0";
 static unsigned long bufferSize       = DEFAULT_SINK_BUFFER_SIZE;
 static bool          matchStereoPairs = false;
-static std::string   configFilePath   = "AlloPlayer.config";
+static boost::filesystem::path configFilePath;
 static bool          robustSyncing    = false;
 static size_t        maxFrameMapSize  = 2;
 static std::string   logPath          = ".";
@@ -294,20 +294,27 @@ int main(int argc, char* argv[])
         },
     };
     
-    std::initializer_list<CommandHandler::Command> commandLineOnlyCommands =
+    CommandHandler configCommandHandler({});
+    
+    std::initializer_list<CommandHandler::Command> configCommandLineOnlyCommands =
     {
         {
             "config",
             {"file_path"},
-            [](const std::vector<std::string>& values)
+            [&configCommandHandler](const std::vector<std::string>& values)
             {
-                configFilePath = values[0];
+                configFilePath = boost::filesystem::canonical(boost::filesystem::absolute(values[0], configFilePath.parent_path()));
+                
+                auto configParseResult = Config::parseConfigFile(configCommandHandler,
+                                                                 configFilePath.string());
+                if (!configParseResult.first)
+                {
+                    std::cerr << configParseResult.second << std::endl;
+                    std::cerr << configCommandHandler.getCommandHelpString();
+                    abort();
+                }
             }
-        }
-    };
-    
-    std::initializer_list<CommandHandler::Command> configCommandLineOnlyCommands =
-    {
+        },
         {
             "no-display",
             {},
@@ -422,7 +429,6 @@ int main(int argc, char* argv[])
                                                     << "β=" << rotation[1] << "°\t"
                                                     << "γ=" << rotation[2] << "°" << std::endl;
                 std::cout << "Rotation speed:     " << renderer.getRotationSpeed() << std::endl;
-                std::cout << "Config file:        " << configFilePath << std::endl;
                 std::cout << "Face resolutions:   ";
                 auto faceResokutions = renderer.getFaceResolutions();
                 for (int eye = 0; eye < StereoCubemap::MAX_EYES_COUNT; eye++)
@@ -444,14 +450,9 @@ int main(int argc, char* argv[])
     };
     
     CommandHandler consoleCommandHandler({generalCommands, consoleOnlyCommands});
-    CommandHandler configCommandHandler({generalCommands, configCommandLineOnlyCommands});
-    CommandHandler commandLineCommandHandler({generalCommands, configCommandLineOnlyCommands, commandLineOnlyCommands});
+    configCommandHandler = CommandHandler({generalCommands, configCommandLineOnlyCommands});
+    CommandHandler commandLineCommandHandler({generalCommands, configCommandLineOnlyCommands});
     
-    // The desired behaviour is that command line parameters override config file settings.
-    // So, we would run the config file parser first and then the command line parser.
-    // However, then we cannot pass the config file path as a command line parameter.
-    // The solution here is to run the command line parser twice:
-    // before and after the config file parser.
     auto commandLineParseResult = CommandLine::parseCommandLine(commandLineCommandHandler,
                                                                 argc,
                                                                 argv);
@@ -461,26 +462,6 @@ int main(int argc, char* argv[])
         std::cerr << commandLineCommandHandler.getCommandHelpString();
         abort();
     }
-    
-    auto configParseResult = Config::parseConfigFile(configCommandHandler,
-                                                     configFilePath);
-    if (!configParseResult.first)
-    {
-        std::cerr << configParseResult.second << std::endl;
-        std::cerr << configCommandHandler.getCommandHelpString();
-        abort();
-    }
-    
-    commandLineParseResult = CommandLine::parseCommandLine(commandLineCommandHandler,
-                                                                argc,
-                                                                argv);
-    if (!commandLineParseResult.first)
-    {
-        std::cerr << commandLineParseResult.second << std::endl;
-        std::cerr << commandLineCommandHandler.getCommandHelpString();
-        abort();
-    }
-    
     
     if (url == "")
     {
