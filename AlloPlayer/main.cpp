@@ -208,6 +208,9 @@ void logSetup()
     document.AddMember("Log path",
                        rapidjson::Value(logPath.c_str(), logPath.length()),
                        document.GetAllocator());
+    document.AddMember("Force mono",
+                       rapidjson::Value(renderer.getForceMono()),
+                       document.GetAllocator());
     
     rapidjson::StringBuffer buffer;
     rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
