@@ -19,8 +19,13 @@ public:
     virtual bool onKeyDown(const al::Keyboard& k);
     StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap);
     
-    void setOnDisplayedFrame(const std::function<void (Renderer*)>& callback);
-    void setOnDisplayedCubemapFace(const std::function<void (Renderer*, int)>& callback);
+    typedef std::function<void (Renderer*)>      OnDisplayedFrame;
+    typedef std::function<void (Renderer*, int)> OnDisplayedCubemapFace;
+    typedef std::function<void (Renderer*)>      OnRotated;
+    
+    void setOnDisplayedFrame      (const OnDisplayedFrame&       callback);
+    void setOnDisplayedCubemapFace(const OnDisplayedCubemapFace& callback);
+    void setOnRotated             (const OnRotated&              callback);
     
     void setGammaMin(float gammaMin);
     void setGammaMax(float gammaMax);
@@ -43,8 +48,9 @@ public:
     bool                             getForceMono();
     
 protected:
-    std::function<void (Renderer*)> onDisplayedFrame;
-    std::function<void (Renderer*, int)> onDisplayedCubemapFace;
+    OnDisplayedFrame       onDisplayedFrame;
+    OnDisplayedCubemapFace onDisplayedCubemapFace;
+    OnRotated              onRotated;
     
 private:
     struct YUV420PTexture
