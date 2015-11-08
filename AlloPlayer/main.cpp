@@ -25,12 +25,21 @@
 
 const unsigned int DEFAULT_SINK_BUFFER_SIZE = 2000000000;
 
-static Stats    stats;
-static bool     noDisplay;
-static Renderer renderer;
-static auto     lastStatsTime = boost::chrono::steady_clock::now();
-static std::string statsFormat = AlloReceiver::formatStringMaker();
+static Stats         stats;
+static Renderer      renderer;
+static auto          lastStatsTime    = boost::chrono::steady_clock::now();
+static std::string   statsFormat      = AlloReceiver::formatStringMaker();
 static std::ofstream ptsLogFile;
+static std::ofstream setupLogFile;
+static bool          noDisplay        = false;
+static std::string   url              = "";
+static std::string   interfaceAddress = "0.0.0.0";
+static unsigned long bufferSize       = DEFAULT_SINK_BUFFER_SIZE;
+static bool          matchStereoPairs = false;
+static std::string   configFilePath   = "AlloPlayer.config";
+static bool          robustSyncing    = false;
+static size_t        maxFrameMapSize  = 2;
+static std::string   logPath          = ".";
 
 StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
@@ -127,21 +136,89 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
     }
 }
 
+void logSetup()
+{
+    rapidjson::Document document;
+    document.SetObject();
+    
+    al::Vec3f forRotation = renderer.getFORRotation() * DEG_DIV_RAD;
+    al::Vec3f rotation    = renderer.getRotation()    * DEG_DIV_RAD;
+    
+    document.AddMember("Display",
+                       rapidjson::Value(!noDisplay),
+                       document.GetAllocator());
+    document.AddMember("RTSP URL",
+                       rapidjson::Value(url.c_str(), url.length()),
+                       document.GetAllocator());
+    document.AddMember("Buffer size",
+                       rapidjson::Value((uint64_t)bufferSize),
+                       document.GetAllocator());
+    document.AddMember("Match stereo pairs",
+                       rapidjson::Value(matchStereoPairs),
+                       document.GetAllocator());
+    document.AddMember("Gamma min",
+                       rapidjson::Value(renderer.getGammaMin()),
+                       document.GetAllocator());
+    document.AddMember("Gamma max",
+                       rapidjson::Value(renderer.getGammaMax()),
+                       document.GetAllocator());
+    document.AddMember("Gamma pow",
+                       rapidjson::Value(renderer.getGammaPow()),
+                       document.GetAllocator());
+    document.AddMember("FOR angle",
+                       rapidjson::Value(renderer.getFORAngle() * DEG_DIV_RAD),
+                       document.GetAllocator());
+    rapidjson::Value forRotationValue;
+    forRotationValue.SetObject();
+    forRotationValue.AddMember("α",
+                               rapidjson::Value(forRotation[0]),
+                               document.GetAllocator());
+    forRotationValue.AddMember("β",
+                               rapidjson::Value(forRotation[1]),
+                               document.GetAllocator());
+    forRotationValue.AddMember("γ",
+                               rapidjson::Value(forRotation[2]),
+                               document.GetAllocator());
+    document.AddMember("FOR rotation",
+                       forRotationValue,
+                       document.GetAllocator());
+    rapidjson::Value sceneRotationValue;
+    sceneRotationValue.SetObject();
+    sceneRotationValue.AddMember("α",
+                                 rapidjson::Value(rotation[0]),
+                                 document.GetAllocator());
+    sceneRotationValue.AddMember("β",
+                                 rapidjson::Value(rotation[1]),
+                                 document.GetAllocator());
+    sceneRotationValue.AddMember("γ",
+                                 rapidjson::Value(rotation[2]),
+                                 document.GetAllocator());
+    document.AddMember("Scene rotation",
+                       sceneRotationValue,
+                       document.GetAllocator());
+    document.AddMember("Rotation speed",
+                       rapidjson::Value(renderer.getRotationSpeed()),
+                       document.GetAllocator());
+    document.AddMember("Robust syncing",
+                       rapidjson::Value(robustSyncing),
+                       document.GetAllocator());
+    document.AddMember("Cubemap queue size",
+                       rapidjson::Value((uint64_t)maxFrameMapSize),
+                       document.GetAllocator());
+    document.AddMember("Log path",
+                       rapidjson::Value(logPath.c_str(), logPath.length()),
+                       document.GetAllocator());
+    
+    rapidjson::StringBuffer buffer;
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+    document.Accept(writer);
+    setupLogFile << buffer.GetString() << "," << std::endl;
+    setupLogFile.flush();
+}
 
 
 int main(int argc, char* argv[])
 {
-    
-                  noDisplay        = false;
-    std::string   url              = "";
-    std::string   interfaceAddress = "0.0.0.0";
-    unsigned long bufferSize       = DEFAULT_SINK_BUFFER_SIZE;
-    bool          matchStereoPairs = false;
-    std::string   configFilePath   = "AlloPlayer.config";
-    bool          robustSyncing    = false;
-    size_t        maxFrameMapSize  = 2;
-    std::string   logPath          = ".";
-    
     std::initializer_list<CommandHandler::Command> generalCommands =
     {
         {
@@ -211,7 +288,7 @@ int main(int argc, char* argv[])
         {
             "config",
             {"file_path"},
-            [&configFilePath](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 configFilePath = values[0];
             }
@@ -231,7 +308,7 @@ int main(int argc, char* argv[])
         {
             "url",
             {"rtsp_url"},
-            [&url](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 url = values[0];
             }
@@ -239,7 +316,7 @@ int main(int argc, char* argv[])
         {
             "interface-address",
             {"ip"},
-            [&interfaceAddress](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 interfaceAddress = values[0];
             }
@@ -247,7 +324,7 @@ int main(int argc, char* argv[])
         {
             "buffer-size",
             {"bytes"},
-            [&bufferSize](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 bufferSize = boost::lexical_cast<unsigned long>(values[0]);
             }
@@ -255,7 +332,7 @@ int main(int argc, char* argv[])
         {
             "match-stereo-pairs",
             {},
-            [&matchStereoPairs](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 matchStereoPairs = true;
             }
@@ -263,7 +340,7 @@ int main(int argc, char* argv[])
         {
             "robust-syncing",
             {},
-            [&robustSyncing](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 robustSyncing = true;
             }
@@ -271,7 +348,7 @@ int main(int argc, char* argv[])
         {
             "cubemap-queue-size",
             {"size"},
-            [&maxFrameMapSize](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 maxFrameMapSize = boost::lexical_cast<size_t>(values[0]);
             }
@@ -279,7 +356,7 @@ int main(int argc, char* argv[])
         {
             "log-path",
             {"path"},
-            [&logPath](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 logPath = values[0];
             }
@@ -312,14 +389,7 @@ int main(int argc, char* argv[])
         {
             "info",
             {},
-            [&bufferSize,
-             &url,
-             &interfaceAddress,
-             &matchStereoPairs,
-             &configFilePath,
-             &robustSyncing,
-             &maxFrameMapSize,
-             &logPath](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 al::Vec3f forRotation = renderer.getFORRotation() * DEG_DIV_RAD;
                 al::Vec3f rotation    = renderer.getRotation()    * DEG_DIV_RAD;
@@ -412,7 +482,9 @@ int main(int argc, char* argv[])
     boost::filesystem::path dir(logPath);
     boost::filesystem::create_directories(dir);
     ptsLogFile.open(logPath + "/PTS.json", std::ofstream::out | std::ofstream::app);
+    setupLogFile.open(logPath + "/Setup.json", std::ofstream::out | std::ofstream::app);
     
+    logSetup();
     
     RTSPCubemapSourceClient* rtspClient = RTSPCubemapSourceClient::create(url.c_str(),
                                                                           bufferSize,
