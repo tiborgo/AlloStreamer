@@ -4,42 +4,26 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity" >
 
-    <view class="com.example.fftrajectorymapper.MainActivity$StopInterceptScrollView"
+    <view
         android:id="@+id/mScrollView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" >
-            
-            
+        android:layout_height="match_parent"
+        class="com.example.fftrajectorymapper.MainActivity$StopInterceptScrollView" >
 
-            <FrameLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/mMapContainer" >
+        <FrameLayout
+            android:id="@+id/mMapContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" >
 
-
-
-                    <ImageView
-                        android:id="@+id/mMapView"
-                        android:layout_width="4000.0px"
-                        android:layout_height="4000.0px"
-						android:scaleType="centerCrop"
-                        android:src="@drawable/ic_launcher" />
-                    
-                   
-
-                
-                <!-- <com.example.fftrajectorymapper.MainActivity.MyView
-                    android:id="@+id/myView1"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />  -->
-
-                
-                
-            </FrameLayout>
-            
+            <ImageView
+                android:id="@+id/mMapView"
+                android:layout_width="4000.0px"
+                android:layout_height="4000.0px"
+                android:scaleType="centerCrop" />
+        </FrameLayout>
     </view>
 
-  <RelativeLayout
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent" >
 
@@ -94,7 +78,6 @@
             android:padding="15dp"
             android:scaleType="fitCenter"
             android:src="@drawable/circle" />
-
     </RelativeLayout>
 
 </FrameLayout>
