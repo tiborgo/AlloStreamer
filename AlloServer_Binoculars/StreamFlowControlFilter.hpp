@@ -29,8 +29,7 @@ private:
 
 	unsigned long bandwidth; // bandwidth is in bit per second
 
-	const unsigned long maxChunkSize;
-	unsigned long chunkIndex;
+	unsigned long processedBytes;
 	unsigned char* buffer;
 	unsigned long bufferSize;
 };
