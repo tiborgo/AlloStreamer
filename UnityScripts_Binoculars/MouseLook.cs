@@ -41,7 +41,7 @@ public class MouseLook : MonoBehaviour
     public float calibZ = 0.0F;
 
     public float offsetX = 0.0F;
-    public float offsetY = 335.0F;
+    public float offsetY = 0.0F;
     public float offsetZ = 0.0F;
 
     [DllImport("UnityServerPlugin")]

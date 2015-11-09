@@ -32,6 +32,7 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Display;
 import android.view.GestureDetector;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -74,7 +75,7 @@ public class MainActivity extends Activity{
     float mapWidth = 400;
     float mapHeight = 400;
     int submitButtonSize = 160;
-    float sX, sY, tmpX, tmpY, prevX, prevY, picX, picY;
+    float sX = Float.POSITIVE_INFINITY, sY = Float.POSITIVE_INFINITY, tmpX, tmpY, prevX, prevY, picX, picY;
     Bitmap  mBitmap;
     int OSCPort = 7244;
     MyView myView;
@@ -94,7 +95,8 @@ public class MainActivity extends Activity{
         
         setContentView(R.layout.activity_main);
         mapView = (ImageView) findViewById(R.id.mMapView);
-        String path = Environment.getExternalStorageDirectory() + "/FFTrajectoryBackground.jpg";
+        String mapFileName = getIntent().getStringExtra(SelectionActivity.MAP_FILE_NAME);
+        String path = Environment.getExternalStorageDirectory() + "/" + mapFileName;
         //Bitmap tempBitmap = BitmapFactory.decodeFile(Environment.getExternalStorageDirectory() + "/FFTrajectoryBackground.jpg");
         //mapView.setImageBitmap(tempBitmap);
         
@@ -193,7 +195,6 @@ public class MainActivity extends Activity{
         
         //OSC start
         SharedPreferences p = PreferenceManager.getDefaultSharedPreferences(this);
-        startActivity(new Intent(this, SettingsActivity.class));
         
         String defaultClient = this.getResources().getString(R.string.defaultClient);
         //playerX = Float.parseFloat(this.getResources().getString(R.string.playerX));
@@ -214,12 +215,29 @@ public class MainActivity extends Activity{
             Log.w("dbg", "oscoutport: " + e.toString() + ": " + prefClient);
         }
         //OSC end
+        
+        ScaleView scaleView = (ScaleView) findViewById(R.id.mScaleView);
+        scaleView.setMapWidth(mapWidth);
     }
 
     @Override
     public void onWindowFocusChanged (boolean hasFocus) {
     	super.onWindowFocusChanged(hasFocus);
     	myView.setLayoutParams(new FrameLayout.LayoutParams(mapView.getWidth(), mapView.getHeight()));
+    }
+    
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) 
+    {
+        switch(keyCode)
+        {
+            case KeyEvent.KEYCODE_BACK:
+            	moveTaskToBack(true);
+            	return true; 
+             
+            default: 
+                return super.onKeyDown(keyCode,event);
+        }
     }
     
     private Paint mPaint;

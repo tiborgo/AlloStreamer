@@ -21,11 +21,19 @@
 
 const unsigned int DEFAULT_SINK_BUFFER_SIZE = 2000000000;
 
-static Stats    stats;
-static bool     noDisplay;
-static Renderer renderer;
-static auto     lastStatsTime = boost::chrono::steady_clock::now();
-static std::string statsFormat = AlloReceiver::formatStringMaker();
+static Stats         stats;
+static Renderer      renderer;
+static auto          lastStatsTime    = boost::chrono::steady_clock::now();
+static std::string   statsFormat      = AlloReceiver::formatStringMaker();
+static bool          noDisplay        = false;
+static std::string   url              = "";
+static std::string   interfaceAddress = "0.0.0.0";
+static unsigned long bufferSize       = DEFAULT_SINK_BUFFER_SIZE;
+static bool          matchStereoPairs = false;
+static boost::filesystem::path configFilePath;
+static bool          robustSyncing    = false;
+static size_t        maxFrameMapSize  = 2;
+static std::string   logPath          = ".";
 
 StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
@@ -104,15 +112,6 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
 
 int main(int argc, char* argv[])
 {
-                  noDisplay        = false;
-    std::string   url              = "";
-    std::string   interfaceAddress = "0.0.0.0";
-    unsigned long bufferSize       = DEFAULT_SINK_BUFFER_SIZE;
-    bool          matchStereoPairs = false;
-    std::string   configFilePath   = "AlloPlayer.config";
-    bool          robustSyncing    = false;
-    size_t        maxFrameMapSize  = 2;
-    
     std::initializer_list<CommandHandler::Command> generalCommands =
     {
         {
@@ -174,23 +173,38 @@ int main(int argc, char* argv[])
             {
                 renderer.setRotationSpeed(boost::lexical_cast<float>(values[0]));
             }
-        }
+        },
+        {
+            "force-mono",
+            {},
+            [](const std::vector<std::string>& values)
+            {
+                renderer.setForceMono(true);
+            }
+        },
     };
     
-    std::initializer_list<CommandHandler::Command> commandLineOnlyCommands =
+    CommandHandler configCommandHandler({});
+    
+    std::initializer_list<CommandHandler::Command> configCommandLineOnlyCommands =
     {
         {
             "config",
             {"file_path"},
-            [&configFilePath](const std::vector<std::string>& values)
+            [&configCommandHandler](const std::vector<std::string>& values)
             {
-                configFilePath = values[0];
+                configFilePath = boost::filesystem::canonical(boost::filesystem::absolute(values[0], configFilePath.parent_path()));
+                
+                auto configParseResult = Config::parseConfigFile(configCommandHandler,
+                                                                 configFilePath.string());
+                if (!configParseResult.first)
+                {
+                    std::cerr << configParseResult.second << std::endl;
+                    std::cerr << configCommandHandler.getCommandHelpString();
+                    abort();
+                }
             }
-        }
-    };
-    
-    std::initializer_list<CommandHandler::Command> configCommandLineOnlyCommands =
-    {
+        },
         {
             "no-display",
             {},
@@ -202,7 +216,7 @@ int main(int argc, char* argv[])
         {
             "url",
             {"rtsp_url"},
-            [&url](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 url = values[0];
             }
@@ -210,7 +224,7 @@ int main(int argc, char* argv[])
         {
             "interface-address",
             {"ip"},
-            [&interfaceAddress](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 interfaceAddress = values[0];
             }
@@ -218,7 +232,7 @@ int main(int argc, char* argv[])
         {
             "buffer-size",
             {"bytes"},
-            [&bufferSize](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 bufferSize = boost::lexical_cast<unsigned long>(values[0]);
             }
@@ -226,7 +240,7 @@ int main(int argc, char* argv[])
         {
             "match-stereo-pairs",
             {},
-            [&matchStereoPairs](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 matchStereoPairs = true;
             }
@@ -234,7 +248,7 @@ int main(int argc, char* argv[])
         {
             "robust-syncing",
             {},
-            [&robustSyncing](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 robustSyncing = true;
             }
@@ -242,7 +256,7 @@ int main(int argc, char* argv[])
         {
             "cubemap-queue-size",
             {"size"},
-            [&maxFrameMapSize](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 maxFrameMapSize = boost::lexical_cast<size_t>(values[0]);
             }
@@ -275,13 +289,7 @@ int main(int argc, char* argv[])
         {
             "info",
             {},
-            [&bufferSize,
-             &url,
-             &interfaceAddress,
-             &matchStereoPairs,
-             &configFilePath,
-             &robustSyncing,
-             &maxFrameMapSize](const std::vector<std::string>& values)
+            [](const std::vector<std::string>& values)
             {
                 al::Vec3f forRotation = renderer.getFORRotation() * DEG_DIV_RAD;
                 al::Vec3f rotation    = renderer.getRotation()    * DEG_DIV_RAD;
@@ -318,19 +326,15 @@ int main(int argc, char* argv[])
                 std::cout << std::endl;
                 std::cout << "Robust syncing:     " << ((robustSyncing) ? "yes" : "no") << std::endl;
                 std::cout << "Cubemap queue size: " << maxFrameMapSize << std::endl;
+                std::cout << "Force mono:         " << ((renderer.getForceMono()) ? "yes" : "no") << std::endl;
             }
         }
     };
     
     CommandHandler consoleCommandHandler({generalCommands, consoleOnlyCommands});
-    CommandHandler configCommandHandler({generalCommands, configCommandLineOnlyCommands});
-    CommandHandler commandLineCommandHandler({generalCommands, configCommandLineOnlyCommands, commandLineOnlyCommands});
+    configCommandHandler = CommandHandler({generalCommands, configCommandLineOnlyCommands});
+    CommandHandler commandLineCommandHandler({generalCommands, configCommandLineOnlyCommands});
     
-    // The desired behaviour is that command line parameters override config file settings.
-    // So, we would run the config file parser first and then the command line parser.
-    // However, then we cannot pass the config file path as a command line parameter.
-    // The solution here is to run the command line parser twice:
-    // before and after the config file parser.
     auto commandLineParseResult = CommandLine::parseCommandLine(commandLineCommandHandler,
                                                                 argc,
                                                                 argv);
@@ -340,26 +344,6 @@ int main(int argc, char* argv[])
         std::cerr << commandLineCommandHandler.getCommandHelpString();
         abort();
     }
-    
-    auto configParseResult = Config::parseConfigFile(configCommandHandler,
-                                                     configFilePath);
-    if (!configParseResult.first)
-    {
-        std::cerr << configParseResult.second << std::endl;
-        std::cerr << configCommandHandler.getCommandHelpString();
-        abort();
-    }
-    
-    commandLineParseResult = CommandLine::parseCommandLine(commandLineCommandHandler,
-                                                                argc,
-                                                                argv);
-    if (!commandLineParseResult.first)
-    {
-        std::cerr << commandLineParseResult.second << std::endl;
-        std::cerr << commandLineCommandHandler.getCommandHelpString();
-        abort();
-    }
-    
     
     if (url == "")
     {

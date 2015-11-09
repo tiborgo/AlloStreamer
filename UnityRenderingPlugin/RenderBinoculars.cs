@@ -168,6 +168,7 @@ public class RenderBinoculars : MonoBehaviour
         distanceSphere.GetComponent<MeshRenderer>().material = dinstanceSphereMat;
         // Remove the collider of the sphere. Otherwise distance measurmen would interfere with the sphere.
         GameObject.Destroy(distanceSphere.GetComponent<SphereCollider>());
+		distanceSphere.layer = 9;
 
         GameObject rendererStereo = new GameObject("RendererStereo");
         rendererStereo.transform.parent = binoculars.transform;
@@ -227,6 +228,7 @@ public class RenderBinoculars : MonoBehaviour
         lineRenderer.SetColors(new Color(1.0f, 0, 0, 0.5f), new Color(1.0f, 0, 0, 0.5f));
         lineRenderer.SetWidth(0.1f, 0.1f);
         lineRenderer.SetVertexCount(2);
+		virtualCameraStereo.layer = 9;
 
         mouseLook = virtualCameraStereo.AddComponent<MouseLook>();
 

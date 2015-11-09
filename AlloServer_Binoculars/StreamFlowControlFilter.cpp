@@ -4,6 +4,9 @@
 
 #include "StreamFlowControlFilter.hpp"
 
+#define BUFFER_SIZE 400000
+#define MAX_CHUNK_SIZE 10000
+
 StreamFlowControlFilter* StreamFlowControlFilter::createNew(UsageEnvironment& env,
 	                                                            FramedSource* inputSource,
 																unsigned long bandwidth)
@@ -17,16 +20,15 @@ StreamFlowControlFilter::StreamFlowControlFilter(UsageEnvironment& env,
 	:
 	FramedFilter(env, inputSource),
 	bandwidth(bandwidth),
-	buffer(new unsigned char[fMaxSize]),
+	buffer(new unsigned char[BUFFER_SIZE]),
 	bufferSize(0),
-	maxChunkSize(10000),
-	chunkIndex(0)
+	processedBytes(0)
 {
 }
 
 void StreamFlowControlFilter::doGetNextFrame()
 {
-	if (chunkIndex * maxChunkSize < bufferSize)
+	if (processedBytes < bufferSize)
 	{
 		deliverChunk();
 	}
@@ -35,7 +37,7 @@ void StreamFlowControlFilter::doGetNextFrame()
 		// Read directly from our input source into our client's buffer:
 		fFrameSize = 0;
 		fInputSource->getNextFrame(buffer,
-			                       fMaxSize,
+								   BUFFER_SIZE,
 			                       afterGettingFrame0,
 			                       this,
 			                       FramedSource::handleClosure,
@@ -58,16 +60,17 @@ void StreamFlowControlFilter::afterGettingFrame(unsigned frameSize,
 {
 	bufferSize = frameSize;
 	fPresentationTime = presentationTime;
-	chunkIndex = 0;
+	processedBytes = 0;
 	deliverChunk();
 }
 
 void StreamFlowControlFilter::deliverChunk()
 {
 	// Fill buffer with next chunk
-	fFrameSize = (std::min)(bufferSize - chunkIndex * maxChunkSize, maxChunkSize);
-	memcpy(fTo, buffer + (chunkIndex * maxChunkSize), fFrameSize);
-	chunkIndex++;
+	fFrameSize = (std::min)((unsigned int)MAX_CHUNK_SIZE, fMaxSize);
+	fFrameSize = (std::min)(fFrameSize, (unsigned int)(bufferSize - processedBytes));
+	memcpy(fTo, buffer + processedBytes, fFrameSize);
+	processedBytes += fFrameSize;
 
 #if BOOST_OS_WINDOWS
 	auto durationPerKBit = boost::chrono::nanoseconds(boost::ratio_multiply<boost::giga, boost::kilo>::num / bandwidth);

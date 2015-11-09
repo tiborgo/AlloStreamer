@@ -227,7 +227,7 @@ void RawPixelSource::frameContentLoop()
 		}
 
 		// End this thread when CubemapExtractionPlugin closes
-		while (!content->getBarrier().timedWait(boost::chrono::milliseconds(100)))
+		while (!content->getBarrier().timedWait(boost::chrono::milliseconds(1000)))
 		{
 			if (destructing)
 			{
