@@ -394,11 +394,8 @@ void copyFromGPUToCPU(Frame* frame)
 #endif
 	}
 
-	if (alloServerProcess.isAlive())
+	while (alloServerProcess.isAlive() && !frame->getBarrier().timedWait(boost::chrono::milliseconds(1000)))
 	{
-		while (!frame->getBarrier().timedWait(boost::chrono::milliseconds(100)) && alloServerProcess.isAlive())
-		{
-		}
 	}
 }
 
