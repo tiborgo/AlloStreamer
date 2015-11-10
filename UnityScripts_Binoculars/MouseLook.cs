@@ -165,14 +165,12 @@ public class MouseLook : MonoBehaviour
 
         if (usePhasespace)
         {
-            transform.rotation = phaseSpaceRotation;
+            transform.rotation = Quaternion.Inverse(rotation) * phaseSpaceRotation;
         }
         else
         {
-            transform.rotation = mobileDeviceRotation;
+            transform.rotation = Quaternion.Inverse(rotation) * mobileDeviceRotation;
         }
-
-        transform.rotation *= rotation;
 
 		Ray ray = new Ray(transform.position, transform.rotation * Vector3.forward);
         RaycastHit hit;
