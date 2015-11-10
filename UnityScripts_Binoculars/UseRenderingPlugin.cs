@@ -72,6 +72,9 @@ public class UseRenderingPlugin : MonoBehaviour
         Thread osct = new Thread(new ThreadStart(oscClient.startServer));
         osct.Start();
 
+		OSCRotationThread oscRotationClient = new OSCRotationThread();
+		Thread oscRt = new Thread(new ThreadStart(oscRotationClient.startServer));
+		oscRt.Start();
     }
 
     public float posX = 512f; //Position the DrawTexture command while testing.

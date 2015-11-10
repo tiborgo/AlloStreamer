@@ -74,6 +74,15 @@ public class MouseLook : MonoBehaviour
     private static extern float getPSQuatZ();
 
     [DllImport("UnityServerPlugin")]
+    private static extern float getRotationX();
+
+    [DllImport("UnityServerPlugin")]
+    private static extern float getRotationY();
+
+    [DllImport("UnityServerPlugin")]
+    private static extern float getRotationZ();
+
+    [DllImport("UnityServerPlugin")]
     private static extern void sendDistance(float distance);
 
 	public Vector3 GetOrientation()
@@ -86,8 +95,14 @@ public class MouseLook : MonoBehaviour
 		return new Vector3(calibX, calibY, calibZ);
 	}
 
+    public Vector3 GetSceneRotation()
+    {
+        return rotation.eulerAngles;
+    }
+
     Quaternion mobileDeviceRotation;
     Quaternion phaseSpaceRotation;
+    Quaternion rotation;
     GameObject distanceSphere;
     void Awake()
     {
@@ -124,10 +139,13 @@ public class MouseLook : MonoBehaviour
         float phaseSpaceZ = getPSQuatZ();
         float phaseSpaceW = getPSQuatW();
 
-        // 
+        float rotationX = getRotationX();
+        float rotationY = getRotationY();
+        float rotationZ = getRotationZ();
 
         mobileDeviceRotation = Quaternion.Euler(pitch /*- calibY*/, roll /*- calibX + 335f*/, yaw); // 335 is the rotation halfway between the two scene cameras (used for calibration)
         phaseSpaceRotation = new Quaternion(phaseSpaceX, phaseSpaceY, phaseSpaceZ, phaseSpaceW);
+        rotation = Quaternion.Euler(rotationX, rotationY, rotationZ);
 
         Vector3 mobileDeviceRotEuler = mobileDeviceRotation.eulerAngles;
         Vector3 PSRotEuler = phaseSpaceRotation.eulerAngles;
@@ -153,6 +171,8 @@ public class MouseLook : MonoBehaviour
         {
             transform.rotation = mobileDeviceRotation;
         }
+
+        transform.rotation *= rotation;
 
 		Ray ray = new Ray(transform.position, transform.rotation * Vector3.forward);
         RaycastHit hit;

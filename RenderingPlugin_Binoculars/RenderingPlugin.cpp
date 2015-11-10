@@ -492,6 +492,7 @@ static void DoRendering (const float* worldMatrix, const float* identityMatrix, 
 
 #define PORT 7000
 #define QPORT 8008
+#define RPORT 8500
 #define SEND_PORT 7001
 float a1 = 0;
 float a2 = 0;
@@ -504,6 +505,9 @@ float q1 = 0;
 float q2 = 0;
 float q3 = 0;
 float q4 = 0;
+float r1 = 0;
+float r2 = 0;
+float r3 = 0;
 extern "C" {
 	int EXPORT_API startStream();
 	int EXPORT_API initInterprocessMemory();
@@ -574,6 +578,18 @@ extern "C" float EXPORT_API getPSQuatZ()
 extern "C" float EXPORT_API getPSQuatW()
 {
 	return q4;
+}
+extern "C" float EXPORT_API getRotationX()
+{
+	return r1;
+}
+extern "C" float EXPORT_API getRotationY()
+{
+	return r2;
+}
+extern "C" float EXPORT_API getRotationZ()
+{
+	return r3;
 }
 
 UdpTransmitSocket* transmitSocket = nullptr;
@@ -673,12 +689,43 @@ protected:
     }
 };
 
+class SceneRotationPacketListener : public osc::OscPacketListener {
+protected:
+
+	virtual void ProcessMessage(const osc::ReceivedMessage& m,
+		const IpEndpointName& remoteEndpoint)
+	{
+		(void)remoteEndpoint; // suppress unused parameter warning
+
+		try{
+			if (strcmp(m.AddressPattern(), "/rotation") == 0){
+				osc::ReceivedMessage::const_iterator arg = m.ArgumentsBegin();
+				r1 = (arg++)->AsFloat();
+				r2 = (arg++)->AsFloat();
+				r3 = (arg++)->AsFloat();
+
+				if (arg != m.ArgumentsEnd()){
+					throw osc::ExcessArgumentException();
+				}
+			}
+		}
+		catch (osc::Exception& e){
+			// any parsing errors such as unexpected argument types, or
+			// missing arguments get thrown as exceptions.
+			std::cout << "error while parsing message: "
+				<< m.AddressPattern() << ": " << e.what() << "\n";
+		}
+	}
+};
+
 UdpListeningReceiveSocket* s = NULL;
 UdpListeningReceiveSocket* qs = NULL;
+UdpListeningReceiveSocket* r = NULL;
 //UdpListeningReceiveSocket s;
 
 boost::barrier sBreakBarrier(2);
 boost::barrier qsBreakBarrier(2);
+boost::barrier rBreakBarrier(2);
 
 extern "C" void EXPORT_API oscStart()
 {
@@ -702,6 +749,18 @@ extern "C" void EXPORT_API oscPhaseSpaceStart()
     
     qs->Run();
 	qsBreakBarrier.wait();
+}
+
+extern "C" void EXPORT_API oscRotationStart()
+{
+	/*
+	* Start OSC client to receive rotation of the scene in the AlloSphere
+	*/
+	SceneRotationPacketListener rlistener;
+	r = new UdpListeningReceiveSocket(IpEndpointName(IpEndpointName::ANY_ADDRESS, RPORT), &rlistener);
+
+	r->Run();
+	rBreakBarrier.wait();
 }
 
 unsigned char testPixels[i_width*i_height*3];
@@ -771,6 +830,13 @@ extern "C" int EXPORT_API initInterprocessMemory()
         delete qs;
         qs = NULL;
     }
+	if (r != NULL)
+	{
+		r->AsynchronousBreak();
+		rBreakBarrier.wait();
+		delete r;
+		r = NULL;
+	}
     
     fprintf(pluginFile,"AlloServer exited\n");
     fflush(pluginFile);
