@@ -154,6 +154,11 @@ public class RenderBinoculars : MonoBehaviour
         return mouseLook.GetCalibration();
     }
 
+    public Vector3 GetSceneRotation()
+    {
+        return mouseLook.GetSceneRotation();
+    }
+
     // Use this for initialization
     void Start()
     {
