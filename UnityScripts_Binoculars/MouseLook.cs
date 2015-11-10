@@ -26,6 +26,8 @@ public class MouseLook : MonoBehaviour
     public float sensitivityX = 7F;
     public float sensitivityY = 7F;
 
+    public bool usePhasespace = false;
+
     public float minimumX = -360F;
     public float maximumX = 360F;
 
@@ -117,34 +119,42 @@ public class MouseLook : MonoBehaviour
         float pitch = getPitch();
         //float yaw = -getYaw (); //minus to turn phone 180 degrees on other landscape
         float yaw = getYaw();
-        //			float phaseSpaceX = getPSQuatX();
-        //			float phaseSpaceY = getPSQuatY();
-        //			float phaseSpaceZ = getPSQuatZ();
-        //			float phaseSpaceW = getPSQuatW();
+        float phaseSpaceX = getPSQuatX();
+        float phaseSpaceY = getPSQuatY();
+        float phaseSpaceZ = getPSQuatZ();
+        float phaseSpaceW = getPSQuatW();
 
         // 
 
         mobileDeviceRotation = Quaternion.Euler(pitch /*- calibY*/, roll /*- calibX + 335f*/, yaw); // 335 is the rotation halfway between the two scene cameras (used for calibration)
-        //			phaseSpaceRotation = new Quaternion(phaseSpaceX, phaseSpaceY, phaseSpaceZ, phaseSpaceW);
+        phaseSpaceRotation = new Quaternion(phaseSpaceX, phaseSpaceY, phaseSpaceZ, phaseSpaceW);
 
         Vector3 mobileDeviceRotEuler = mobileDeviceRotation.eulerAngles;
-        //			Vector3 PSRotEuler = phaseSpaceRotation.eulerAngles;
+        Vector3 PSRotEuler = phaseSpaceRotation.eulerAngles;
+
+        PSRotEuler.y += 180;
 
         mobileDeviceRotEuler.x = mobileDeviceRotEuler.x - calibX + offsetX;
         mobileDeviceRotEuler.y = mobileDeviceRotEuler.y - calibY + offsetY;
         mobileDeviceRotEuler.z = mobileDeviceRotEuler.z - calibZ + offsetZ;
 
-        //			PSRotEuler.x = PSRotEuler.x - calibX + offsetX;
-        //			PSRotEuler.y = PSRotEuler.y - calibY + offsetY;
-        //			PSRotEuler.z = PSRotEuler.z - calibZ + offsetZ;
-        //			
+        PSRotEuler.x = PSRotEuler.x - calibX + offsetX;
+        PSRotEuler.y = PSRotEuler.y - calibY + offsetY;
+        PSRotEuler.z = PSRotEuler.z - calibZ + offsetZ;
+        			
         mobileDeviceRotation = Quaternion.Euler(mobileDeviceRotEuler);
-        //			phaseSpaceRotation = Quaternion.Euler (PSRotEuler);
+        phaseSpaceRotation = Quaternion.Euler (PSRotEuler);
 
-        transform.rotation = mobileDeviceRotation;
-        //			transform.rotation = phaseSpaceRotation;
+        if (usePhasespace)
+        {
+            transform.rotation = phaseSpaceRotation;
+        }
+        else
+        {
+            transform.rotation = mobileDeviceRotation;
+        }
 
-        Ray ray = new Ray(transform.position, mobileDeviceRotation * Vector3.forward);
+		Ray ray = new Ray(transform.position, transform.rotation * Vector3.forward);
         RaycastHit hit;
 
         if (Physics.Raycast(ray, out hit))
