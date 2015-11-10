@@ -7,6 +7,10 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/prettywriter.h>
 #include <fstream>
+#include <osc/OscReceivedElements.h>
+#include <osc/OscPacketListener.h>
+#include <osc/OscOutboundPacketStream.h>
+#include <ip/UdpSocket.h>
 
 #include "Renderer.hpp"
 #include "AlloShared/StatsUtils.hpp"
@@ -43,6 +47,9 @@ static std::string   phase;
 static std::ofstream setupLogFile;
 static std::ofstream ptsLogFile;
 static std::ofstream rotationLogFile;
+static UdpTransmitSocket* transmitSocket = nullptr;
+static uint16_t      oscRotationPort  = 8500;
+static std::string   oscRotationAddress;
 
 rapidjson::Document getIdentifierJSON()
 {
@@ -159,9 +166,25 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
 
 void onRotated(Renderer* renderer)
 {
+    al::Vec3f rotation = renderer->getRotation() * DEG_DIV_RAD;
+    
+    // Send rotation to Unity so that binoculars perspective can be adapted correctly
+    const int OUTPUT_BUFFER_SIZE = 64;
+    char buffer[OUTPUT_BUFFER_SIZE];
+    osc::OutboundPacketStream p(buffer, OUTPUT_BUFFER_SIZE);
+    
+    p << osc::BeginBundleImmediate
+      << osc::BeginMessage("/rotation")
+      << rotation[0]
+      << rotation[1]
+      << rotation[2]
+      << osc::EndMessage
+      << osc::EndBundle;
+    transmitSocket->Send(p.Data(), p.Size());
+    
+    // Log rotation
     rapidjson::Document document = getIdentifierJSON();
     
-    al::Vec3f rotation = renderer->getRotation() * DEG_DIV_RAD;
     rapidjson::Value rotationValue;
     rotationValue.SetObject();
     rotationValue.AddMember("x",
@@ -434,6 +457,22 @@ int main(int argc, char* argv[])
                 phase = values[0];
             }
         },
+        {
+            "osc-rotation-port",
+            {"port"},
+            [](const std::vector<std::string>& values)
+            {
+                oscRotationPort = boost::lexical_cast<uint16_t>(values[0]);
+            }
+        },
+        {
+            "osc-rotation-address",
+            {"port"},
+            [](const std::vector<std::string>& values)
+            {
+                oscRotationAddress = values[0];
+            }
+        }
     };
     
     std::initializer_list<CommandHandler::Command> consoleOnlyCommands =
@@ -468,23 +507,23 @@ int main(int argc, char* argv[])
                 al::Vec3f rotation    = renderer.getRotation()    * DEG_DIV_RAD;
                 
                 std::cout << std::setiosflags(std::ios::fixed) << std::setprecision(1);
-                std::cout << "Display:            " << ((noDisplay) ? "no" : "yes") << std::endl;
-                std::cout << "RTSP URL:           " << url << std::endl;
-                std::cout << "Interface address:  " << interfaceAddress << std::endl;
-                std::cout << "Buffer size:        " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
-                std::cout << "Match stereo pairs: " << ((matchStereoPairs) ? "yes" : "no") << std::endl;
-                std::cout << "Gamma min:          " << renderer.getGammaMin() << std::endl;
-                std::cout << "Gamma max:          " << renderer.getGammaMax() << std::endl;
-                std::cout << "Gamma pow:          " << renderer.getGammaPow() << std::endl;
-                std::cout << "FOR angle:          " << renderer.getFORAngle() * DEG_DIV_RAD << "°" << std::endl;
-                std::cout << "FOR rotation:       " << "α=" << forRotation[0] << "°\t"
-                                                    << "β=" << forRotation[1] << "°\t"
-                                                    << "γ=" << forRotation[2] << "°" << std::endl;
-                std::cout << "Scene rotation:     " << "α=" << rotation[0] << "°\t"
-                                                    << "β=" << rotation[1] << "°\t"
-                                                    << "γ=" << rotation[2] << "°" << std::endl;
-                std::cout << "Rotation speed:     " << renderer.getRotationSpeed() << std::endl;
-                std::cout << "Face resolutions:   ";
+                std::cout << "Display:                " << ((noDisplay) ? "no" : "yes") << std::endl;
+                std::cout << "RTSP URL:               " << url << std::endl;
+                std::cout << "Interface address:      " << interfaceAddress << std::endl;
+                std::cout << "Buffer size:            " << to_human_readable_byte_count(bufferSize, false, false) << std::endl;
+                std::cout << "Match stereo pairs:     " << ((matchStereoPairs) ? "yes" : "no") << std::endl;
+                std::cout << "Gamma min:              " << renderer.getGammaMin() << std::endl;
+                std::cout << "Gamma max:              " << renderer.getGammaMax() << std::endl;
+                std::cout << "Gamma pow:              " << renderer.getGammaPow() << std::endl;
+                std::cout << "FOR angle:              " << renderer.getFORAngle() * DEG_DIV_RAD << "°" << std::endl;
+                std::cout << "FOR rotation:           " << "α=" << forRotation[0] << "°\t"
+                                                        << "β=" << forRotation[1] << "°\t"
+                                                        << "γ=" << forRotation[2] << "°" << std::endl;
+                std::cout << "Scene rotation:         " << "α=" << rotation[0] << "°\t"
+                                                        << "β=" << rotation[1] << "°\t"
+                                                        << "γ=" << rotation[2] << "°" << std::endl;
+                std::cout << "Rotation speed:         " << renderer.getRotationSpeed() << std::endl;
+                std::cout << "Face resolutions:       ";
                 auto faceResokutions = renderer.getFaceResolutions();
                 for (int eye = 0; eye < StereoCubemap::MAX_EYES_COUNT; eye++)
                 {
@@ -496,12 +535,14 @@ int main(int argc, char* argv[])
                     std::cout << std::endl << "                    ";
                 }
                 std::cout << std::endl;
-                std::cout << "Robust syncing:     " << ((robustSyncing) ? "yes" : "no") << std::endl;
-                std::cout << "Cubemap queue size: " << maxFrameMapSize << std::endl;
-                std::cout << "Force mono:         " << ((renderer.getForceMono()) ? "yes" : "no") << std::endl;
-                std::cout << "Log path:           " << logPath << std::endl;
-                std::cout << "Participant id:     " << participantId << std::endl;
-                std::cout << "Phase:              " << phase << std::endl;
+                std::cout << "Robust syncing:         " << ((robustSyncing) ? "yes" : "no") << std::endl;
+                std::cout << "Cubemap queue size:     " << maxFrameMapSize << std::endl;
+                std::cout << "Force mono:             " << ((renderer.getForceMono()) ? "yes" : "no") << std::endl;
+                std::cout << "Log path:               " << logPath << std::endl;
+                std::cout << "Participant id:         " << participantId << std::endl;
+                std::cout << "Phase:                  " << phase << std::endl;
+                std::cout << "OSC rotation port:      " << oscRotationPort << std::endl;
+                std::cout << "OSC rotation address:   " << oscRotationAddress << std::endl;
             }
         }
     };
@@ -526,6 +567,8 @@ int main(int argc, char* argv[])
         abort();
     }
     
+    transmitSocket = new UdpTransmitSocket(IpEndpointName(oscRotationAddress.c_str(), oscRotationPort));
+    
     Console console(consoleCommandHandler);
     console.start();
     
@@ -546,8 +589,6 @@ int main(int argc, char* argv[])
                                                                           interfaceAddress.c_str());
     rtspClient->setOnDidConnect(boost::bind(&onDidConnect, _1, _2));
     rtspClient->connect();
-    
-    
     
     if (noDisplay)
     {
