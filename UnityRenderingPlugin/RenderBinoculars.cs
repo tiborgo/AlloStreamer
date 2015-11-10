@@ -98,6 +98,22 @@ public class RenderBinoculars : MonoBehaviour
         }
     }
 
+    [JsonProperty]
+#if UNITY_EDITOR
+	[ExposeProperty]
+#endif
+    public bool usePhasespace
+    {
+        get
+        {
+            return mouseLook.usePhasespace;
+        }
+        set
+        {
+            mouseLook.usePhasespace = value;
+        }
+    }
+
     [DllImport("UnityServerPlugin")]
     private static extern void setBinocularsAddress(string address);
 

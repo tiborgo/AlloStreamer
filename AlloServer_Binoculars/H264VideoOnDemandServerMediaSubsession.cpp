@@ -73,7 +73,7 @@ FramedSource* H264VideoOnDemandServerMediaSubsession::createNewStreamSource(unsi
   //ByteStreamFileSource* fileSource = ByteStreamFileSource::createNew(envir(), fFileName);
     
   MyDeviceSource *fileSource = MyDeviceSource::createNew(*envi);
-  StreamFlowControlFilter* flowControlFilter = StreamFlowControlFilter::createNew(*envi, fileSource, 50000000);
+  StreamFlowControlFilter* flowControlFilter = StreamFlowControlFilter::createNew(*envi, fileSource, 30000000);
 
   //FramedSource wrapper ?
     

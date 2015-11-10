@@ -4,7 +4,7 @@
 
 #include "StreamFlowControlFilter.hpp"
 
-#define BUFFER_SIZE 400000
+#define BUFFER_SIZE 300000
 #define MAX_CHUNK_SIZE 10000
 
 StreamFlowControlFilter* StreamFlowControlFilter::createNew(UsageEnvironment& env,
