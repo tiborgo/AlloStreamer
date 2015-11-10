@@ -38,7 +38,7 @@ public class ScaleView extends View {
 	protected void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
 		
-		float unityWidth = getWidth() * 0.4f * (mMapWidth / 4000.0f);
+		float unityWidth = getWidth() * 0.6f * (mMapWidth / 4000.0f);
 		
 		float meters = (int)(unityWidth / 250.0f) * 250.0f;
 		float feet = (int)(unityWidth * 3.28084f / 1000.0f) * 1000.0f;
