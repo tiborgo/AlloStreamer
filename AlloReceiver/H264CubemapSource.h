@@ -19,6 +19,7 @@ public:
     typedef std::function<void (H264CubemapSource*, u_int8_t, size_t, int)>     OnColorConvertedFrame;
     typedef std::function<void (H264CubemapSource*, int)>                       OnAddedFrameToCubemap;
     typedef std::function<void (H264CubemapSource*, int)>                       OnScheduledFrameInCubemap;
+    typedef std::function<void (H264CubemapSource*, int64_t)>                   OnScheduledCubemap;
     
     virtual void setOnReceivedNALU           (const OnReceivedNALU&            callback);
     virtual void setOnReceivedFrame          (const OnReceivedFrame&           callback);
@@ -27,6 +28,7 @@ public:
     virtual void setOnNextCubemap            (const OnNextCubemap&             callback);
     virtual void setOnAddedFrameToCubemap    (const OnAddedFrameToCubemap&     callback);
     virtual void setOnScheduledFrameInCubemap(const OnScheduledFrameInCubemap& callback);
+    virtual void setOnScheduledCubemap       (const OnScheduledCubemap&        callback);
     
     H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
                       AVPixelFormat                    format,
@@ -42,6 +44,7 @@ protected:
     OnNextCubemap             onNextCubemap;
     OnAddedFrameToCubemap     onAddedFrameToCubemap;
     OnScheduledFrameInCubemap onScheduledFrameInCubemap;
+    OnScheduledCubemap        onScheduledCubemap;
     
 private:
     void getNextFramesLoop();

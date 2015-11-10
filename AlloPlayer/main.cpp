@@ -3,6 +3,10 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/prettywriter.h>
+#include <fstream>
 
 #include "Renderer.hpp"
 #include "AlloShared/StatsUtils.hpp"
@@ -33,7 +37,40 @@ static bool          matchStereoPairs = false;
 static boost::filesystem::path configFilePath;
 static bool          robustSyncing    = false;
 static size_t        maxFrameMapSize  = 2;
-static std::string   logPath          = ".";
+static boost::filesystem::path logPath = ".";
+static std::string   participantId;
+static std::string   phase;
+static std::ofstream setupLogFile;
+static std::ofstream ptsLogFile;
+static std::ofstream rotationLogFile;
+
+rapidjson::Document getIdentifierJSON()
+{
+    auto timeStamp = boost::chrono::system_clock::now().time_since_epoch();
+    
+    rapidjson::Document document;
+    document.SetObject();
+    
+    document.AddMember("time",
+                       rapidjson::Value(boost::chrono::duration_cast<boost::chrono::microseconds>(timeStamp).count()),
+                       document.GetAllocator());
+    document.AddMember("participantId",
+                       rapidjson::Value(participantId.c_str(), participantId.length()),
+                       document.GetAllocator());
+    document.AddMember("phase",
+                       rapidjson::Value(phase.c_str(), phase.length()),
+                       document.GetAllocator());
+    return document;
+}
+
+void log(const rapidjson::Document& document, std::ofstream& logFile)
+{
+    rapidjson::StringBuffer buffer;
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+    document.Accept(writer);
+    logFile << buffer.GetString() << "," << std::endl;
+    logFile.flush();
+}
 
 StereoCubemap* onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
@@ -75,6 +112,17 @@ void setOnScheduledFrameInCubemap(CubemapSource* source, int face)
     stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::SCHEDULED));
 }
 
+void setOnScheduledCubemap(CubemapSource* source, int64_t pts)
+{
+    rapidjson::Document document = getIdentifierJSON();
+    
+    document.AddMember("pts",
+                       rapidjson::Value(pts),
+                       document.GetAllocator());
+    
+    log(document, ptsLogFile);
+}
+
 void onDisplayedCubemapFace(Renderer* renderer, int face)
 {
     stats.store(StatsUtils::CubemapFace(face, StatsUtils::CubemapFace::DISPLAYED));
@@ -96,6 +144,7 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
         h264CubemapSource->setOnColorConvertedFrame    (boost::bind(&onColorConvertedFrame,        _1, _2, _3, _4));
         h264CubemapSource->setOnAddedFrameToCubemap    (boost::bind(&onAddedFrameToCubemap,        _1, _2));
         h264CubemapSource->setOnScheduledFrameInCubemap(boost::bind(&setOnScheduledFrameInCubemap, _1, _2));
+        h264CubemapSource->setOnScheduledCubemap       (boost::bind(&setOnScheduledCubemap,        _1, _2));
     }
     
     if (noDisplay)
@@ -108,6 +157,106 @@ void onDidConnect(RTSPCubemapSourceClient* client, CubemapSource* cubemapSource)
     }
 }
 
+void onRotated(Renderer* renderer)
+{
+    rapidjson::Document document = getIdentifierJSON();
+    
+    al::Vec3f rotation = renderer->getRotation() * DEG_DIV_RAD;
+    rapidjson::Value rotationValue;
+    rotationValue.SetObject();
+    rotationValue.AddMember("x",
+                            rapidjson::Value(rotation[0]),
+                            document.GetAllocator());
+    rotationValue.AddMember("y",
+                            rapidjson::Value(rotation[1]),
+                            document.GetAllocator());
+    rotationValue.AddMember("z",
+                            rapidjson::Value(rotation[2]),
+                            document.GetAllocator());
+    document.AddMember("rotation",
+                       rotationValue,
+                       document.GetAllocator());
+    
+    log(document, rotationLogFile);
+}
+
+void logSetup()
+{
+    rapidjson::Document document = getIdentifierJSON();
+    
+    al::Vec3f forRotation = renderer.getFORRotation() * DEG_DIV_RAD;
+    al::Vec3f rotation    = renderer.getRotation()    * DEG_DIV_RAD;
+    
+    document.AddMember("display",
+                       rapidjson::Value(!noDisplay),
+                       document.GetAllocator());
+    document.AddMember("rtsp-url",
+                       rapidjson::Value(url.c_str(), url.length()),
+                       document.GetAllocator());
+    document.AddMember("buffer-size",
+                       rapidjson::Value((uint64_t)bufferSize),
+                       document.GetAllocator());
+    document.AddMember("match-stereo-pairs",
+                       rapidjson::Value(matchStereoPairs),
+                       document.GetAllocator());
+    document.AddMember("gamma-min",
+                       rapidjson::Value(renderer.getGammaMin()),
+                       document.GetAllocator());
+    document.AddMember("gamma-max",
+                       rapidjson::Value(renderer.getGammaMax()),
+                       document.GetAllocator());
+    document.AddMember("gamma-pow",
+                       rapidjson::Value(renderer.getGammaPow()),
+                       document.GetAllocator());
+    document.AddMember("for-angle",
+                       rapidjson::Value(renderer.getFORAngle() * DEG_DIV_RAD),
+                       document.GetAllocator());
+    rapidjson::Value forRotationValue;
+    forRotationValue.SetObject();
+    forRotationValue.AddMember("x",
+                               rapidjson::Value(forRotation[0]),
+                               document.GetAllocator());
+    forRotationValue.AddMember("y",
+                               rapidjson::Value(forRotation[1]),
+                               document.GetAllocator());
+    forRotationValue.AddMember("z",
+                               rapidjson::Value(forRotation[2]),
+                               document.GetAllocator());
+    document.AddMember("for-rotation",
+                       forRotationValue,
+                       document.GetAllocator());
+    rapidjson::Value sceneRotationValue;
+    sceneRotationValue.SetObject();
+    sceneRotationValue.AddMember("x",
+                                 rapidjson::Value(rotation[0]),
+                                 document.GetAllocator());
+    sceneRotationValue.AddMember("y",
+                                 rapidjson::Value(rotation[1]),
+                                 document.GetAllocator());
+    sceneRotationValue.AddMember("z",
+                                 rapidjson::Value(rotation[2]),
+                                 document.GetAllocator());
+    document.AddMember("scene-rotation",
+                       sceneRotationValue,
+                       document.GetAllocator());
+    document.AddMember("rotation-speed",
+                       rapidjson::Value(renderer.getRotationSpeed()),
+                       document.GetAllocator());
+    document.AddMember("robust-syncing",
+                       rapidjson::Value(robustSyncing),
+                       document.GetAllocator());
+    document.AddMember("cubemap-queue-size",
+                       rapidjson::Value((uint64_t)maxFrameMapSize),
+                       document.GetAllocator());
+    document.AddMember("log-path",
+                       rapidjson::Value(logPath.string().c_str(), logPath.string().length()),
+                       document.GetAllocator());
+    document.AddMember("force-mono",
+                       rapidjson::Value(renderer.getForceMono()),
+                       document.GetAllocator());
+    
+    log(document, setupLogFile);
+}
 
 
 int main(int argc, char* argv[])
@@ -260,7 +409,31 @@ int main(int argc, char* argv[])
             {
                 maxFrameMapSize = boost::lexical_cast<size_t>(values[0]);
             }
-        }
+        },
+        {
+            "log-path",
+            {"path"},
+            [](const std::vector<std::string>& values)
+            {
+                logPath = values[0];
+            }
+        },
+        {
+            "participant-id",
+            {"string"},
+            [](const std::vector<std::string>& values)
+            {
+                participantId = values[0];
+            }
+        },
+        {
+            "phase",
+            {"string"},
+            [](const std::vector<std::string>& values)
+            {
+                phase = values[0];
+            }
+        },
     };
     
     std::initializer_list<CommandHandler::Command> consoleOnlyCommands =
@@ -311,7 +484,6 @@ int main(int argc, char* argv[])
                                                     << "β=" << rotation[1] << "°\t"
                                                     << "γ=" << rotation[2] << "°" << std::endl;
                 std::cout << "Rotation speed:     " << renderer.getRotationSpeed() << std::endl;
-                std::cout << "Config file:        " << configFilePath << std::endl;
                 std::cout << "Face resolutions:   ";
                 auto faceResokutions = renderer.getFaceResolutions();
                 for (int eye = 0; eye < StereoCubemap::MAX_EYES_COUNT; eye++)
@@ -327,6 +499,9 @@ int main(int argc, char* argv[])
                 std::cout << "Robust syncing:     " << ((robustSyncing) ? "yes" : "no") << std::endl;
                 std::cout << "Cubemap queue size: " << maxFrameMapSize << std::endl;
                 std::cout << "Force mono:         " << ((renderer.getForceMono()) ? "yes" : "no") << std::endl;
+                std::cout << "Log path:           " << logPath << std::endl;
+                std::cout << "Participant id:     " << participantId << std::endl;
+                std::cout << "Phase:              " << phase << std::endl;
             }
         }
     };
@@ -354,6 +529,13 @@ int main(int argc, char* argv[])
     Console console(consoleCommandHandler);
     console.start();
     
+    boost::filesystem::path dir(logPath / participantId / phase);
+    boost::filesystem::create_directories(dir);
+    ptsLogFile.open     ((dir / "PTS.json"     ).string(), std::ofstream::out | std::ofstream::app);
+    setupLogFile.open   ((dir / "Setup.json"   ).string(), std::ofstream::out | std::ofstream::app);
+    rotationLogFile.open((dir / "Rotation.json").string(), std::ofstream::out | std::ofstream::app);
+    
+    logSetup();
     
     RTSPCubemapSourceClient* rtspClient = RTSPCubemapSourceClient::create(url.c_str(),
                                                                           bufferSize,
@@ -379,6 +561,7 @@ int main(int argc, char* argv[])
     {
         renderer.setOnDisplayedCubemapFace(boost::bind(&onDisplayedCubemapFace, _1, _2));
         renderer.setOnDisplayedFrame(boost::bind(&onDisplayedFrame, _1));
+        renderer.setOnRotated(boost::bind(&onRotated, _1));
         renderer.start(); // does not return
     }
 }

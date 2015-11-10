@@ -304,14 +304,19 @@ bool Renderer::onKeyDown(const al::Keyboard& k)
     return true;
 }
 
-void Renderer::setOnDisplayedFrame(const std::function<void (Renderer*)>& callback)
+void Renderer::setOnDisplayedFrame(const OnDisplayedFrame& callback)
 {
     onDisplayedFrame = callback;
 }
 
-void Renderer::setOnDisplayedCubemapFace(const std::function<void (Renderer*, int)>& callback)
+void Renderer::setOnDisplayedCubemapFace(const OnDisplayedCubemapFace& callback)
 {
     onDisplayedCubemapFace = callback;
+}
+
+void Renderer::setOnRotated(const OnRotated& callback)
+{
+    onRotated = callback;
 }
 
 void Renderer::setGammaMin(float gammaMin)
@@ -348,6 +353,7 @@ void Renderer::setRotation(const al::Vec3f& rotation)
 {
     boost::mutex::scoped_lock(uniformsMutex);
     this->rotation = rotation;
+    if (onRotated) onRotated(this);
 }
 
 void Renderer::setRotationSpeed(float speed)

@@ -24,6 +24,7 @@ find_package(OpenGL REQUIRED)
 find_package(Allocore REQUIRED)
 find_package(Alloutil REQUIRED)
 find_package(Readline REQUIRED)
+find_package(Rapidjson REQUIRED)
 
 # packages for allocore
 find_package(GLUT REQUIRED)
@@ -52,6 +53,7 @@ target_include_directories(AlloPlayer
     ${ALLOCORE_INCLUDE_DIR}
     ${ALLOUTIL_INCLUDE_DIR}
 	${GLEW_INCLUDE_DIR}
+    ${RAPIDJSON_INCLUDE_DIRS}
 )
 target_link_libraries(AlloPlayer
 	${Boost_LIBRARIES}
