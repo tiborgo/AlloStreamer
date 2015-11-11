@@ -348,10 +348,21 @@ int main(int argc, char* argv[])
         },
         {
             "force-mono",
-            {},
+            {"yes|no"},
             [](const std::vector<std::string>& values)
             {
-                renderer.setForceMono(true);
+                if (values[0] == "yes")
+                {
+                    renderer.setForceMono(true);
+                }
+                else if (values[0] == "no")
+                {
+                    renderer.setForceMono(false);
+                }
+                else
+                {
+                    throw std::invalid_argument("Only yes or no are valid values");
+                }
             }
         },
     };
