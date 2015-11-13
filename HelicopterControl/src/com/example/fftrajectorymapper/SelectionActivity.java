@@ -16,6 +16,7 @@ public class SelectionActivity  extends Activity {
         setContentView(R.layout.activity_selection);
         
         Button settingsButton = (Button) findViewById(R.id.mSettingsButton);
+        Button preTrainingButton = (Button) findViewById(R.id.mPreTrainingButton);
         Button trainingButton = (Button) findViewById(R.id.mTrainingButton);
         Button assessmentButton = (Button) findViewById(R.id.mAssessmentButton);
         
@@ -34,6 +35,16 @@ public class SelectionActivity  extends Activity {
         
         final Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK); 
+        
+        preTrainingButton.setOnClickListener(new View.OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				intent.putExtra(MAP_FILE_NAME, "PreTrainingMap.jpg");
+				startActivity(intent);
+				finish();
+			}
+        });
         
         trainingButton.setOnClickListener(new View.OnClickListener() {
 

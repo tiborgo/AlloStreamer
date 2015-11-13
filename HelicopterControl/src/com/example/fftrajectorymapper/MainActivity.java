@@ -179,6 +179,12 @@ public class MainActivity extends Activity{
 
         int uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN |View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN ;
         decorView.setSystemUiVisibility(uiOptions);
+        
+        mTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mTextPaint.setColor(0xFFFF0000);
+        mTextPaint.setStrokeWidth(1);
+        mTextPaint.setTextSize(30);
+        mTextPaint.setTextAlign(Paint.Align.CENTER);
 
         mPaint = new Paint();
         mPaint.setAntiAlias(true);
@@ -241,6 +247,7 @@ public class MainActivity extends Activity{
     }
     
     private Paint mPaint;
+    private Paint mTextPaint;
     private MaskFilter  mEmboss;
     private MaskFilter  mBlur;
 
@@ -331,12 +338,15 @@ public class MainActivity extends Activity{
             int width2 = mapContainer.getWidth();
             int height2 = mapContainer.getHeight();
             
+            float normalizedPlayerX = (playerX - originX) * (getWidth() / mapWidth);
+            float normalizedPlayerY = (playerY - originY) * (getHeight() / mapHeight);
+            
             //Draw a circle at the player location
             int width = getWidth();
             int height = getHeight();
             mPaint.setStrokeWidth(10);
             mPaint.setAlpha(255);
-            canvas.drawCircle((playerX - originX) * (getWidth() / mapWidth), (playerY - originY) * (getHeight() / mapHeight), 8, mPaint);
+            canvas.drawCircle(normalizedPlayerX, normalizedPlayerY, 8, mPaint);
             
             mPaint.setStrokeWidth(2);
             //canvas.drawCircle(sX, sY, 3, mPaint);
@@ -347,10 +357,22 @@ public class MainActivity extends Activity{
             canvas.drawLine(sX, sY-lineGap, sX, sY-lineGap-lineLength, mPaint);
             canvas.drawLine(sX, sY+lineGap, sX, sY+lineGap+lineLength, mPaint);
             
+            float distance = (float) Math.sqrt(Math.pow(sX-normalizedPlayerX, 2) + Math.pow(sY-normalizedPlayerY, 2));
+            float unityDistance = distance * (mapWidth / 4000.0f);
+            
+            float meters = unityDistance;
+    		float feet = unityDistance * 3.28084f;
+            
+            canvas.drawLine(normalizedPlayerX, normalizedPlayerY, sX, sY, mPaint);
+            canvas.drawText("" + String.format("%.1f", meters) + " m / " + String.format("%.1f", feet) + " ft", sX, sY-RING_RADIUS-RING_THICKNESS*0.5f-10, mTextPaint);
+           
+            
             mPaint.setStrokeWidth(RING_THICKNESS);
             mPaint.setAlpha(50);
             canvas.drawCircle(sX, sY, RING_RADIUS, mPaint);
             //canvas.drawRect(0, 0, submitButtonSize, submitButtonSize, mPaint);
+            
+            
     
         }
 
