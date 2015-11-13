@@ -42,7 +42,7 @@ static const char* yuvGammaFragShader = AL_STRINGIFY
 Renderer::Renderer()
     :
     al::OmniApp("AlloPlayer", false, 2048), gammaMin(0.0f), gammaMax(1.0f), gammaPow(1.0f),
-    forRotation(0, 0, 0), forAngle(M_PI*2.0), rotation(0, 0, 0), rotationSpeed(0.5),
+    forRotation(0, 0, 0), forAngle(M_PI*2.0, M_PI*2.0), rotation(0, 0, 0), rotationSpeed(0.5),
     forceMono(false)
 {
     nav().smooth(0.8);
@@ -343,7 +343,7 @@ void Renderer::setFORRotation(const al::Vec3f& forRotation)
     this->forRotation = forRotation;
 }
 
-void Renderer::setFORAngle(float forAngle)
+void Renderer::setFORAngle(const al::Vec2f& forAngle)
 {
     boost::mutex::scoped_lock(uniformsMutex);
     this->forAngle = forAngle;
@@ -400,7 +400,7 @@ const al::Vec3f& Renderer::getFORRotation()
     return forRotation;
 }
 
-float Renderer::getFORAngle()
+const al::Vec2f& Renderer::getFORAngle()
 {
     boost::mutex::scoped_lock(uniformsMutex);
     return forAngle;

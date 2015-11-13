@@ -31,7 +31,7 @@ public:
     void setGammaMax(float gammaMax);
     void setGammaPow(float gammaPow);
     void setFORRotation(const al::Vec3f& forRotation);
-    void setFORAngle(float forAngle);
+    void setFORAngle(const al::Vec2f& forAngle);
     void setRotation(const al::Vec3f& rotation);
     void setRotationSpeed(float speed);
     void setForceMono(bool forceMono);
@@ -41,7 +41,7 @@ public:
     float                            getGammaMax();
     float                            getGammaPow();
     const al::Vec3f&                 getFORRotation();
-    float                            getFORAngle();
+    const al::Vec2f&                 getFORAngle();
     const al::Vec3f&                 getRotation();
     float                            getRotationSpeed();
     std::vector<std::pair<int, int>> getFaceResolutions();
@@ -71,7 +71,7 @@ private:
     float                            gammaMax;
     float                            gammaPow;
     al::Vec3f                        forRotation;
-    float                            forAngle;
+    al::Vec2f                        forAngle;
     al::Vec3f                        rotation;
     float                            rotationSpeed;
     bool                             forceMono;

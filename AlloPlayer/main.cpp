@@ -207,6 +207,7 @@ void logSetup()
 {
     rapidjson::Document document = getIdentifierJSON();
     
+    al::Vec2f forAngle    = renderer.getFORAngle()    * DEG_DIV_RAD;
     al::Vec3f forRotation = renderer.getFORRotation() * DEG_DIV_RAD;
     al::Vec3f rotation    = renderer.getRotation()    * DEG_DIV_RAD;
     
@@ -231,9 +232,14 @@ void logSetup()
     document.AddMember("gamma-pow",
                        rapidjson::Value(renderer.getGammaPow()),
                        document.GetAllocator());
-    document.AddMember("for-angle",
-                       rapidjson::Value(renderer.getFORAngle() * DEG_DIV_RAD),
-                       document.GetAllocator());
+    rapidjson::Value forAngleValue;
+    forAngleValue.SetObject();
+    forAngleValue.AddMember("x",
+                            rapidjson::Value(forAngle[0]),
+                            document.GetAllocator());
+    forAngleValue.AddMember("y",
+                            rapidjson::Value(forAngle[1]),
+                            document.GetAllocator());
     rapidjson::Value forRotationValue;
     forRotationValue.SetObject();
     forRotationValue.AddMember("x",
@@ -322,10 +328,11 @@ int main(int argc, char* argv[])
         },
         {
             "for-angle",
-            {"°"},
+            {"horizontal°", "vertical°"},
             [](const std::vector<std::string>& values)
             {
-                renderer.setFORAngle(boost::lexical_cast<float>(values[0]) * RAD_DIV_DEG);
+                renderer.setFORAngle(al::Vec2f(boost::lexical_cast<float>(values[0]) * RAD_DIV_DEG,
+                                               boost::lexical_cast<float>(values[1]) * RAD_DIV_DEG));
             }
         },
         {
@@ -514,6 +521,7 @@ int main(int argc, char* argv[])
             {},
             [](const std::vector<std::string>& values)
             {
+                al::Vec2f forAngle    = renderer.getFORAngle()    * DEG_DIV_RAD;
                 al::Vec3f forRotation = renderer.getFORRotation() * DEG_DIV_RAD;
                 al::Vec3f rotation    = renderer.getRotation()    * DEG_DIV_RAD;
                 
@@ -526,7 +534,8 @@ int main(int argc, char* argv[])
                 std::cout << "Gamma min:              " << renderer.getGammaMin() << std::endl;
                 std::cout << "Gamma max:              " << renderer.getGammaMax() << std::endl;
                 std::cout << "Gamma pow:              " << renderer.getGammaPow() << std::endl;
-                std::cout << "FOR angle:              " << renderer.getFORAngle() * DEG_DIV_RAD << "°" << std::endl;
+                std::cout << "FOR angle:              " << "α=" << forAngle[0] << "°\t"
+                                                        << "β=" << forAngle[1] << "°" << std::endl;
                 std::cout << "FOR rotation:           " << "α=" << forRotation[0] << "°\t"
                                                         << "β=" << forRotation[1] << "°\t"
                                                         << "γ=" << forRotation[2] << "°" << std::endl;
