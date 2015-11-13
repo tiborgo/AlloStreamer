@@ -106,13 +106,19 @@ public class RenderBinoculars : MonoBehaviour
     {
         get
         {
-            return mouseLook.usePhasespace;
+			return usePhasespace_;
         }
         set
         {
-            mouseLook.usePhasespace = value;
+			usePhasespace_ = value;
+			if (mouseLook)
+			{
+            	mouseLook.usePhasespace = value;
+			}
         }
     }
+	[JsonProperty]
+	public string blinder;
 
     [DllImport("UnityServerPlugin")]
     private static extern void setBinocularsAddress(string address);
@@ -143,6 +149,11 @@ public class RenderBinoculars : MonoBehaviour
     [SerializeField]
     [HideInInspector]
     private float magnification_ = 1;
+
+	[SerializeField]
+	[HideInInspector]
+	private bool usePhasespace_ = false;
+
 
     public Vector3 GetOrientation()
     {
@@ -252,6 +263,10 @@ public class RenderBinoculars : MonoBehaviour
 		virtualCameraStereo.layer = 9;
 
         mouseLook = virtualCameraStereo.AddComponent<MouseLook>();
+		mouseLook.usePhasespace = usePhasespace_;
+		mouseLook.blinder = GameObject.Find("Blinders/" + blinder).transform.GetChild(0).gameObject;
+		mouseLook.blinder.SetActive(true);
+		mouseLook.blinder.layer = 9;
 
         GameObject hmd = new GameObject("HMD");
         hmd.transform.parent = virtualCameraStereo.transform;
@@ -266,7 +281,7 @@ public class RenderBinoculars : MonoBehaviour
         leftEyeCameraCam = leftEyeCamera.AddComponent<Camera>();
         leftEyeCameraCam.targetTexture = leftEyeTexture;
         leftEyeCameraCam.fieldOfView = fieldOfView / magnification;
-        leftEyeCameraCam.cullingMask &= ~(1 << 8);
+        leftEyeCameraCam.cullingMask &= ~(1 << 8 | 1 << 15 | 1 << 16);
 
         rightEyeCamera = new GameObject("RightEyeCamera");
         rightEyeCamera.transform.parent = hmd.transform;
@@ -276,6 +291,6 @@ public class RenderBinoculars : MonoBehaviour
         rightEyeCameraCam = rightEyeCamera.AddComponent<Camera>();
         rightEyeCameraCam.targetTexture = rightEyeTexture;
         rightEyeCameraCam.fieldOfView = fieldOfView / magnification;
-        rightEyeCameraCam.cullingMask &= ~(1 << 8);
-    }
+		rightEyeCameraCam.cullingMask &= ~(1 << 8 | 1 << 15 | 1 << 16);
+	}
 }

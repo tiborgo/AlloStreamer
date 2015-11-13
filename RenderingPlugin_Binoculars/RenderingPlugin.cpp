@@ -508,6 +508,9 @@ float q4 = 0;
 float r1 = 0;
 float r2 = 0;
 float r3 = 0;
+float p1 = 0;
+float p2 = 0;
+float p3 = 0;
 extern "C" {
 	int EXPORT_API startStream();
 	int EXPORT_API initInterprocessMemory();
@@ -591,6 +594,19 @@ extern "C" float EXPORT_API getRotationZ()
 {
 	return r3;
 }
+extern "C" float EXPORT_API getPositionX()
+{
+	return p1;
+}
+extern "C" float EXPORT_API getPositionY()
+{
+	return p2;
+}
+extern "C" float EXPORT_API getPositionZ()
+{
+	return p3;
+}
+
 
 UdpTransmitSocket* transmitSocket = nullptr;
 
@@ -632,14 +648,27 @@ protected:
             // example #2 -- argument iterator interface, supports
             // reflection for overloaded messages (eg you can call
             // (*arg)->IsBool() to check if a bool was passed etc).
-            osc::ReceivedMessage::const_iterator arg = m.ArgumentsBegin();
-            q1 = (arg++)->AsFloat();
-            q2 = (arg++)->AsFloat();
-            q3 = (arg++)->AsFloat();
-            q4 = (arg++)->AsFloat();
-            
-            if( arg != m.ArgumentsEnd() )
-                throw osc::ExcessArgumentException();
+			if (strcmp(m.AddressPattern(), "/pose") == 0){
+				osc::ReceivedMessage::const_iterator arg = m.ArgumentsBegin();
+				q1 = (arg++)->AsFloat();
+				q2 = (arg++)->AsFloat();
+				q3 = (arg++)->AsFloat();
+				q4 = (arg++)->AsFloat();
+
+				if (arg != m.ArgumentsEnd())
+					throw osc::ExcessArgumentException();
+			}
+
+			if (strcmp(m.AddressPattern(), "/position") == 0){
+				osc::ReceivedMessage::const_iterator arg = m.ArgumentsBegin();
+				p1 = (arg++)->AsFloat();
+				p2 = (arg++)->AsFloat();
+				p3 = (arg++)->AsFloat();
+
+				if (arg != m.ArgumentsEnd()){
+					throw osc::ExcessArgumentException();
+				}
+			}
             
         }catch( osc::Exception& e ){
             // any parsing errors such as unexpected argument types, or
@@ -744,7 +773,7 @@ extern "C" void EXPORT_API oscPhaseSpaceStart()
 	/*
      * Start OSC client to receive Phase Space sensor orientation
      */
-    QuaternionPacketListener qlistener;
+	QuaternionPacketListener qlistener;
     qs = new UdpListeningReceiveSocket(IpEndpointName( IpEndpointName::ANY_ADDRESS, QPORT ), &qlistener );
     
     qs->Run();
