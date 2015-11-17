@@ -529,11 +529,15 @@ extern "C" {
 	void EXPORT_API oscStart();
 	void EXPORT_API oscPhaseSpaceStart();
 }
+
+boost::barrier endSeverBarrier(2);
+
 extern "C" void EXPORT_API endServer()
 {
     data->shutdownServer = true;
     fprintf(pluginFile, "Ending server...\n");
     fflush(pluginFile);
+	endSeverBarrier.wait();
 }
 
 extern "C" float EXPORT_API getRoll()
@@ -841,8 +845,9 @@ extern "C" int EXPORT_API initInterprocessMemory()
      * Will not return until endServer() is called
      */
     
-	if (0 != std::system(ROOT_DIR "/Bin/" CMAKE_INTDIR "/AlloServer_Binoculars"))
-        return 1;
+	std::system(ROOT_DIR "/Bin/" CMAKE_INTDIR "/AlloServer_Binoculars");
+
+	endSeverBarrier.wait();
     
     //AlloServer is finished, so shutdown OSC
     if(s != NULL)

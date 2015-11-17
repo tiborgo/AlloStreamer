@@ -247,8 +247,8 @@ void uploadFrames()
                 
             }
         }
-		std::this_thread::sleep_for(std::chrono::microseconds(15000));
-
+		//std::this_thread::sleep_for(std::chrono::microseconds(15000));
+		std::this_thread::sleep_for(std::chrono::microseconds(66667));
     }
     fprintf(logz,"exiting... \n");
     fflush(logz);

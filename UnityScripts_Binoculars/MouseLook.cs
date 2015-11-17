@@ -46,7 +46,7 @@ public class MouseLook : MonoBehaviour
     public float offsetY = 0.0F;
     public float offsetZ = 0.0F;
 
-	public GameObject blinder;
+    public GameObject blinder;
 
     [DllImport("UnityServerPlugin")]
     private static extern float getRoll();
@@ -96,15 +96,15 @@ public class MouseLook : MonoBehaviour
     [DllImport("UnityServerPlugin")]
     private static extern void sendDistance(float distance);
 
-	public Vector3 GetOrientation()
-	{
-		return mobileDeviceRotation.eulerAngles;
-	}
+    public Vector3 GetOrientation()
+    {
+        return mobileDeviceRotation.eulerAngles;
+    }
 
-	public Vector3 GetCalibration()
-	{
-		return new Vector3(calibX, calibY, calibZ);
-	}
+    public Vector3 GetCalibration()
+    {
+        return new Vector3(calibX, calibY, calibZ);
+    }
 
     public Vector3 GetSceneRotation()
     {
@@ -136,6 +136,7 @@ public class MouseLook : MonoBehaviour
     private LineRenderer lineRenderer;
 
     private Vector3 startPosition;
+    private Quaternion blinderStartRotation;
 
     void Update()
     {
@@ -163,7 +164,7 @@ public class MouseLook : MonoBehaviour
         mobileDeviceRotation = Quaternion.Euler(pitch /*- calibY*/, roll /*- calibX + 335f*/, yaw); // 335 is the rotation halfway between the two scene cameras (used for calibration)
         phaseSpaceRotation = new Quaternion(phaseSpaceX, phaseSpaceY, phaseSpaceZ, phaseSpaceW);
         rotation = Quaternion.Euler(rotationX, rotationY, rotationZ);
-        position = new Vector3(positionX, positionY, -positionZ);  
+        position = new Vector3(positionX, positionY, -positionZ);
 
         Vector3 mobileDeviceRotEuler = mobileDeviceRotation.eulerAngles;
         Vector3 PSRotEuler = phaseSpaceRotation.eulerAngles;
@@ -177,9 +178,9 @@ public class MouseLook : MonoBehaviour
         PSRotEuler.x = PSRotEuler.x - calibX + offsetX;
         PSRotEuler.y = PSRotEuler.y - calibY + offsetY;
         PSRotEuler.z = PSRotEuler.z - calibZ + offsetZ;
-        			
+
         mobileDeviceRotation = Quaternion.Euler(mobileDeviceRotEuler);
-        phaseSpaceRotation = Quaternion.Euler (PSRotEuler);
+        phaseSpaceRotation = Quaternion.Euler(PSRotEuler);
 
         if (usePhasespace)
         {
@@ -190,14 +191,14 @@ public class MouseLook : MonoBehaviour
             transform.rotation = Quaternion.Inverse(rotation) * mobileDeviceRotation;
         }
 
-		if (blinder)
-		{
-			blinder.transform.rotation = Quaternion.Inverse(rotation);
-		}
+        if (blinder)
+        {
+            blinder.transform.rotation = blinderStartRotation * Quaternion.Inverse(rotation);
+        }
 
-        transform.position = startPosition + position;
+        //transform.position = startPosition + position;
 
-		Ray ray = new Ray(transform.position, transform.rotation * Vector3.forward);
+        Ray ray = new Ray(transform.position, transform.rotation * Vector3.forward);
         RaycastHit hit;
 
         if (Physics.Raycast(ray, out hit))
@@ -320,5 +321,6 @@ public class MouseLook : MonoBehaviour
             GetComponent<Rigidbody>().freezeRotation = true;
 
         startPosition = transform.position;
+        blinderStartRotation = blinder.transform.rotation;
     }
 }
