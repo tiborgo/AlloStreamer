@@ -27,10 +27,11 @@
                 android:layout_alignParentBottom="true"
                 android:layout_centerHorizontal="true"
                 android:layout_marginBottom="100dp"
-                android:text="m / ft"
+                android:text="m\nft"
                 android:textAppearance="?android:attr/textAppearanceLarge"
-                android:textColor="#aaff0000"
-                android:textSize="25sp" />
+                android:textColor="#ff00B400"
+                android:textSize="25sp"
+                android:lines="2" />
 
         </RelativeLayout>
 
@@ -46,10 +47,11 @@
                 android:layout_alignParentBottom="true"
                 android:layout_centerHorizontal="true"
                 android:layout_marginBottom="100dp"
-                android:text="m / ft"
+                android:text="m\nft"
                 android:textAppearance="?android:attr/textAppearanceLarge"
-                android:textColor="#aaff0000"
-                android:textSize="25sp" />
+                android:textColor="#ff00B400"
+                android:textSize="25sp"
+                android:lines="2" />
             
         </RelativeLayout>
 

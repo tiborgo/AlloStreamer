@@ -28,6 +28,8 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
+import android.provider.Settings.SettingNotFoundException;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Display;
@@ -55,6 +57,7 @@ import android.view.ViewGroup.LayoutParams;
  * limitations under the License.
  */
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -75,7 +78,8 @@ public class MainActivity extends Activity{
     float mapWidth = 400;
     float mapHeight = 400;
     int submitButtonSize = 160;
-    float sX = Float.POSITIVE_INFINITY, sY = Float.POSITIVE_INFINITY, tmpX, tmpY, prevX, prevY, picX, picY;
+    float sX = Float.POSITIVE_INFINITY, sY = Float.POSITIVE_INFINITY, tmpX, tmpY, prevX, prevY, picX, picY,
+    		lastMarkX = Float.POSITIVE_INFINITY, lastMarkY = Float.POSITIVE_INFINITY;
     Bitmap  mBitmap;
     int OSCPort = 7244;
     MyView myView;
@@ -90,6 +94,25 @@ public class MainActivity extends Activity{
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+     // Lower brightness because AlloSphere is dark
+	    int brightnessMode;
+		try {
+			brightnessMode = Settings.System.getInt(getContentResolver(),
+			        Settings.System.SCREEN_BRIGHTNESS_MODE);
+			if (brightnessMode == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC) {
+		        Settings.System.putInt(getContentResolver(),
+		                Settings.System.SCREEN_BRIGHTNESS_MODE,
+		                Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL);
+		    }
+
+		    WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
+		    layoutParams.screenBrightness = 0.1F;
+		    getWindow().setAttributes(layoutParams);
+		}
+		catch (SettingNotFoundException e1) {
+			e1.printStackTrace();
+		}
         
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         
@@ -167,6 +190,9 @@ public class MainActivity extends Activity{
         ImageButton submitButton4 = (ImageButton) findViewById(R.id.mSubmitButton4);
         View.OnClickListener submitButtonClickListener = new View.OnClickListener() {
             public void onClick(View v) {
+            	lastMarkX = sX;
+            	lastMarkY = sY;
+            	myView.invalidate();
             	new oscthread().execute(true);
             }
         };
@@ -190,7 +216,6 @@ public class MainActivity extends Activity{
         mPaint.setAntiAlias(true);
         mPaint.setDither(true);
         mPaint.setColor(0xFFFF0000);
-        mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setStrokeJoin(Paint.Join.ROUND);
         mPaint.setStrokeCap(Paint.Cap.ROUND);
         mPaint.setStrokeWidth(12);
@@ -341,6 +366,8 @@ public class MainActivity extends Activity{
             float normalizedPlayerX = (playerX - originX) * (getWidth() / mapWidth);
             float normalizedPlayerY = (playerY - originY) * (getHeight() / mapHeight);
             
+            mPaint.setStyle(Paint.Style.STROKE);
+            
             //Draw a circle at the player location
             int width = getWidth();
             int height = getHeight();
@@ -362,18 +389,30 @@ public class MainActivity extends Activity{
             
             float meters = unityDistance;
     		float feet = unityDistance * 3.28084f;
+    		
+    		canvas.drawLine(normalizedPlayerX, normalizedPlayerY, sX, sY, mPaint);
+    		
+    		for (int i = 0; i < 4; i++)
+    		{
+    			canvas.save();
+                canvas.rotate(i*90, sX, sY);
+                canvas.drawText("" + String.format("%.0f", meters) + " m / " + String.format("%.0f", feet) + " ft", sX, sY-RING_RADIUS-RING_THICKNESS*0.5f-10, mTextPaint);
+                canvas.restore();
+    		}
             
-            canvas.drawLine(normalizedPlayerX, normalizedPlayerY, sX, sY, mPaint);
-            canvas.drawText("" + String.format("%.1f", meters) + " m / " + String.format("%.1f", feet) + " ft", sX, sY-RING_RADIUS-RING_THICKNESS*0.5f-10, mTextPaint);
+            //canvas.drawText("" + String.format("%.1f", meters) + " m / " + String.format("%.1f", feet) + " ft", textX, textY, mTextPaint);
+            
            
+            mPaint.setStyle(Paint.Style.FILL);
+            canvas.drawCircle(lastMarkX, lastMarkY, 10, mPaint);
             
+            mPaint.setStyle(Paint.Style.STROKE);
             mPaint.setStrokeWidth(RING_THICKNESS);
             mPaint.setAlpha(50);
             canvas.drawCircle(sX, sY, RING_RADIUS, mPaint);
             //canvas.drawRect(0, 0, submitButtonSize, submitButtonSize, mPaint);
             
             
-    
         }
 
         private static final float TOUCH_TOLERANCE = 4;

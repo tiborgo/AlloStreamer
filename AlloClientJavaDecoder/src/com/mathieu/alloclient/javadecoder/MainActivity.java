@@ -23,8 +23,11 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
+import android.provider.Settings.SettingNotFoundException;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -75,6 +78,25 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		
+		// Lower brightness because AlloSphere is dark
+	    int brightnessMode;
+		try {
+			brightnessMode = Settings.System.getInt(getContentResolver(),
+			        Settings.System.SCREEN_BRIGHTNESS_MODE);
+			if (brightnessMode == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC) {
+		        Settings.System.putInt(getContentResolver(),
+		                Settings.System.SCREEN_BRIGHTNESS_MODE,
+		                Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL);
+		    }
+
+		    WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
+		    layoutParams.screenBrightness = 0.15F;
+		    getWindow().setAttributes(layoutParams);
+		}
+		catch (SettingNotFoundException e1) {
+			e1.printStackTrace();
+		}
 		
 //		m_sensorManager = (SensorManager) getSystemService(this.SENSOR_SERVICE);
 //        registerListeners();
@@ -169,11 +191,11 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
 								String content;
 								if (distance == -1)
 								{
-									content = "\u221e m / \u221e ft";
+									content = "\u221e m" + System.getProperty("line.separator") + "\u221e ft";
 								}
 								else
 								{
-									content = String.format("%.1f m / %.1f ft", distance, distance * 3.28084);
+									content = String.format("%.0f m" + System.getProperty("line.separator") + "%.0f ft", distance, distance * 3.28084);
 								}
 								distanceViewLeft.setText(content);
 								distanceViewRight.setText(content);
@@ -186,6 +208,18 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
 			} catch (SocketException e) {
 				Log.w("dbg", "oscintport: " + e.toString());
 			}
+		}
+	}
+	
+	@Override
+	public boolean dispatchKeyEvent (KeyEvent event) {
+		switch( event.getKeyCode() ) {
+		case KeyEvent.KEYCODE_VOLUME_UP:
+		case KeyEvent.KEYCODE_VOLUME_DOWN:
+			return true;
+
+		default:
+			return super.dispatchKeyEvent(event);
 		}
 	}
 	
@@ -290,7 +324,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
 	{
 		super.onPause();
 		mSensorManager.unregisterListener(this);
-		NativeLib.shutdownClient();
+		//NativeLib.shutdownClient();
 		Log.i("dbg", "onPause");
 		if (mPlayer != null) {
 			mPlayer.interrupt();
@@ -302,7 +336,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, Se
 	{
 		super.onStop();
 		mSensorManager.unregisterListener(this);
-		NativeLib.shutdownClient();
+		//NativeLib.shutdownClient();
 	}
 	
 	@Override
