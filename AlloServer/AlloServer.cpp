@@ -13,14 +13,14 @@ extern "C"
 }
 
 #include "AlloShared/to_human_readable_byte_count.hpp"
-#include "AlloShared/concurrent_queue.h"
+#include "AlloShared/ConcurrentQueue.hpp"
 #include "AlloShared/Cubemap.hpp"
 #include "AlloShared/Binoculars.hpp"
 #include "AlloShared/config.h"
 #include "AlloShared/Process.h"
 #include "AlloShared/StatsUtils.hpp"
 #include "config.h"
-#include "RawPixelSource.hpp"
+#include "H264NALUSource.hpp"
 #include "CubemapExtractionPlugin/CubemapExtractionPlugin.h"
 #include "AlloServer.h"
 #include "AlloReceiver/Stats.hpp"
@@ -72,12 +72,12 @@ static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms, std:
     delete[] url;
 }
 
-void onSentNALU(RawPixelSource*, uint8_t type, size_t size, int eye, int face)
+void onSentNALU(H264NALUSource*, uint8_t type, size_t size, int eye, int face)
 {
 	//stats.store(StatsUtils::NALU(type, size, eye * 6 + face, StatsUtils::NALU::SENT));
 }
 
-void onEncodedFrame(RawPixelSource*, int eye, int face)
+void onEncodedFrame(H264NALUSource*, int eye, int face)
 {
 	stats.store(StatsUtils::CubemapFace(eye * 6 + face, StatsUtils::CubemapFace::DISPLAYED));
 }
@@ -110,7 +110,7 @@ void addFaceSubstreams0(void*)
 
 			cubemapSMS->addSubsession(subsession);
 
-			RawPixelSource* source = RawPixelSource::createNew(*env,
+			H264NALUSource* source = H264NALUSource::createNew(*env,
 				state->content,
 				avgBitRate,
 				robustSyncing);
@@ -170,7 +170,7 @@ void addBinocularsSubstream0(void*)
     binocularsSMS->addSubsession(subsession);
     
     binocularsStream->source = H264VideoStreamDiscreteFramer::createNew(*env,
-                                                                        RawPixelSource::createNew(*env,
+                                                                        H264NALUSource::createNew(*env,
                                                                                                   binocularsStream->content,
                                                                                                   avgBitRate,
 																								  robustSyncing));

@@ -17,7 +17,7 @@ extern "C"
 
 #include "AlloReceiver.h"
 
-#include "AlloShared/concurrent_queue.h"
+#include "AlloShared/ConcurrentQueue.hpp"
 #include "AlloShared/Cubemap.hpp"
 
 class ALLORECEIVER_API H264RawPixelsSink : public MediaSink
@@ -77,14 +77,14 @@ private:
 	unsigned long bufferSize;
 	unsigned char* buffer;
 	AVCodecContext* codecContext;
-    concurrent_queue<NALU*> naluPool;
-    concurrent_queue<NALU*> naluBuffer;
-    concurrent_queue<AVPacket*> pktBuffer;
-    concurrent_queue<AVPacket*> pktPool;
-	concurrent_queue<AVFrame*> frameBuffer;
-	concurrent_queue<AVFrame*> framePool;
-    concurrent_queue<AVFrame*> convertedFrameBuffer;
-    concurrent_queue<AVFrame*> convertedFramePool;
+    ConcurrentQueue<NALU*> naluPool;
+    ConcurrentQueue<NALU*> naluBuffer;
+    ConcurrentQueue<AVPacket*> pktBuffer;
+    ConcurrentQueue<AVPacket*> pktPool;
+	ConcurrentQueue<AVFrame*> frameBuffer;
+	ConcurrentQueue<AVFrame*> framePool;
+    ConcurrentQueue<AVFrame*> convertedFrameBuffer;
+    ConcurrentQueue<AVFrame*> convertedFramePool;
     
     AVPacket* currentPkt;
     int64_t pts;

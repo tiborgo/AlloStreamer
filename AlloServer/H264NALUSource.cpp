@@ -8,14 +8,14 @@
 #include <iomanip>
 
 #include "config.h"
-#include "RawPixelSource.hpp"
+#include "H264NALUSource.hpp"
 
 namespace bc = boost::chrono;
 
-boost::mutex RawPixelSource::triggerEventMutex;
-std::vector<RawPixelSource*> RawPixelSource::sourcesReadyForDelivery;
+boost::mutex H264NALUSource::triggerEventMutex;
+std::vector<H264NALUSource*> H264NALUSource::sourcesReadyForDelivery;
 
-int RawPixelSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
+int H264NALUSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
 {
 	char *err = NULL;
 	if (img_convert_ctx == NULL)
@@ -45,19 +45,19 @@ int RawPixelSource::x2yuv(AVFrame *xFrame, AVFrame *yuvFrame, AVCodecContext *c)
 		yuvFrame->data, yuvFrame->linesize);
 }
 
-RawPixelSource* RawPixelSource::createNew(UsageEnvironment& env,
+H264NALUSource* H264NALUSource::createNew(UsageEnvironment& env,
                                           Frame* content,
                                           int avgBitRate,
 										  bool robustSyncing)
 {
-	return new RawPixelSource(env, content, avgBitRate, robustSyncing);
+	return new H264NALUSource(env, content, avgBitRate, robustSyncing);
 }
 
-unsigned RawPixelSource::referenceCount = 0;
+unsigned H264NALUSource::referenceCount = 0;
 
 struct timeval prevtime;
 
-RawPixelSource::RawPixelSource(UsageEnvironment& env,
+H264NALUSource::H264NALUSource(UsageEnvironment& env,
                                Frame* content,
 							   int avgBitRate,
 							   bool robustSyncing)
@@ -165,16 +165,16 @@ RawPixelSource::RawPixelSource(UsageEnvironment& env,
 
 	//std::cout << this << ": eventTriggerId: " << eventTriggerId  << std::endl;
 
-	frameContentThread = boost::thread(boost::bind(&RawPixelSource::frameContentLoop, this));
+	frameContentThread = boost::thread(boost::bind(&H264NALUSource::frameContentLoop, this));
 
-	encodeFrameThread  = boost::thread(boost::bind(&RawPixelSource::encodeFrameLoop,  this));
+	encodeFrameThread  = boost::thread(boost::bind(&H264NALUSource::encodeFrameLoop,  this));
 
-	//eventThread        = boost::thread(boost::bind(&RawPixelSource::eventLoop, this));
+	//eventThread        = boost::thread(boost::bind(&H264NALUSource::eventLoop, this));
 
 	lastFrameTime = av_gettime();
 }
 
-RawPixelSource::~RawPixelSource()
+H264NALUSource::~H264NALUSource()
 {
 	// Any instance-specific 'destruction' (i.e., resetting) of the device would be done here:
 	//std::cout << this << ": deconstructing..." << std::endl;
@@ -204,24 +204,24 @@ RawPixelSource::~RawPixelSource()
 	//std::cout << this << ": deconstructed" << std::endl;
 }
 
-void RawPixelSource::setOnSentNALU(const OnSentNALU& callback)
+void H264NALUSource::setOnSentNALU(const OnSentNALU& callback)
 {
 	onSentNALU = callback;
 }
 
-void RawPixelSource::setOnEncodedFrame(const OnEncodedFrame& callback)
+void H264NALUSource::setOnEncodedFrame(const OnEncodedFrame& callback)
 {
 	onEncodedFrame = callback;
 }
 
-void RawPixelSource::frameContentLoop()
+void H264NALUSource::frameContentLoop()
 {
 
 	while (!destructing)
 	{
 
 		AVFrame* frame;
-		if (!framePool.wait_and_pop(frame))
+		if (!framePool.waitAndPop(frame))
 		{
 			return;
 		}
@@ -289,7 +289,7 @@ void RawPixelSource::frameContentLoop()
 	}
 }
 
-void RawPixelSource::doGetNextFrame()
+void H264NALUSource::doGetNextFrame()
 {
 	// This function is called (by our 'downstream' object) when it asks for new data.
 
@@ -311,10 +311,10 @@ void RawPixelSource::doGetNextFrame()
 
 }
 
-void RawPixelSource::deliverFrame0(void* clientData)
+void H264NALUSource::deliverFrame0(void* clientData)
 {
 	boost::mutex::scoped_lock lock(triggerEventMutex);
-	for (RawPixelSource* source : sourcesReadyForDelivery)
+	for (H264NALUSource* source : sourcesReadyForDelivery)
 	{
 		source->deliverFrame();
 	}
@@ -322,7 +322,7 @@ void RawPixelSource::deliverFrame0(void* clientData)
 	//std::cout << "deliver frame: " << ((CubemapFaceSource*)clientData)->face->index << std::endl;
 }
 
-void RawPixelSource::encodeFrameLoop()
+void H264NALUSource::encodeFrameLoop()
 {
 	while (!this->destructing)
 	{
@@ -334,7 +334,7 @@ void RawPixelSource::encodeFrameLoop()
 			AVFrame* xFrame;
 			AVFrame* yuv420pFrame;
 
-			if (!frameBuffer.wait_and_pop(xFrame))
+			if (!frameBuffer.waitAndPop(xFrame))
 			{
 				// queue did close
 				return;
@@ -437,7 +437,7 @@ void RawPixelSource::encodeFrameLoop()
 
 
 			AVPacket dummy;
-			if (!pktPool.wait_and_pop(dummy))
+			if (!pktPool.waitAndPop(dummy))
 			{
 				// queue did close
 				return;
@@ -477,7 +477,7 @@ void RawPixelSource::encodeFrameLoop()
 	}
 }
 
-void RawPixelSource::deliverFrame()
+void H264NALUSource::deliverFrame()
 {
 	// This function is called when new frame data is available from the device.
 	// We deliver this data by copying it to the 'downstream' object, using the following parameters (class members):
@@ -525,7 +525,7 @@ void RawPixelSource::deliverFrame()
 	//std::cout << this << ": pktBuffer size: " << pktBuffer.size() << std::endl;
 
 	AVPacket pkt;
-	if (!pktBuffer.wait_and_pop(pkt))
+	if (!pktBuffer.waitAndPop(pkt))
 	{
 		// queue did close
 		return;

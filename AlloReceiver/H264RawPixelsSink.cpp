@@ -69,7 +69,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
         pkt->size = 0;
         pktPool.push(pkt);
     }
-    pktPool.wait_and_pop(currentPkt);
+    pktPool.waitAndPop(currentPkt);
     
 	for (int i = 0; i < 60; i++)
 	{
@@ -187,7 +187,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
         // make frame available to the decoder
         // if we currently have the capacities to encode another frame
         AVPacket* pkt;
-        if (pktPool.try_pop(pkt))
+        if (pktPool.tryPop(pkt))
         {
             pktBuffer.push(currentPkt);
             currentPkt = pkt;
@@ -213,7 +213,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
     lastPTS = pts;
     
 //    NALU* nalu;
-//    if (naluPool.try_pop(nalu))
+//    if (naluPool.tryPop(nalu))
 //    {
 //        size_t size;
 //        if (frameSize > MAX_NALU_SIZE)
@@ -252,7 +252,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 //        
 //        AVPacket* pkt;
 //        
-//        if (pktPool.try_pop(pkt))
+//        if (pktPool.tryPop(pkt))
 //        {
 //            
 //            av_init_packet(pkt);
@@ -390,7 +390,7 @@ void H264RawPixelsSink::packageNALUsLoop()
     /*while (true)
     {
         NALU* nalu;
-        if (!naluBuffer.wait_and_pop(nalu))
+        if (!naluBuffer.waitAndPop(nalu))
         {
             // queue did close
             return;
@@ -401,7 +401,7 @@ void H264RawPixelsSink::packageNALUsLoop()
     while (true)
     {
         AVPacket* pkt;
-        if (!pktPool.wait_and_pop(pkt))
+        if (!pktPool.waitAndPop(pkt))
         {
             // queue did close
             return;
@@ -418,7 +418,7 @@ void H264RawPixelsSink::packageNALUsLoop()
             lastPTS = pts;
             
             NALU* nalu;
-            if (!naluBuffer.wait_and_pop(nalu))
+            if (!naluBuffer.waitAndPop(nalu))
             {
                 // queue did close
                 return;
@@ -460,7 +460,7 @@ void H264RawPixelsSink::packageNALUsLoop()
 //                
 //                        AVPacket* pkt;
 //                
-//                        if (pktPool.try_pop(pkt))
+//                        if (pktPool.tryPop(pkt))
 //                        {
 //                
 //                            av_init_packet(pkt);
@@ -506,14 +506,14 @@ void H264RawPixelsSink::decodeFrameLoop()
 		AVFrame* frame;
 		AVPacket* pkt;
 
-		if (!pktBuffer.wait_and_pop(pkt))
+		if (!pktBuffer.waitAndPop(pkt))
 		{
 			// queue did close
 			return;
 		}
         //std::cout << pktPool.size() << std::endl;
 
-		if (!framePool.wait_and_pop(frame))
+		if (!framePool.waitAndPop(frame))
 		{
 			// queue did close
 			return;
@@ -615,14 +615,14 @@ void H264RawPixelsSink::convertFrameLoop()
         AVFrame* frame;
         AVFrame* convertedFrame;
         
-        if (!frameBuffer.wait_and_pop(frame))
+        if (!frameBuffer.waitAndPop(frame))
         {
             // queue did close
             return;
         }
         //std::cout /*<< this << " "*/ << frameBuffer.size() << std::endl;
         
-        if (!convertedFramePool.wait_and_pop(convertedFrame))
+        if (!convertedFramePool.waitAndPop(convertedFrame))
         {
             // queue did close
             return;
@@ -687,7 +687,7 @@ void H264RawPixelsSink::convertFrameLoop()
 AVFrame* H264RawPixelsSink::getNextFrame()
 {
     AVFrame* frame;
-	if (convertedFrameBuffer.try_pop(frame))
+	if (convertedFrameBuffer.tryPop(frame))
 	{
         return frame;
 	}

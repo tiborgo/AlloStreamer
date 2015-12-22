@@ -1,12 +1,12 @@
 set(SOURCES
 	AlloServer.cpp
-	RawPixelSource.cpp
+	H264NALUSource.cpp
 	DiscreteFlowControlFilter.cpp
 )
 	
 set(HEADERS
 	config.h
-	RawPixelSource.hpp
+	H264NALUSource.hpp
 	AlloServer.h
 	DiscreteFlowControlFilter.hpp
 )
