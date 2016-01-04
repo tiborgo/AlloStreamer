@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.0)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules/")
 
-project(AlloUnity)
+project(AlloStreamer)
 
 set(ENABLE_ALLOSHARED ON CACHE BOOL "")
 set(ENABLE_ALLOSERVER ON CACHE BOOL "")
