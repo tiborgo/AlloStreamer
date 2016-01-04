@@ -14,14 +14,15 @@ libfind_pkg_check_modules(Jsoncpp_PKGCONF jsoncpp)
 # Include dir
 find_path(Jsoncpp_INCLUDE_DIR
   NAMES json/features.h
-  PATH_SUFFIXES jsoncpp
-  PATHS ${Jsoncpp_PKGCONF_INCLUDE_DIRS}
+  PATH_SUFFIXES jsoncpp include
+  PATHS ${Jsoncpp_PKGCONF_INCLUDE_DIRS} ${Jsoncpp_ROOT}
 )
 
 # Finally the library itself
 find_library(Jsoncpp_LIBRARY
   NAMES jsoncpp
-  PATHS ${Jsoncpp_PKGCONF_LIBRARY_DIRS}
+  PATH_SUFFIXES lib
+  PATHS ${Jsoncpp_PKGCONF_LIBRARY_DIRS} ${Jsoncpp_ROOT}
 )
 
 set(Jsoncpp_PROCESS_INCLUDES Jsoncpp_INCLUDE_DIR)

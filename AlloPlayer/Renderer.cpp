@@ -85,7 +85,7 @@ bool Renderer::onFrame()
     boost::mutex::scoped_lock(uniformsMutex);
     
     StereoCubemap* cubemap;
-    if (cubemapBuffer.try_pop(cubemap))
+    if (cubemapBuffer.tryPop(cubemap))
     {
         for (int j = 0; j < cubemap->getEyesCount(); j++)
         {
@@ -221,9 +221,9 @@ bool Renderer::onFrame()
 StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
     StereoCubemap* oldCubemap;
-    if (!cubemapPool.try_pop(oldCubemap))
+    if (!cubemapPool.tryPop(oldCubemap))
     {
-        if (cubemapPool.closed())
+        if (cubemapPool.isClosed())
         {
             abort();
         }

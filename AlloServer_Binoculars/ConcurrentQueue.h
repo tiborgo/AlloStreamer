@@ -33,7 +33,7 @@ public:
         return the_queue.empty();
     }
     
-    bool try_pop(Data& popped_value)
+    bool tryPop(Data& popped_value)
     {
         boost::mutex::scoped_lock lock(the_mutex);
         if(the_queue.empty())
@@ -46,7 +46,7 @@ public:
         return true;
     }
     
-    void wait_and_pop(Data& popped_value)
+    void waitAndPop(Data& popped_value)
     {
         boost::mutex::scoped_lock lock(the_mutex);
         

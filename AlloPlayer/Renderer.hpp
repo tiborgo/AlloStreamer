@@ -2,7 +2,7 @@
 
 #include <alloutil/al_OmniApp.hpp>
 #include <boost/thread.hpp>
-#include "AlloShared/concurrent_queue.h"
+#include "AlloShared/ConcurrentQueue.hpp"
 #include "AlloReceiver/AlloReceiver.h"
 
 class Renderer : public al::OmniApp
@@ -61,8 +61,8 @@ private:
         YUV420PTexture() : yTexture(nullptr), uTexture(nullptr), vTexture(nullptr) {}
     };
     
-    concurrent_queue<StereoCubemap*> cubemapBuffer;
-    concurrent_queue<StereoCubemap*> cubemapPool;
+    ConcurrentQueue<StereoCubemap*> cubemapBuffer;
+    ConcurrentQueue<StereoCubemap*> cubemapPool;
     std::vector<YUV420PTexture>      textures;
     al_sec                           now;
     al::ShaderProgram                yuvGammaShader;

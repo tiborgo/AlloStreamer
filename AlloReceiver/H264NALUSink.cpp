@@ -5,7 +5,7 @@
 #include <boost/thread.hpp>
 #include <GroupsockHelper.hh>
 
-#include "H264RawPixelsSink.h"
+#include "H264NALUSink.hpp"
 
 namespace bc = boost::chrono;
 
@@ -14,43 +14,43 @@ unsigned char const START_CODE[4] = { 0x00, 0x00, 0x00, 0x01 };
 const size_t MAX_NALU_SIZE = 1000000;
 const size_t MAX_PKT_SIZE  = (sizeof(START_CODE) + MAX_NALU_SIZE) * MAX_NALUS_PER_PKT;
 
-H264RawPixelsSink* H264RawPixelsSink::createNew(UsageEnvironment& env,
-                                                unsigned long     bufferSize,
-                                                AVPixelFormat     format,
-                                                MediaSubsession*  subsession,
-                                                bool              robustSyncing)
+H264NALUSink* H264NALUSink::createNew(UsageEnvironment& env,
+                                      unsigned long     bufferSize,
+                                      AVPixelFormat     format,
+                                      MediaSubsession*  subsession,
+                                      bool              robustSyncing)
 {
     av_log_set_level(AV_LOG_FATAL);
     avcodec_register_all();
     avformat_network_init();
-	return new H264RawPixelsSink(env, bufferSize, format, subsession, robustSyncing);
+	return new H264NALUSink(env, bufferSize, format, subsession, robustSyncing);
 }
 
-void H264RawPixelsSink::setOnReceivedNALU(const OnReceivedNALU& callback)
+void H264NALUSink::setOnReceivedNALU(const OnReceivedNALU& callback)
 {
     onReceivedNALU = callback;
 }
 
-void H264RawPixelsSink::setOnReceivedFrame(const OnReceivedFrame& callback)
+void H264NALUSink::setOnReceivedFrame(const OnReceivedFrame& callback)
 {
     onReceivedFrame = callback;
 }
 
-void H264RawPixelsSink::setOnDecodedFrame(const OnDecodedFrame& callback)
+void H264NALUSink::setOnDecodedFrame(const OnDecodedFrame& callback)
 {
     onDecodedFrame = callback;
 }
 
-void H264RawPixelsSink::setOnColorConvertedFrame(const OnColorConvertedFrame& callback)
+void H264NALUSink::setOnColorConvertedFrame(const OnColorConvertedFrame& callback)
 {
     onColorConvertedFrame = callback;
 }
 
-H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
-                                     unsigned int      bufferSize,
-                                     AVPixelFormat     format,
-                                     MediaSubsession*  subsession,
-                                     bool              robustSyncing)
+H264NALUSink::H264NALUSink(UsageEnvironment& env,
+                           unsigned int      bufferSize,
+                           AVPixelFormat     format,
+                           MediaSubsession*  subsession,
+                           bool              robustSyncing)
     :
     MediaSink(env), bufferSize(bufferSize), buffer(new unsigned char[bufferSize]),
     imageConvertCtx(NULL), receivedFirstPriorityPackages(false), format(format),
@@ -69,7 +69,7 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
         pkt->size = 0;
         pktPool.push(pkt);
     }
-    pktPool.wait_and_pop(currentPkt);
+    pktPool.waitAndPop(currentPkt);
     
 	for (int i = 0; i < 60; i++)
 	{
@@ -117,12 +117,12 @@ H264RawPixelsSink::H264RawPixelsSink(UsageEnvironment& env,
 		abort();
 	}
 
-    //packageNALUsThread = boost::thread(boost::bind(&H264RawPixelsSink::packageNALUsLoop, this));
-	decodeFrameThread  = boost::thread(boost::bind(&H264RawPixelsSink::decodeFrameLoop,  this));
-    convertFrameThread = boost::thread(boost::bind(&H264RawPixelsSink::convertFrameLoop, this));
+    //packageNALUsThread = boost::thread(boost::bind(&H264NALUSink::packageNALUsLoop, this));
+	decodeFrameThread  = boost::thread(boost::bind(&H264NALUSink::decodeFrameLoop,  this));
+    convertFrameThread = boost::thread(boost::bind(&H264NALUSink::convertFrameLoop, this));
 }
 
-void H264RawPixelsSink::packageData(AVPacket* pkt, unsigned int frameSize, timeval presentationTime)
+void H264NALUSink::packageData(AVPacket* pkt, unsigned int frameSize, timeval presentationTime)
 {
     unsigned char const start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
     //unsigned char const start_code[0] = { };
@@ -139,7 +139,7 @@ void H264RawPixelsSink::packageData(AVPacket* pkt, unsigned int frameSize, timev
     memcpy(pkt->data + sizeof(start_code), buffer, frameSize);
 }
 
-void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
+void H264NALUSink::afterGettingFrame(unsigned frameSize,
 	unsigned numTruncatedBytes,
 	timeval presentationTime)
 {
@@ -187,7 +187,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
         // make frame available to the decoder
         // if we currently have the capacities to encode another frame
         AVPacket* pkt;
-        if (pktPool.try_pop(pkt))
+        if (pktPool.tryPop(pkt))
         {
             pktBuffer.push(currentPkt);
             currentPkt = pkt;
@@ -213,7 +213,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
     lastPTS = pts;
     
 //    NALU* nalu;
-//    if (naluPool.try_pop(nalu))
+//    if (naluPool.tryPop(nalu))
 //    {
 //        size_t size;
 //        if (frameSize > MAX_NALU_SIZE)
@@ -252,7 +252,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 //        
 //        AVPacket* pkt;
 //        
-//        if (pktPool.try_pop(pkt))
+//        if (pktPool.tryPop(pkt))
 //        {
 //            
 //            av_init_packet(pkt);
@@ -362,7 +362,7 @@ void H264RawPixelsSink::afterGettingFrame(unsigned frameSize,
 //	continuePlaying();
 }
 
-Boolean H264RawPixelsSink::continuePlaying()
+Boolean H264NALUSink::continuePlaying()
 {
 	fSource->getNextFrame(buffer, bufferSize,
 		afterGettingFrame, this,
@@ -371,17 +371,17 @@ Boolean H264RawPixelsSink::continuePlaying()
 	return True;
 }
 
-void H264RawPixelsSink::afterGettingFrame(void*clientData,
+void H264NALUSink::afterGettingFrame(void*clientData,
                                           unsigned frameSize,
                                           unsigned numTruncatedBytes,
                                           timeval presentationTime,
                                           unsigned durationInMicroseconds)
 {
-	H264RawPixelsSink* sink = (H264RawPixelsSink*)clientData;
+	H264NALUSink* sink = (H264NALUSink*)clientData;
 	sink->afterGettingFrame(frameSize, numTruncatedBytes, presentationTime);
 }
 
-void H264RawPixelsSink::packageNALUsLoop()
+void H264NALUSink::packageNALUsLoop()
 {
     int64_t lastPTS = -1;
     int64_t pts     = -1;
@@ -390,7 +390,7 @@ void H264RawPixelsSink::packageNALUsLoop()
     /*while (true)
     {
         NALU* nalu;
-        if (!naluBuffer.wait_and_pop(nalu))
+        if (!naluBuffer.waitAndPop(nalu))
         {
             // queue did close
             return;
@@ -401,7 +401,7 @@ void H264RawPixelsSink::packageNALUsLoop()
     while (true)
     {
         AVPacket* pkt;
-        if (!pktPool.wait_and_pop(pkt))
+        if (!pktPool.waitAndPop(pkt))
         {
             // queue did close
             return;
@@ -418,7 +418,7 @@ void H264RawPixelsSink::packageNALUsLoop()
             lastPTS = pts;
             
             NALU* nalu;
-            if (!naluBuffer.wait_and_pop(nalu))
+            if (!naluBuffer.waitAndPop(nalu))
             {
                 // queue did close
                 return;
@@ -460,7 +460,7 @@ void H264RawPixelsSink::packageNALUsLoop()
 //                
 //                        AVPacket* pkt;
 //                
-//                        if (pktPool.try_pop(pkt))
+//                        if (pktPool.tryPop(pkt))
 //                        {
 //                
 //                            av_init_packet(pkt);
@@ -498,7 +498,7 @@ void H264RawPixelsSink::packageNALUsLoop()
     }
 }
 
-void H264RawPixelsSink::decodeFrameLoop()
+void H264NALUSink::decodeFrameLoop()
 {
 	while (true)
 	{
@@ -506,14 +506,14 @@ void H264RawPixelsSink::decodeFrameLoop()
 		AVFrame* frame;
 		AVPacket* pkt;
 
-		if (!pktBuffer.wait_and_pop(pkt))
+		if (!pktBuffer.waitAndPop(pkt))
 		{
 			// queue did close
 			return;
 		}
         //std::cout << pktPool.size() << std::endl;
 
-		if (!framePool.wait_and_pop(frame))
+		if (!framePool.waitAndPop(frame))
 		{
 			// queue did close
 			return;
@@ -608,21 +608,21 @@ void H264RawPixelsSink::decodeFrameLoop()
 	}
 }
 
-void H264RawPixelsSink::convertFrameLoop()
+void H264NALUSink::convertFrameLoop()
 {
     while(true)
     {
         AVFrame* frame;
         AVFrame* convertedFrame;
         
-        if (!frameBuffer.wait_and_pop(frame))
+        if (!frameBuffer.waitAndPop(frame))
         {
             // queue did close
             return;
         }
         //std::cout /*<< this << " "*/ << frameBuffer.size() << std::endl;
         
-        if (!convertedFramePool.wait_and_pop(convertedFrame))
+        if (!convertedFramePool.waitAndPop(convertedFrame))
         {
             // queue did close
             return;
@@ -684,10 +684,10 @@ void H264RawPixelsSink::convertFrameLoop()
     }
 }
 
-AVFrame* H264RawPixelsSink::getNextFrame()
+AVFrame* H264NALUSink::getNextFrame()
 {
     AVFrame* frame;
-	if (convertedFrameBuffer.try_pop(frame))
+	if (convertedFrameBuffer.tryPop(frame))
 	{
         return frame;
 	}
@@ -697,7 +697,7 @@ AVFrame* H264RawPixelsSink::getNextFrame()
     }
 }
 
-void H264RawPixelsSink::returnFrame(AVFrame* frame)
+void H264NALUSink::returnFrame(AVFrame* frame)
 {
 	if (frame)
     {

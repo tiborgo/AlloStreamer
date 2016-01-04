@@ -7,7 +7,7 @@
 #include <map>
 
 #include "AlloReceiver.h"
-#include "H264RawPixelsSink.h"
+#include "H264NALUSink.hpp"
 #include "RTSPCubemapSourceClient.hpp"
 
 class ALLORECEIVER_API H264CubemapSource : public CubemapSource
@@ -30,11 +30,11 @@ public:
     virtual void setOnScheduledFrameInCubemap(const OnScheduledFrameInCubemap& callback);
     virtual void setOnScheduledCubemap       (const OnScheduledCubemap&        callback);
     
-    H264CubemapSource(std::vector<H264RawPixelsSink*>& sinks,
-                      AVPixelFormat                    format,
-                      bool                             matchStereoPairs,
-                      bool                             robustSyncing,
-                      size_t                           maxFrameMapSize);
+    H264CubemapSource(std::vector<H264NALUSink*>& sinks,
+                      AVPixelFormat               format,
+                      bool                        matchStereoPairs,
+                      bool                        robustSyncing,
+                      size_t                      maxFrameMapSize);
 
 protected:
     OnReceivedNALU            onReceivedNALU;
@@ -50,16 +50,16 @@ private:
     void getNextFramesLoop();
     void getNextCubemapLoop();
     
-    void sinkOnReceivedNALU       (H264RawPixelsSink* sink, u_int8_t type, size_t size);
-    void sinkOnReceivedFrame      (H264RawPixelsSink* sink, u_int8_t type, size_t size);
-    void sinkOnDecodedFrame       (H264RawPixelsSink* sink, u_int8_t type, size_t size);
-    void sinkOnColorConvertedFrame(H264RawPixelsSink* sink, u_int8_t type, size_t size);
+    void sinkOnReceivedNALU       (H264NALUSink* sink, u_int8_t type, size_t size);
+    void sinkOnReceivedFrame      (H264NALUSink* sink, u_int8_t type, size_t size);
+    void sinkOnDecodedFrame       (H264NALUSink* sink, u_int8_t type, size_t size);
+    void sinkOnColorConvertedFrame(H264NALUSink* sink, u_int8_t type, size_t size);
   
     boost::mutex                              frameMapMutex;
     boost::condition_variable                 frameMapCondition;
     std::map<int, std::vector<AVFrame*> >     frameMap;
-    std::vector<H264RawPixelsSink*>           sinks;
-    std::map<H264RawPixelsSink*, int64_t>     sinksFaceMap;
+    std::vector<H264NALUSink*>                sinks;
+    std::map<H264NALUSink*, int64_t>          sinksFaceMap;
     AVPixelFormat                             format;
     HeapAllocator                             heapAllocator;
     boost::thread                             getNextCubemapThread;

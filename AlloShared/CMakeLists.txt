@@ -17,7 +17,7 @@ set(SOURCES
 set(HEADERS
 	Cubemap.hpp
     config.h
-    concurrent_queue.h
+    ConcurrentQueue.hpp
     Process.h
     Allocator.h
     Frame.hpp

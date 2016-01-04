@@ -17,32 +17,32 @@ extern "C"
     #include <x264.h>
 }
 
-#include "AlloShared/concurrent_queue.h"
+#include "AlloShared/ConcurrentQueue.hpp"
 #include "AlloShared/Cubemap.hpp"
 
-class RawPixelSource : public FramedSource
+class H264NALUSource : public FramedSource
 {
 public:
-	static RawPixelSource* createNew(UsageEnvironment& env,
+	static H264NALUSource* createNew(UsageEnvironment& env,
                                      Frame* content,
                                      int avgBitRate,
 									 bool robustSyncing);
 
-	typedef std::function<void(RawPixelSource* self,
+	typedef std::function<void(H264NALUSource* self,
 		                       uint8_t type,
 		                       size_t size)> OnSentNALU;
-	typedef std::function<void(RawPixelSource* self)> OnEncodedFrame;
+	typedef std::function<void(H264NALUSource* self)> OnEncodedFrame;
 
 	void setOnSentNALU    (const OnSentNALU&     callback);
 	void setOnEncodedFrame(const OnEncodedFrame& callback);
 
 protected:
-	RawPixelSource(UsageEnvironment& env,
+	H264NALUSource(UsageEnvironment& env,
                    Frame* content,
                    int avgBitRate,
 				   bool robustSyncing);
 	// called only by createNew(), or by subclass constructors
-	virtual ~RawPixelSource();
+	virtual ~H264NALUSource();
 
 	OnSentNALU     onSentNALU;
 	OnEncodedFrame onEncodedFrame;
@@ -51,7 +51,7 @@ private:
 	EventTriggerId eventTriggerId;
 	static void deliverFrame0(void* clientData);
 	static boost::mutex triggerEventMutex;
-	static std::vector<RawPixelSource*> sourcesReadyForDelivery;
+	static std::vector<H264NALUSource*> sourcesReadyForDelivery;
 	void deliverFrame();
 
 	// redefined virtual functions:
@@ -62,14 +62,14 @@ private:
 	SwsContext *img_convert_ctx;
 
 	// Stores unencoded frames
-	concurrent_queue<AVFrame*> frameBuffer;
+	ConcurrentQueue<AVFrame*> frameBuffer;
 	// Here unused frames are stored. Included so that we can allocate all the frames at startup
 	// and reuse them during runtime
-	concurrent_queue<AVFrame*> framePool;
+	ConcurrentQueue<AVFrame*> framePool;
 
 	// Stores encoded frames
-	concurrent_queue<AVPacket> pktBuffer;
-	concurrent_queue<AVPacket> pktPool;
+	ConcurrentQueue<AVPacket> pktBuffer;
+	ConcurrentQueue<AVPacket> pktPool;
 
 	static unsigned referenceCount; // used to count how many instances of this class currently exist
 

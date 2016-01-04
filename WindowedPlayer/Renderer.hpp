@@ -4,7 +4,7 @@
 #include <SDL.h>
 #undef main
 #include <boost/thread.hpp>
-#include "AlloShared/concurrent_queue.h"
+#include "AlloShared/ConcurrentQueue.hpp"
 #include "AlloReceiver/AlloReceiver.h"
 
 class Renderer
@@ -29,8 +29,8 @@ private:
 
 	boost::thread                    renderThread;
 	CubemapSource*                   cubemapSource;
-	concurrent_queue<StereoCubemap*> cubemapBuffer;
-	concurrent_queue<StereoCubemap*> cubemapPool;
+	ConcurrentQueue<StereoCubemap*> cubemapBuffer;
+	ConcurrentQueue<StereoCubemap*> cubemapPool;
 	SDL_Window*                      window;
 	SDL_Renderer*                    renderer;
 	std::vector<SDL_Texture*>        textures;
