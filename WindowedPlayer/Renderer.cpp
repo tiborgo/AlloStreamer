@@ -51,9 +51,9 @@ Renderer::~Renderer()
 StereoCubemap* Renderer::onNextCubemap(CubemapSource* source, StereoCubemap* cubemap)
 {
 	StereoCubemap* oldCubemap;
-	if (!cubemapPool.try_pop(oldCubemap))
+	if (!cubemapPool.tryPop(oldCubemap))
 	{
-		if (cubemapPool.closed())
+		if (cubemapPool.isClosed())
 		{
 			return nullptr;
 		}
@@ -144,7 +144,7 @@ void Renderer::renderLoop()
 	{
 		StereoCubemap* cubemap;
 
-		if (!cubemapBuffer.wait_and_pop(cubemap))
+		if (!cubemapBuffer.waitAndPop(cubemap))
 		{
 			return;
 		}

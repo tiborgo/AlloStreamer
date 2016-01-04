@@ -20,10 +20,10 @@ extern "C"
 #include "AlloShared/ConcurrentQueue.hpp"
 #include "AlloShared/Cubemap.hpp"
 
-class ALLORECEIVER_API H264RawPixelsSink : public MediaSink
+class ALLORECEIVER_API H264NALUSink : public MediaSink
 {
 public:
-	static H264RawPixelsSink* createNew(UsageEnvironment& env,
+	static H264NALUSink* createNew(UsageEnvironment& env,
                                         unsigned long     bufferSize,
                                         AVPixelFormat     format,
                                         MediaSubsession*  subsession,
@@ -32,10 +32,10 @@ public:
 	AVFrame* getNextFrame();
     void returnFrame(AVFrame* usedFrame);
     
-    typedef std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> OnReceivedNALU;
-    typedef std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> OnReceivedFrame;
-    typedef std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> OnDecodedFrame;
-    typedef std::function<void (H264RawPixelsSink*, u_int8_t, size_t)> OnColorConvertedFrame;
+    typedef std::function<void (H264NALUSink*, u_int8_t, size_t)> OnReceivedNALU;
+    typedef std::function<void (H264NALUSink*, u_int8_t, size_t)> OnReceivedFrame;
+    typedef std::function<void (H264NALUSink*, u_int8_t, size_t)> OnDecodedFrame;
+    typedef std::function<void (H264NALUSink*, u_int8_t, size_t)> OnColorConvertedFrame;
     
     void setOnReceivedNALU       (const OnReceivedNALU&        callback);
     void setOnReceivedFrame      (const OnReceivedFrame&       callback);
@@ -43,7 +43,7 @@ public:
     void setOnColorConvertedFrame(const OnColorConvertedFrame& callback);
 	
 protected:
-	H264RawPixelsSink(UsageEnvironment& env,
+	H264NALUSink(UsageEnvironment& env,
                       unsigned int      bufferSize,
                       AVPixelFormat     format,
                       MediaSubsession*  subsession,

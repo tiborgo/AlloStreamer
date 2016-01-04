@@ -1,7 +1,7 @@
     #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string_regex.hpp>
 
-#include "H264RawPixelsSink.h"
+#include "H264NALUSink.hpp"
 #include "H264CubemapSource.h"
 #include "RTSPCubemapSourceClient.hpp"
 
@@ -206,15 +206,15 @@ void RTSPCubemapSourceClient::createOutputFiles(char const* periodicFilenameSuff
     
     if (isH264)
     {
-        std::vector<H264RawPixelsSink*> h264Sinks;
+        std::vector<H264NALUSink*> h264Sinks;
         std::vector<MediaSink*> sinks;
         for (int i = 0; i < (std::min)(subsessions.size(), (size_t)(StereoCubemap::MAX_EYES_COUNT * Cubemap::MAX_FACES_COUNT)); i++)
         {
-            H264RawPixelsSink* sink = H264RawPixelsSink::createNew(envir(),
-                                                                   sinkBufferSize,
-                                                                   format,
-                                                                   subsessions[i],
-                                                                   robustSyncing);
+            H264NALUSink* sink = H264NALUSink::createNew(envir(),
+                                                         sinkBufferSize,
+                                                         format,
+                                                         subsessions[i],
+                                                         robustSyncing);
             subsessions[i]->sink = sink;
             
             h264Sinks.push_back(sink);
