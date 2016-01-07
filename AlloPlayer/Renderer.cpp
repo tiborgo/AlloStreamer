@@ -208,7 +208,7 @@ bool Renderer::onFrame()
         yuvGammaShader.uniform("gamma_pow", gammaPow);
         yuvGammaShader.end();
         mOmni.forRotation(forRotation);
-        mOmni.forAngle(forAngle);
+        mOmni.forAngle(al::Vec2f(forAngle, 0));
         mOmni.rotation(rotation);
     }
     
