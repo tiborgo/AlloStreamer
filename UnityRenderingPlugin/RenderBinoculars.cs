@@ -92,7 +92,6 @@ public class RenderBinoculars : MonoBehaviour
         }
     }
 
-    [JsonProperty]
 #if UNITY_EDITOR
 	[ExposeProperty]
 #endif

@@ -753,7 +753,7 @@ extern "C" int EXPORT_API initInterprocessMemory()
      * Will not return until endServer() is called
      */
     
-	if (0 != std::system(ROOT_DIR "/Bin/" CMAKE_INTDIR "/AlloServer_Binoculars"))
+	if (0 != std::system(ROOT_DIR "/Bin/" CONFIG "/AlloServer_Binoculars"))
         return 1;
     
     //AlloServer is finished, so shutdown OSC

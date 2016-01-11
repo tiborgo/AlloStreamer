@@ -36,6 +36,11 @@ set_target_properties(RenderingPlugin_Binoculars
     LIBRARY_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}/" # for OS X
 	OUTPUT_NAME "UnityServerPlugin"
 )
+target_compile_definitions(RenderingPlugin_Binoculars
+	PRIVATE
+	CONFIG="${CMAKE_CFG_INTDIR}"
+)
+message(STATUS CMAKE_CFG_INTDIR "${CMAKE_CFG_INTDIR}")
 
 if(WIN32)
 	target_link_libraries(RenderingPlugin_Binoculars

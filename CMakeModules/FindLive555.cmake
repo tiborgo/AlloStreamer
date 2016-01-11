@@ -17,6 +17,7 @@ if (NOT Live555_FOUND)
 			${library}.hh
 			${lowercase_library}.hh
 			PATHS
+			${Live555_ROOT}/${library}/include
 			${Live555_ROOT}/live/${library}/include
 			/usr/local/include/${library}
 			/usr/local/include/${lowercase_library}
@@ -35,6 +36,7 @@ if (NOT Live555_FOUND)
 				${lowercase_library}
 				PATHS
 				${Live555_ROOT}/lib/${mode}
+				${Live555_ROOT}/${library}
 			)
 			if (Live555_${library}_LIBRARY_${mode})
 				if (${mode} STREQUAL RELEASE) 

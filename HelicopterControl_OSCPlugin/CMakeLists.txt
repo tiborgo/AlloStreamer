@@ -36,6 +36,10 @@ set_target_properties(HelicopterControl_OSCPlugin
     LIBRARY_OUTPUT_DIRECTORY "${UNITY_PROJECT_PLUGIN_DIR}/" # for OS X
 	OUTPUT_NAME "HelicopterControlPlugin"
 )
+target_compile_definitions(HelicopterControl_OSCPlugin
+	PRIVATE
+	CONFIG="${CMAKE_CFG_INTDIR}"
+)
 
 if(WIN32)
 	target_link_libraries(HelicopterControl_OSCPlugin

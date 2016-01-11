@@ -19,6 +19,7 @@ foreach (mode DEBUG RELEASE)
 		oscpack
 		PATHS
 		${OSCPack_ROOT}/Lib/${mode}
+		${OSCPack_ROOT}
 	)
 	if (OSCPack_LIBRARY_${mode})
 		if (${mode} STREQUAL RELEASE) 
