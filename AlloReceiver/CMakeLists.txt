@@ -5,6 +5,7 @@ set(SOURCES
     #Source.cpp
     H264CubemapSource.cpp
     RTSPCubemapSourceClient.cpp
+    Wrappers.cpp
 )
 
 set(HEADERS
@@ -15,6 +16,7 @@ set(HEADERS
     H264CubemapSource.h
     RTSPCubemapSourceClient.hpp
 	Stats.hpp
+    Wrappers.hpp
 )
 
 
